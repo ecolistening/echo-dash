@@ -1,0 +1,12 @@
+dash
+dash-core-components
+dash-html-components
+dash-bootstrap-components
+dash-daq
+datashader
+holoviews
+pandas
+plotly
+plotly-calplot
+pyarrow
+xarray
