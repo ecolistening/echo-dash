@@ -54,10 +54,11 @@ layout = html.Div([
 # Add controls to build the interaction
 @callback(
     Output(main_plot, component_property='figure'),
-    Input(feature_checkbox, component_property='value')
+    Input(feature_checkbox, component_property='value'),
+    Input(component_id='checklist-locations', component_property='value')
 )
-def update_graph(feature):
-    data = df[df.feature == feature]#.sample(n=10000, axis=0, ignore_index=True)
+def update_graph(feature, locations):
+    data = df[(df.feature == feature) & (df.recorder.isin(locations))]
     fig = px.box(data, x='hour', y='value',
                  hover_name='file', hover_data=['file', 'timestamp', 'file_timestamp'],
                  facet_col='recorder', points='outliers')

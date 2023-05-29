@@ -50,10 +50,11 @@ layout = html.Div([
 # Add controls to build the interaction
 @callback(
     Output(component_id='tod-features-graph', component_property='figure'),
-    Input(component_id='feature-checkbox', component_property='value')
+    Input(component_id='feature-checkbox', component_property='value'),
+    Input(component_id='checklist-locations', component_property='value')
 )
-def update_graph(feature):
-    data = df[df.feature == feature]#.sample(n=10000, axis=0, ignore_index=True)
+def update_graph(feature, locations):
+    data = df[(df.feature == feature) & (df.recorder.isin(locations))]
     fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['file', 'timestamp', 'file_timestamp'], opacity=0.5, facet_col='recorder')
     # fig.update_xaxes(type='date', tickformat='%H:%M')
     return fig

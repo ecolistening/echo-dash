@@ -10,51 +10,74 @@ this feature you must install dash-bootstrap-components >= 0.11.0.
 For more details on building multi-page Dash applications, check out the Dash
 documentation: https://dash.plot.ly/urls
 """
+from pathlib import Path
+
 import dash
 import dash_bootstrap_components as dbc
 from dash import Dash, Input, Output, dcc, html
+import pandas as pd
 
-app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.CYBORG])
+from utils import is_docker
 
-# the style arguments for the sidebar. We use position:fixed and a fixed width
-SIDEBAR_STYLE = {
-    "position": "fixed",
-    "top": 0,
-    "left": 0,
-    "bottom": 0,
-    "width": "16rem",
-    "padding": "2rem 1rem",
-    # "background-color": "#f8f9fa",
-}
+app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.LITERA])
 
-# the styles for the main content position it to the right of the sidebar and
-# add some padding.
-CONTENT_STYLE = {
-    "margin-left": "18rem",
-    "margin-right": "2rem",
-    "padding": "2rem 1rem",
-}
 
-sidebar = html.Div(
-    [
-        html.B("Eyeballing Ecoacoustics", className="display-4"),
-        html.Hr(),
-        html.P(
-            "Choose analysis page", className="lead"
-        ),
-        dbc.Nav(
-            [
-                dbc.NavLink(page['name'], href=page["relative_path"], active="exact")
-                for page in dash.page_registry.values()
-            ],
-            vertical=True,
-            pills=True,
-        ),
+# Incorporate data
+f = Path('/data/features.23D17.dashboard_subset_mini.parquet')
+if not is_docker():
+    f = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/features.23D17.dashboard_subset_mini.parquet')
+
+# df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
+df = pd.read_parquet(f, columns=['file_timestamp','recorder']).drop_duplicates()
+df = df.assign(date=df.file_timestamp.dt.date)
+
+navbar = dbc.NavbarSimple(
+    children=[
+        dbc.NavLink(page['name'], href=page["relative_path"], active="exact")
+        for page in dash.page_registry.values()
     ],
-    style=SIDEBAR_STYLE,
+    brand="Eyeballing Ecoacoustics",
+    brand_href="#",
+    color="primary",
+    dark=True,
 )
 
-app.layout = html.Div([dcc.Location(id="url"), sidebar, dash.page_container], id="page-content", style=CONTENT_STYLE)
+date_input = html.Div([
+    dbc.Label("Dates", html_for="date-picker"),
+    dcc.DatePickerRange(id='date-picker'),
+], className="mb-3")
+
+location_input = html.Div([
+    dbc.Label("Locations", html_for=""),
+    dbc.Checklist(
+        options=[
+            {"label": r, "value": r} for r in df.recorder.unique()
+        ],
+        value=[r for r in df.recorder.unique()],
+        id="checklist-locations",
+        inline=True,
+        persistence=True
+    ),
+])
+
+filters = dbc.Form([
+    html.H3("Filters"),
+    date_input,
+    location_input,
+], id='filters')
+
+body = html.Div(
+    [
+        dbc.Row(
+            [
+                dbc.Col(filters, width="auto"),
+                dbc.Col(dash.page_container),
+            ]
+        ),
+    ]
+)
+
+app.layout = html.Div([dcc.Location(id="url"), navbar, body], id="page-content")
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', debug=True)
