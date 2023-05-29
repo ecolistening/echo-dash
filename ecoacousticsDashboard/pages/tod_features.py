@@ -15,9 +15,9 @@ from utils import is_docker
 dash.register_page(__name__, title='Features by Time-of-Day', name='Features by Time-of-Day')
 
 # Incorporate data
-f = Path('/data/features.23D17.dashboard_subset.parquet')
+f = Path('/data/features.23D17.dashboard_subset_mini.parquet')
 if not is_docker():
-    f = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/features.23D17.dashboard_subset.parquet')
+    f = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/features.23D17.dashboard_subset_mini.parquet')
 
 # df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
 df = pd.read_parquet(f).drop_duplicates()
@@ -53,7 +53,7 @@ layout = html.Div([
     Input(component_id='feature-checkbox', component_property='value')
 )
 def update_graph(feature):
-    data = df[df.feature == feature].sample(n=10000, axis=0, ignore_index=True)
+    data = df[df.feature == feature]#.sample(n=10000, axis=0, ignore_index=True)
     fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['file', 'timestamp', 'file_timestamp'], opacity=0.5, facet_col='recorder')
     # fig.update_xaxes(type='date', tickformat='%H:%M')
     return fig

@@ -1,33 +1,3 @@
-# from dash import Dash, html, dcc
-# import dash
-# import dash_bootstrap_components as dbc
-#
-# app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.CYBORG])
-#
-# app.layout = html.Div([
-# 	html.H1('SEAD'),
-# 	html.H2('The Sussex EcoAcoustics Dashboard'),
-#
-#     html.Div(
-#         [
-#             html.Div(
-#                 dcc.Link(
-#                     f"{page['name']} - {page['path']}", href=page["relative_path"]
-#                 )
-#             )
-#             for page in dash.page_registry.values()
-#         ]
-#     ),
-#
-# 	dash.page_container
-# ])
-#
-# if __name__ == '__main__':
-# 	app.run_server(host='0.0.0.0', debug=True)
-#
-#
-# -------------------------------------------
-
 """
 This app creates a simple sidebar layout using inline style arguments and the
 dbc.Nav component.
@@ -84,28 +54,7 @@ sidebar = html.Div(
     style=SIDEBAR_STYLE,
 )
 
-# content = html.Div(id="page-content", style=CONTENT_STYLE)
-
 app.layout = html.Div([dcc.Location(id="url"), sidebar, dash.page_container], id="page-content", style=CONTENT_STYLE)
-
-# @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
-# def render_page_content(pathname):
-#     if pathname == "/":
-#         return html.P("This is the content of the home page!")
-#     elif pathname == "/page-1":
-#         return html.P("This is the content of page 1. Yay!")
-#     elif pathname == "/page-2":
-#         return html.P("Oh cool, this is page 2!")
-#     # If the user tries to reach a different page, return a 404 message
-#     return html.Div(
-#         [
-#             html.H1("404: Not found", className="text-danger"),
-#             html.Hr(),
-#             html.P(f"The pathname {pathname} was not recognised..."),
-#         ],
-#         className="p-3 bg-light rounded-3",
-#     )
-
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', debug=True)

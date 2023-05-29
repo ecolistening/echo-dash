@@ -20,9 +20,9 @@ colours = {
 }
 
 # Incorporate data
-f = Path('/data/features.23D17.dashboard_subset.parquet')
+f = Path('/data/features.23D17.dashboard_subset_mini.parquet')
 if not is_docker():
-    f = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/features.23D17.dashboard_subset.parquet')
+    f = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/features.23D17.dashboard_subset_mini.parquet')
 
 # df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
 df = pd.read_parquet(f).drop_duplicates()
@@ -57,7 +57,7 @@ layout = html.Div([
     Input(feature_checkbox, component_property='value')
 )
 def update_graph(feature):
-    data = df[df.feature == feature].sample(n=10000, axis=0, ignore_index=True)
+    data = df[df.feature == feature]#.sample(n=10000, axis=0, ignore_index=True)
     fig = px.box(data, x='hour', y='value',
                  hover_name='file', hover_data=['file', 'timestamp', 'file_timestamp'],
                  facet_col='recorder', points='outliers')
