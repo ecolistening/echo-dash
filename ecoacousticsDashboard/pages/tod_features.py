@@ -4,15 +4,15 @@ from datetime import date
 from pathlib import Path
 
 import dash
-from dash import Dash, html, dash_table, dcc, callback, Output, Input, State
+from dash import Dash, html, dash_table, dcc, callback, Output, Input, State, Patch
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
 from plotly_calplot import calplot
 
-from utils import is_docker
+from utils import is_docker, filter_dataset
 
-dash.register_page(__name__, title='Features by Time-of-Day', name='Features by Time-of-Day')
+dash.register_page(__name__, title='Features by Time-of-Day', name='Features by Time-of-Day', pagefilter=html.Span('Why hello!'))
 
 # Incorporate data
 f = Path('/data/features.23D17.dashboard_subset_mini.parquet')
@@ -37,10 +37,6 @@ layout = html.Div([
         [html.H1('Features by Time of Day')],
     ),
     html.Hr(),
-    html.Div([
-        html.Label('Feature: '),
-        dcc.Dropdown(options=df.feature.unique(), value=df.feature.unique()[0], id='feature-checkbox'),
-    ]),
     html.Div(
         dcc.Graph(id='tod-features-graph'),
     ),
@@ -49,12 +45,14 @@ layout = html.Div([
 
 # Add controls to build the interaction
 @callback(
-    Output(component_id='tod-features-graph', component_property='figure'),
-    Input(component_id='feature-checkbox', component_property='value'),
-    Input(component_id='checklist-locations', component_property='value')
+    Output('tod-features-graph', component_property='figure'),
+    Input('date-picker', component_property='start_date'),
+    Input('date-picker', component_property='end_date'),
+    Input('checklist-locations', component_property='value'),
+    Input('feature-dropdown', component_property='value'),
 )
-def update_graph(feature, locations):
-    data = df[(df.feature == feature) & (df.recorder.isin(locations))]
+def update_graph(start_date, end_date, locations, feature):
+    data = filter_dataset(df, [start_date, end_date], feature, locations)
     fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['file', 'timestamp', 'file_timestamp'], opacity=0.5, facet_col='recorder')
     # fig.update_xaxes(type='date', tickformat='%H:%M')
     return fig
@@ -62,7 +60,7 @@ def update_graph(feature, locations):
 @callback(
     Output(drilldown_file_div, 'children'),
     Input('tod-features-graph', 'clickData'),
-    Input('feature-checkbox', 'value'))
+    Input('feature-dropdown', 'value'))
 def display_click_data(clickData, value):
     if clickData is None:
         return None

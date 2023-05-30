@@ -14,7 +14,7 @@ from pathlib import Path
 
 import dash
 import dash_bootstrap_components as dbc
-from dash import Dash, Input, Output, dcc, html
+from dash import Dash, Input, Output, dcc, html, callback, Patch
 import pandas as pd
 
 from utils import is_docker
@@ -28,7 +28,7 @@ if not is_docker():
     f = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/features.23D17.dashboard_subset_mini.parquet')
 
 # df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
-df = pd.read_parquet(f, columns=['file_timestamp','recorder']).drop_duplicates()
+df = pd.read_parquet(f, columns=['file_timestamp','recorder','feature']).drop_duplicates()
 df = df.assign(date=df.file_timestamp.dt.date)
 
 navbar = dbc.NavbarSimple(
@@ -60,17 +60,30 @@ location_input = html.Div([
     ),
 ])
 
+feature_input = html.Div([
+    dbc.Label("Feature", html_for=""),
+    dcc.Dropdown(
+        id='feature-dropdown',
+        options=df.feature.unique(), value=df.feature.unique()[0],
+        # style={'min-width': '200px'},
+        clearable=False, persistence=True),
+])
+
 filters = dbc.Form([
     html.H3("Filters"),
     date_input,
     location_input,
+    feature_input
 ], id='filters')
 
 body = html.Div(
     [
         dbc.Row(
             [
-                dbc.Col(filters, width="auto"),
+                dbc.Col(
+                    html.Div([
+                        filters,
+                    ]), width="auto"),
                 dbc.Col(dash.page_container),
             ]
         ),
@@ -78,6 +91,7 @@ body = html.Div(
 )
 
 app.layout = html.Div([dcc.Location(id="url"), navbar, body], id="page-content")
+
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', debug=True)
