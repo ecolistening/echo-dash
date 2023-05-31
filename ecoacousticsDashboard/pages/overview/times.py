@@ -8,17 +8,13 @@ import pandas as pd
 import plotly.express as px
 from plotly_calplot import calplot
 
+from config import filepath
 from utils import is_docker
 
 dash.register_page(__name__)
 
-# Incorporate data
-f = Path('/data/features.23D17.dashboard_subset_mini.parquet')
-if not is_docker():
-    f = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/features.23D17.dashboard_subset_mini.parquet')
-
-df = pd.read_parquet(f, columns=['file','file_timestamp','recorder']).drop_duplicates()
-df = df.assign(date=pd.to_datetime(df.file_timestamp.dt.date), hour=df.file_timestamp.dt.hour + df.file_timestamp.dt.minute / 60.0)
+df = pd.read_parquet(filepath, columns=['file','timestamp','recorder']).drop_duplicates()
+df = df.assign(date=pd.to_datetime(df.timestamp.dt.date), hour=df.timestamp.dt.hour + df.timestamp.dt.minute / 60.0)
 
 # fig = px.scatter(df, x='date', y='hour', symbol='recorder', hover_name='file', opacity=0.5)
 # fig.update_xaxes(type='category')

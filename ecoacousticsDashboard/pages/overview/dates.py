@@ -8,17 +8,13 @@ import pandas as pd
 import plotly.express as px
 from plotly_calplot import calplot
 
+from config import filepath
 from utils import is_docker
 
 dash.register_page(__name__)
 
-# Incorporate data
-f = Path('/data/features.23D17.dashboard_subset_mini.parquet')
-if not is_docker():
-    f = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/features.23D17.dashboard_subset_mini.parquet')
-
-df = pd.read_parquet(f, columns=['file','file_timestamp']).drop_duplicates()
-df = df.assign(date=pd.to_datetime(df.file_timestamp.dt.date))
+df = pd.read_parquet(filepath, columns=['file','timestamp']).drop_duplicates()
+df = df.assign(date=pd.to_datetime(df.timestamp.dt.date))
 df = df.groupby('date').agg('count').reset_index()
 
 layout = html.Div([
@@ -27,7 +23,7 @@ layout = html.Div([
     ),
     html.Hr(),
     # dcc.RadioItems(options=['pop', 'lifeExp', 'gdpPercap'], value='lifeExp', id='my-final-radio-item-example'),
-    dash_table.DataTable(data=df.to_dict('records'), page_size=6),
+    # dash_table.DataTable(data=df.to_dict('records'), page_size=6),
     dcc.Graph(figure=calplot(df, x='date', y='file'), id='dates-graph')
 ])
 

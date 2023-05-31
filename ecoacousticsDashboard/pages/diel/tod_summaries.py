@@ -11,22 +11,18 @@ import pandas as pd
 import plotly.express as px
 from plotly_calplot import calplot
 
+from config import filepath
 from utils import is_docker, filter_dataset
 
-dash.register_page(__name__, title='Feature Summaries by Time-of-Day', name='Feature Summaries by Time-of-Day')
+dash.register_page(__name__, title='Summaries', name='Summaries')
 
 colours = {
     'main': 'blue',
     'accent1': 'red'
 }
 
-# Incorporate data
-f = Path('/data/features.23D17.dashboard_subset_mini.parquet')
-if not is_docker():
-    f = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/features.23D17.dashboard_subset_mini.parquet')
-
 # df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
-df = pd.read_parquet(f).drop_duplicates()
+df = pd.read_parquet(filepath).drop_duplicates()
 df = df.assign(time=df.timestamp.dt.hour + df.timestamp.dt.minute / 60.0, hour=df.timestamp.dt.hour, minute=df.timestamp.dt.minute)#.astype('datetime64[ns]')
 
 # agg_by_selector = dbc.
@@ -109,7 +105,7 @@ def update_graph(start_date, end_date, locations, feature, time_agg, outliers, c
     }
 
     fig = px.box(data, x=time_agg, y='value',
-                 hover_name='file', hover_data=['file', 'timestamp', 'file_timestamp'],
+                 hover_name='file', hover_data=['file', 'timestamp', 'timestamp'],
                  facet_col='recorder' if separate_plots == True else None,
                  points='outliers' if outliers == True else False,
                  color='recorder' if colour_locations == True else None,
@@ -135,7 +131,7 @@ def display_click_data(clickData, value):
         return None
     filename, ts, file_ts = clickData['points'][0]['customdata']
 
-    fig = px.line(data_frame=df[(df.file_timestamp == file_ts) & (df.feature == value)].sort_values(by='timestamp'), x='timestamp', y='value', color='recorder')
+    fig = px.line(data_frame=df[(df.timestamp == file_ts) & (df.feature == value)].sort_values(by='timestamp'), x='timestamp', y='value', color='recorder')
     fig.update_xaxes(type='date')#, tickformat='%H:%M')
 
     # Plot the feature curves

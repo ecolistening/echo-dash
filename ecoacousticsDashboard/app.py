@@ -17,25 +17,36 @@ import dash_bootstrap_components as dbc
 from dash import Dash, Input, Output, dcc, html, callback, Patch
 import pandas as pd
 
+from config import filepath
 from utils import is_docker
 
-app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.LITERA])
+app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.LITERA, dbc.icons.BOOTSTRAP])
 
-
-# Incorporate data
-f = Path('/data/features.23D17.dashboard_subset_mini.parquet')
-if not is_docker():
-    f = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/features.23D17.dashboard_subset_mini.parquet')
 
 # df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
-df = pd.read_parquet(f, columns=['file_timestamp','recorder','feature']).drop_duplicates()
-df = df.assign(date=df.file_timestamp.dt.date)
+df = pd.read_parquet(filepath, columns=['timestamp','recorder','feature']).drop_duplicates()
+df = df.assign(date=df.timestamp.dt.date)
+
+pages = {m:m.split('.')[1:] for m in dash.page_registry}
+children = {}
+for p in pages:
+    page = dash.page_registry[p]
+    if len(pages[p]) == 1:
+        children[pages[p][0]] = dbc.NavItem(dbc.NavLink(page['name'], href=page["relative_path"], active="exact"))
+    else:
+        if pages[p][0] not in children:
+            children[pages[p][0]] = dbc.DropdownMenu(
+                            children=[],
+                            label=pages[p][0],
+                            in_navbar=True,
+                            nav=True,
+                        )
+        children[pages[p][0]].children.append(
+            dbc.DropdownMenuItem(page['name'], href=page["relative_path"])
+        )
 
 navbar = dbc.NavbarSimple(
-    children=[
-        dbc.NavLink(page['name'], href=page["relative_path"], active="exact")
-        for page in dash.page_registry.values()
-    ],
+    children=list(children.values()),
     brand="Eyeballing Ecoacoustics",
     brand_href="#",
     color="primary",
@@ -44,14 +55,17 @@ navbar = dbc.NavbarSimple(
 
 date_input = html.Div([
     dbc.Label("Dates", html_for="date-picker"),
+    dbc.Button(html.I(className="bi p-2 lh-1"), className='btn btn-primary rounded-circle'),
     dcc.DatePickerRange(id='date-picker'),
 ], className="mb-3")
+
+
 
 location_input = html.Div([
     dbc.Label("Locations", html_for=""),
     dbc.Checklist(
         options=[
-            {"label": r, "value": r} for r in df.recorder.unique()
+            {"label": r, "value": r} for r in sorted(df.recorder.unique())
         ],
         value=[r for r in df.recorder.unique()],
         id="checklist-locations",
@@ -83,7 +97,7 @@ body = html.Div(
                 dbc.Col(
                     html.Div([
                         filters,
-                    ]), width="auto"),
+                    ]), width=3),
                 dbc.Col(dash.page_container),
             ]
         ),
