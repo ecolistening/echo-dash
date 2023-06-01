@@ -42,15 +42,14 @@ layout = html.Div([
 # Add controls to build the interaction
 @callback(
     Output('tod-features-graph', component_property='figure'),
-    Input('date-picker', component_property='start_date'),
-    Input('date-picker', component_property='end_date'),
+    Input('date-picker', component_property='value'),
+    Input('checklist-locations-hierarchy', component_property='value'),
     Input('checklist-locations', component_property='value'),
     Input('feature-dropdown', component_property='value'),
 )
-def update_graph(start_date, end_date, locations, feature):
-    data = filter_dataset(df, [start_date, end_date], feature, locations)
+def update_graph(dates, locations, recorders, feature):
+    data = filter_dataset(df, dates, feature, locations, recorders)
     fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['file', 'timestamp', 'timestamp'], opacity=0.5, facet_col='recorder')
-    # fig.update_xaxes(type='date', tickformat='%H:%M')
     return fig
 
 @callback(
