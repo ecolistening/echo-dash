@@ -12,8 +12,8 @@ import pandas as pd
 import plotly.express as px
 from plotly_calplot import calplot
 
-from config import filepath
-from utils import is_docker, filter_dataset
+from config import filepath, is_docker
+from utils import load_and_filter_dataset
 
 dash.register_page(__name__, title='Summaries', name='Summaries')
 
@@ -23,8 +23,8 @@ colours = {
 }
 
 # df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
-df = pd.read_parquet(filepath).drop_duplicates()
-df = df.assign(time=df.timestamp.dt.hour + df.timestamp.dt.minute / 60.0, hour=df.timestamp.dt.hour, minute=df.timestamp.dt.minute)#.astype('datetime64[ns]')
+# df = pd.read_parquet(filepath).drop_duplicates()
+# df = df.assign(time=df.timestamp.dt.hour + df.timestamp.dt.minute / 60.0, hour=df.timestamp.dt.hour, minute=df.timestamp.dt.minute)#.astype('datetime64[ns]')
 
 colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
 outliers_tickbox = dmc.Chip('Outliers', value='outlier', checked=True, persistence=True, id='outliers-tickbox')
@@ -55,12 +55,17 @@ layout = html.Div([
     html.Div(
         main_plot := dcc.Graph(),
     ),
+    html.Div([
+        dmc.Title('Acoustic Evenness Index', order=3),
+        dmc.Text('The Acoustic Evenness Index (AEI), from Villanueva-Rivera et al. 2011 (band evenness using the Gini index), is calculated by dividing the spectrogram into bins (default 10, each one of 1000 Hz) and taking the proportion of the signals in each bin above a threshold (default -50 dBFS). The AEI is the result of the Gini index applied to these bins.')
+    ]),
     drilldown_file_div := html.Div(),
 ])
 
 # Add controls to build the interaction
 @callback(
     Output(main_plot, component_property='figure'),
+    Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
     Input('checklist-locations-hierarchy', component_property='value'),
     Input('checklist-locations', component_property='value'),
@@ -70,9 +75,11 @@ layout = html.Div([
     Input(colours_tickbox, component_property='checked'),
     Input(separate_plots_tickbox, component_property='checked'),
 )
-def update_graph(dates, locations, recorders, feature, time_agg, outliers, colour_locations, separate_plots):
-    data = filter_dataset(df, dates, feature, locations, recorders)
+def update_graph(dataset, dates, locations, recorders, feature, time_agg, outliers, colour_locations, separate_plots):
+    data = load_and_filter_dataset(dataset, dates, feature, locations, recorders)
     data = data.sort_values(by='recorder')
+    data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
+                   minute=data.timestamp.dt.minute)
 
     category_orders = {
         'time': None,
@@ -90,19 +97,19 @@ def update_graph(dates, locations, recorders, feature, time_agg, outliers, colou
 
     return fig
 
-@callback(
-    Output(drilldown_file_div, 'children'),
-    Input(main_plot, 'clickData'),
-    Input('feature-dropdown', 'value'))
-def display_click_data(clickData, value):
-    print(clickData)
-    if clickData is None:
-        return None
-    filename, ts, file_ts = clickData['points'][0]['customdata']
-
-    fig = px.line(data_frame=df[(df.timestamp == file_ts) & (df.feature == value)].sort_values(by='timestamp'), x='timestamp', y='value', color='recorder')
-    fig.update_xaxes(type='date')#, tickformat='%H:%M')
-
-    # Plot the feature curves
-    feature_plot = dcc.Graph(figure=fig)
-    return feature_plot
+# @callback(
+#     Output(drilldown_file_div, 'children'),
+#     Input(main_plot, 'clickData'),
+#     Input('feature-dropdown', 'value'))
+# def display_click_data(clickData, value):
+#     print(clickData)
+#     if clickData is None:
+#         return None
+#     filename, ts, file_ts = clickData['points'][0]['customdata']
+#
+#     fig = px.line(data_frame=df[(df.timestamp == file_ts) & (df.feature == value)].sort_values(by='timestamp'), x='timestamp', y='value', color='recorder')
+#     fig.update_xaxes(type='date')#, tickformat='%H:%M')
+#
+#     # Plot the feature curves
+#     feature_plot = dcc.Graph(figure=fig)
+#     return feature_plot

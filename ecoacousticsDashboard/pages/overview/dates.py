@@ -8,13 +8,13 @@ import pandas as pd
 import plotly.express as px
 from plotly_calplot import calplot
 
-from config import filepath
-from utils import is_docker, filter_dataset
+from config import filepath, is_docker
+from utils import load_and_filter_dataset
 
 dash.register_page(__name__)
-
-df = pd.read_parquet(filepath)
-df = df.assign(date=pd.to_datetime(df.timestamp.dt.date))
+#
+# df = pd.read_parquet(filepath)
+# df = df.assign(date=pd.to_datetime(df.timestamp.dt.date))
 
 layout = html.Div([
     html.Div(
@@ -27,13 +27,15 @@ layout = html.Div([
 # Add controls to build the interaction
 @callback(
     Output(main_plot, component_property='figure'),
+    Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
     Input('checklist-locations-hierarchy', component_property='value'),
     Input('checklist-locations', component_property='value'),
     Input('feature-dropdown', component_property='value'),
 )
-def update_graph(dates, locations, recorders, feature):
-    data = filter_dataset(df, dates, feature, locations, recorders)
+def update_graph(dataset, dates, locations, recorders, feature):
+    data = load_and_filter_dataset(dataset, dates, feature, locations, recorders)
+    data = data.assign(date=pd.to_datetime(data.timestamp.dt.date))
 
     data = data.groupby('date').agg('count').reset_index()
 
