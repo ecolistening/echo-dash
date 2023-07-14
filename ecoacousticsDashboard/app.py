@@ -16,19 +16,17 @@ import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import pandas as pd
-from dash import Dash, callback, html, Output, Input, dcc
+from dash import Dash, callback, html, Output, Input, dcc, ALL, Patch
+from dash_iconify import DashIconify
+import bigtree as bt
 
 from config import filepath, root_dir
+from utils import load_and_filter_dataset, load_and_filter_sites
 
 app = Dash(__name__, use_pages=True, external_stylesheets=[
     dbc.themes.LITERA, dbc.icons.BOOTSTRAP,
    "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;900&display=swap"
 ])
-
-#TODO This is redundant with the filepath selection based on the menu. Remove.
-# df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
-df = pd.read_parquet(filepath, columns=['timestamp', 'location', 'recorder', 'feature']).drop_duplicates()
-df = df.assign(date=df.timestamp.dt.date)#, habitat_code=df['habitat code'])
 
 header = dmc.Header(
     height=60,
@@ -49,6 +47,14 @@ dataset_input = dmc.Select(
     persistence=True,
 )
 
+#TODO This is redundant with the filepath selection based on the menu. Remove.
+# df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
+# df = pd.read_parquet(filepath, columns=['timestamp', 'location', 'recorder', 'feature']).drop_duplicates()
+# df = df.assign(date=df.timestamp.dt.date)#, habitat_code=df['habitat code'])
+
+df = load_and_filter_dataset(datasets[0])
+tree = load_and_filter_sites(datasets[0])
+
 date_input = dmc.DateRangePicker(
         id="date-picker",
         label="Date Range",
@@ -63,6 +69,29 @@ date_input = dmc.DateRangePicker(
 
 location_hierarchy = html.Div([
     dmc.Group([
+        dmc.Text(f"Sites (Lvl {1}/{tree.depth})"),
+        dmc.ButtonGroup([
+            dmc.Button('All', size='xs', compact=True),
+            dmc.Button('Clear', size='xs', compact=True),
+        ])
+    ]),
+    dmc.ChipGroup(
+        #TODO Add a + button chip for those who can expand.
+        [
+            dmc.Chip(r.name, value=r.path_name, variant='filled', size='xs') for r in tree.children
+        ] + [],
+        value=[r.path_name for r in tree.children],
+        # id={
+        #     'type': 'checklist-locations-hierarchy',
+        #     'index': 0
+        # },
+        multiple=True,
+        persistence=True,
+    ),
+], id="checklist-locations-div")
+
+location_top = html.Div([
+    dmc.Group([
         dmc.Text("Locations"),
         dmc.ButtonGroup([
             dmc.Button('All', size='xs', compact=True),
@@ -74,7 +103,7 @@ location_hierarchy = html.Div([
             dmc.Chip(r, value=r, variant='filled', size='xs') for r in sorted(df.location.unique())
         ] + [],
         value=[str(l) for l in df.location.unique()],
-        id="checklist-locations-hierarchy",
+        id="checklist-locations-top",
         multiple=True,
         persistence=True,
     ),
@@ -116,6 +145,7 @@ filters = dmc.Stack([
     date_input,
     feature_input,
     location_hierarchy,
+    location_top,
     location_input
 ])#, type='hover', offsetScrollbars=True, h='250')
 
@@ -140,16 +170,18 @@ def menu_from_page_registry():
 navbar = dmc.Navbar(
     p="md",
     width={"base": 300},
-    children=dmc.Stack(children=[
-        dmc.Title("Eyeballing Soundscapes", order=3),
-    ] + menu_from_page_registry() + [
-        dmc.Divider(),
-        dmc.Title("Data", order=3),
-        dataset_input,
-        dmc.Title("Filters", order=3),
-        filters,
-        dataset_name := dcc.Store(id='dataset_name')
-    ]),
+    children=dmc.ScrollArea(
+        dmc.Stack(children=[
+            dmc.Title("Eyeballing Soundscapes", order=3),
+        ] + menu_from_page_registry() + [
+            dmc.Divider(),
+            dmc.Title("Data", order=3),
+            dataset_input,
+            dmc.Title("Filters", order=3),
+            filters,
+            dataset_name := dcc.Store(id='dataset_name')
+        ])
+    )
 )
 
 app.layout = dmc.MantineProvider(
@@ -168,16 +200,23 @@ app.layout = dmc.MantineProvider(
     children=dmc.AppShell(children=dash.page_container, navbar=navbar),#, header=header),
 )
 
+def path_name(node):
+    return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
+
+
 @callback(
     Output(date_input, component_property='minDate'),
     Output(date_input, component_property='maxDate'),
     Output(date_input, component_property='value'),
+    Output(location_hierarchy, component_property='children'),
     Output(locations, component_property='children'),
     Output(locations, component_property='value'),
     Output(recorders, component_property='children'),
     Output(recorders, component_property='value'),
+    # Output("checklist-locations-div", component_property="children"),
     Input(dataset_input, component_property='value'),
     Input(date_input, component_property='value'),
+    # [Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value')]
 )
 def update_menu(dataset, value):
     value = [date.fromisoformat(v) for v in value]
@@ -193,13 +232,44 @@ def update_menu(dataset, value):
     if value[1] < minDate or value[1] > maxDate:
         value[1] = maxDate
 
+    tree = load_and_filter_sites(dataset)
+    # print(tree.max_depth)
+    # bt.print_tree(tree, all_attrs=True)
+    location_hierarchy = html.Div(dmc.Accordion(children=[
+        dmc.AccordionItem(
+            [
+                dmc.AccordionControl(f"Level {i}/{tree.max_depth-1}"),
+                dmc.AccordionPanel(children=[
+                    dmc.ChipGroup(
+                        [
+                            dmc.Chip(path_name(r), value=r.path_name, variant='filled', size='xs') for r in bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i+1)
+                        ] + [],
+                        value=[path_name(r) for r in tree.children],
+                        id={
+                            'type': 'checklist-locations-hierarchy',
+                            'index': 0
+                        },
+                        multiple=True,
+                        persistence=True,
+                    )]
+                ),
+            ],
+            value=f"level_{i}",
+        ) for i in range(1, tree.max_depth)
+    ]), id="checklist-locations-div")
+
     location_values = sorted(df.location.unique())
     location_options = [dmc.Chip(r, value=r, variant='filled', size='xs') for r in location_values]
 
     recorder_values = sorted(df.recorder.unique())
     recorder_options = [dmc.Chip(r, value=r, variant='filled', size='xs') for r in recorder_values]
 
-    return (minDate, maxDate, value, location_options, location_values, recorder_options, recorder_values)
+    # patched_children = Patch()
+    # print(values)
+
+    return (minDate, maxDate, value,
+            location_hierarchy,
+            location_options, location_values, recorder_options, recorder_values) #, patched_children)
 
 @callback(
     Output(dataset_name, component_property='data'),
@@ -207,6 +277,59 @@ def update_menu(dataset, value):
 )
 def update_dataset(dataset):
     return dataset
+
+# @callback(
+#     Output("checklist-locations-div", component_property="children"),
+#     Input(dataset_input, component_property='value'),
+#     [Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value')]
+# )
+# def update_location_hierarchy(dataset, values):
+#     tree = load_and_filter_sites(dataset)
+#
+#     children = [dmc.Group([
+#         dmc.Text(f"Sites (Lvl {1}/{tree.depth})"),
+#         dmc.ButtonGroup([
+#             dmc.Button('All', size='xs', compact=True),
+#             dmc.Button('Clear', size='xs', compact=True),
+#         ])
+#     ]),
+#     dmc.ChipGroup(
+#         #TODO Add a + button chip for those who can expand.
+#         [
+#             dmc.Chip(r.name, value=r.path_name, variant='filled', size='xs') for r in tree.children
+#         ] + [dmc.ActionIcon(
+#             DashIconify(icon="material-symbols:expand-more"),
+#             size="xs",
+#             variant="subtle",
+#             id={'type': 'expand', 'index': 0},
+#             n_clicks=0,
+#             mb=10,
+#         )],
+#         value=[r.path_name for r in tree.children],
+#         id={
+#             'type': 'checklist-locations-hierarchy',
+#             'index': 0
+#         },
+#         multiple=True,
+#         persistence=True,
+#     )]
+#
+#     print(values)
+#     return children
+#
+#     # patched_children = Patch()
+#     # print(values)
+#     # return patched_children
+#
+# @callback(
+#     Output("checklist-locations-div", component_property="children"),
+#     [Input({'type': 'expand', 'index': ALL}, component_property='value')]
+# )
+# def update_location_hierarchy(values):
+#     children = Patch()
+#
+#     print(values)
+#     return children
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', debug=True)

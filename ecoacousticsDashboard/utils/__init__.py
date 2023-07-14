@@ -1,16 +1,16 @@
 from datetime import date
 from typing import List
 import pandas as pd
+import bigtree as bt
 
 from config import root_dir
 
 
 def load_and_filter_dataset(dataset: str, dates=None, feature: str=None, locations: List=None, recorders: List=None):
     data = pd.read_parquet(root_dir / dataset / 'indices.parquet')#.drop_duplicates()
-    recorders = [int(r) for r in recorders]
 
-    dates = [date.fromisoformat(d) for d in dates]
     if dates is not None:
+        dates = [date.fromisoformat(d) for d in dates]
         data = data[data.timestamp.dt.date.between(*dates)]
 
     if feature is not None:
@@ -20,7 +20,33 @@ def load_and_filter_dataset(dataset: str, dates=None, feature: str=None, locatio
         data = data[data['location'].isin(locations)]
 
     if recorders is not None and len(recorders) > 0:
+        recorders = [int(r) for r in recorders]
         data = data[data.recorder.isin(recorders)]
 
     return data
 
+def load_and_filter_locations(dataset: str, dates=None, feature: str=None, locations: List=None, recorders: List=None):
+    data = pd.read_parquet(root_dir / dataset / 'locations.parquet')#.drop_duplicates()
+
+    # dates = [date.fromisoformat(d) for d in dates]
+    # if dates is not None:
+    #     data = data[data.timestamp.dt.date.between(*dates)]
+    #
+    # if feature is not None:
+    #     data = data[data.feature == feature]
+    #
+    # if locations is not None and len(locations) > 0:
+    #     data = data[data['location'].isin(locations)]
+    #
+    # if recorders is not None and len(recorders) > 0:
+    #     recorders = [int(r) for r in recorders]
+    #     data = data[data.recorder.isin(recorders)]
+
+    return data
+
+def load_and_filter_sites(dataset: str, dates=None, feature: str=None, locations: List=None, recorders: List=None):
+    data = pd.read_parquet(root_dir / dataset / 'locations.parquet')
+
+    tree = bt.dataframe_to_tree(data.reset_index(drop=True), path_col='site')
+
+    return tree

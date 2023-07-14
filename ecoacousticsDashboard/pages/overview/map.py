@@ -48,7 +48,7 @@ def update_graph(dataset, dates, locations, recorders, feature):
 
     extents = data.describe()
 
-    fig = px.scatter_mapbox(data, lat="latitude", lon="longitude", hover_name="path",
+    fig = px.scatter_mapbox(data, lat="latitude", lon="longitude", hover_name="site",
                             hover_data=['timezone'],
                             # color_discrete_sequence=["fuchsia"],
                             zoom=1, height=500)
