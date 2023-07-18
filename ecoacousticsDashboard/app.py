@@ -93,43 +93,43 @@ location_hierarchy = html.Div([
     ),
 ], id="checklist-locations-div")
 
-location_top = html.Div([
-    dmc.Group([
-        dmc.Text("Locations"),
-        dmc.ButtonGroup([
-            dmc.Button('All', size='xs', compact=True),
-            dmc.Button('Clear', size='xs', compact=True),
-        ])
-    ]),
-    locations := dmc.ChipGroup(
-        [
-            dmc.Chip(r, value=r, variant='filled', size='xs') for r in sorted(df.location.unique())
-        ] + [],
-        value=[str(l) for l in df.location.unique()],
-        id="checklist-locations-top",
-        multiple=True,
-        persistence=True,
-    ),
-])
+# location_top = html.Div([
+#     dmc.Group([
+#         dmc.Text("Locations"),
+#         dmc.ButtonGroup([
+#             dmc.Button('All', size='xs', compact=True),
+#             dmc.Button('Clear', size='xs', compact=True),
+#         ])
+#     ]),
+#     locations := dmc.ChipGroup(
+#         [
+#             dmc.Chip(r, value=r, variant='filled', size='xs') for r in sorted(df.location.unique())
+#         ] + [],
+#         value=[str(l) for l in df.location.unique()],
+#         id="checklist-locations-top",
+#         multiple=True,
+#         persistence=True,
+#     ),
+# ])
 
-location_input = html.Div([
-    dmc.Group([
-        dmc.Text("Recorders"),
-        dmc.ButtonGroup([
-            dmc.Button('All', size='xs', compact=True),
-            dmc.Button('Clear', size='xs', compact=True),
-            dmc.Button('Per Site', size='xs', compact=True, variant='outline')
-        ])
-    ]),
-    recorders := dmc.ChipGroup(
-        [
-            dmc.Chip(str(r), value=str(r), variant='filled', size='xs', persistence=True) for r in sorted(df.recorder.unique())
-        ],
-        value=[str(l) for l in df.recorder.unique()],
-        id="checklist-locations",
-        multiple=True
-    ),
-])
+# location_input = html.Div([
+#     dmc.Group([
+#         dmc.Text("Recorders"),
+#         dmc.ButtonGroup([
+#             dmc.Button('All', size='xs', compact=True),
+#             dmc.Button('Clear', size='xs', compact=True),
+#             dmc.Button('Per Site', size='xs', compact=True, variant='outline')
+#         ])
+#     ]),
+#     recorders := dmc.ChipGroup(
+#         [
+#             dmc.Chip(str(r), value=str(r), variant='filled', size='xs', persistence=True) for r in sorted(df.recorder.unique())
+#         ],
+#         value=[str(l) for l in df.recorder.unique()],
+#         id="checklist-locations",
+#         multiple=True
+#     ),
+# ])
 
 feature_input = html.Div([
     dmc.Select(
@@ -148,8 +148,8 @@ filters = dmc.Stack([
     date_input,
     feature_input,
     location_hierarchy,
-    location_top,
-    location_input
+    # location_top,
+    # location_input
 ])#, type='hover', offsetScrollbars=True, h='250')
 
 def menu_from_page_registry():
@@ -267,7 +267,7 @@ def update_locations(children=None, values=None):
         else:
             children.append(kids)
 
-    print('Children: ', children)
+    # print('Children: ', children)
 
     if values is not None:
         return children, values
@@ -279,14 +279,12 @@ def update_locations(children=None, values=None):
     Output(date_input, component_property='maxDate'),
     Output(date_input, component_property='value'),
     Output(location_hierarchy, component_property='children'),
-    Output(locations, component_property='children'),
-    Output(locations, component_property='value'),
-    Output(recorders, component_property='children'),
-    Output(recorders, component_property='value'),
-    # Output("checklist-locations-div", component_property="children"),
+    # Output(locations, component_property='children'),
+    # Output(locations, component_property='value'),
+    # Output(recorders, component_property='children'),
+    # Output(recorders, component_property='value'),
     Input(dataset_input, component_property='value'),
     Input(date_input, component_property='value'),
-    # [Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value')]
 )
 def update_menu(dataset, value):
     value = [date.fromisoformat(v) for v in value]
@@ -317,15 +315,16 @@ def update_menu(dataset, value):
     # print(values)
 
     return (minDate, maxDate, value,
-            location_hierarchy,
-            location_options, location_values, recorder_options, recorder_values) #, patched_children)
+            location_hierarchy)
+            # ,
+            # location_options, location_values, recorder_options, recorder_values) #, patched_children)
 
-@callback(
-    Output(dataset_name, component_property='data'),
-    Input(dataset_input, component_property='value'),
-)
-def update_dataset(dataset):
-    return dataset
+# @callback(
+#     Output(dataset_name, component_property='data'),
+#     Input(dataset_input, component_property='value'),
+# )
+# def update_dataset(dataset):
+#     return dataset
 
 
 @callback(
@@ -335,20 +334,20 @@ def update_dataset(dataset):
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
 )
 def display_output(current_children, value):#, all_values, previous_values):
-    print(value)
-    print(current_children)
-
-    # print(children)
-    print('Prop IDs: ', dash.callback_context.triggered_prop_ids)
-    try:
-        print('Trig IDs: ', dash.callback_context.triggered_id['index'])
-    except TypeError as e:
-        pass
-    print('Args Grouping: ', dash.callback_context.args_grouping[0])
+    # print(value)
+    # print(current_children)
+    #
+    # # print(children)
+    # print('Prop IDs: ', dash.callback_context.triggered_prop_ids)
+    # try:
+    #     print('Trig IDs: ', dash.callback_context.triggered_id['index'])
+    # except TypeError as e:
+    #     pass
+    # print('Args Grouping: ', dash.callback_context.args_grouping[0])
 
     try:
         level = dash.callback_context.triggered_id['index']
-        print(f'Current Children Level {level}: ', current_children[:level])
+        # print(f'Current Children Level {level}: ', current_children[:level])
         current_children, value = update_locations(children=current_children[:level], values=value)
     except TypeError as e:
         pass

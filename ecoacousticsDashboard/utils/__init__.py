@@ -1,3 +1,4 @@
+import itertools
 from datetime import date
 from typing import List
 import pandas as pd
@@ -6,7 +7,7 @@ import bigtree as bt
 from config import root_dir
 
 
-def load_and_filter_dataset(dataset: str, dates=None, feature: str=None, locations: List=None, recorders: List=None):
+def load_and_filter_dataset(dataset: str, dates=None, feature: str=None, locations: List=None):#, recorders: List=None):
     data = pd.read_parquet(root_dir / dataset / 'indices.parquet')#.drop_duplicates()
 
     if dates is not None:
@@ -17,11 +18,11 @@ def load_and_filter_dataset(dataset: str, dates=None, feature: str=None, locatio
         data = data[data.feature == feature]
 
     if locations is not None and len(locations) > 0:
-        data = data[data['location'].isin(locations)]
+        data = data[data['site'].isin([l.strip('/') for l in locations[-1]])]
 
-    if recorders is not None and len(recorders) > 0:
-        recorders = [int(r) for r in recorders]
-        data = data[data.recorder.isin(recorders)]
+    # if recorders is not None and len(recorders) > 0:
+    #     recorders = [int(r) for r in recorders]
+    #     data = data[data.recorder.isin(recorders)]
 
     return data
 

@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import dash
-from dash import Dash, html, dash_table, dcc, callback, Output, Input, State, Patch
+from dash import Dash, html, dash_table, dcc, callback, Output, Input, State, Patch, ALL
 import dash_mantine_components as dmc
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -50,17 +50,17 @@ layout = html.Div([
     Output('tod-features-graph', component_property='figure'),
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
+    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
     # Input('checklist-locations-hierarchy', component_property='value'),
-    Input('checklist-locations', component_property='value'),
+    # Input('checklist-locations', component_property='value'),
     Input('feature-dropdown', component_property='value'),
     Input(colours_tickbox, component_property='checked'),
 )
-def update_graph(dataset, dates, locations, recorders, feature, colour_date):
-    data = load_and_filter_dataset(dataset, dates, feature, locations, recorders)
+def update_graph(dataset, dates, locations, feature, colour_date):
+    data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.assign(month=data.timestamp.dt.month, hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, minute=data.timestamp.dt.minute)
     fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['file', 'timestamp', 'timestamp'], opacity=0.5, facet_col='recorder',
-                     color='month' if colour_date else None
-                 )
+                     color='month' if colour_date else None)
     return fig
 
 # @callback(
