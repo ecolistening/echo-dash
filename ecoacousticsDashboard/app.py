@@ -207,7 +207,7 @@ def path_name(node):
     return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
 
 
-def update_locations(children=None, values=None):
+def update_locations(dataset, children=None, values=None):
     '''Update the locations options.
 
     This function provides either the initial location options or updates it when selections are made.
@@ -216,6 +216,7 @@ def update_locations(children=None, values=None):
     '''
     wrap_in_accordian = children is None
     children = children if children is not None else []
+    tree = load_and_filter_sites(dataset)
 
     try:
         flatvalues = list(itertools.chain(*values))
@@ -300,10 +301,9 @@ def update_menu(dataset, value):
     if value[1] < minDate or value[1] > maxDate:
         value[1] = maxDate
 
-    tree = load_and_filter_sites(dataset)
     # print(tree.max_depth)
     # bt.print_tree(tree, all_attrs=True)
-    location_hierarchy = html.Div(dmc.Accordion(children=update_locations()), id="checklist-locations-div")
+    location_hierarchy = html.Div(dmc.Accordion(children=update_locations(dataset)), id="checklist-locations-div")
 
     location_values = sorted(df.location.unique())
     location_options = [dmc.Chip(r, value=r, variant='filled', size='xs') for r in location_values]
@@ -330,10 +330,11 @@ def update_menu(dataset, value):
 @callback(
     Output({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'children'),
     Output({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
+    Input(dataset_input, component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'children'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
 )
-def display_output(current_children, value):#, all_values, previous_values):
+def display_output(dataset, current_children, value):#, all_values, previous_values):
     # print(value)
     # print(current_children)
     #
@@ -348,7 +349,7 @@ def display_output(current_children, value):#, all_values, previous_values):
     try:
         level = dash.callback_context.triggered_id['index']
         # print(f'Current Children Level {level}: ', current_children[:level])
-        current_children, value = update_locations(children=current_children[:level], values=value)
+        current_children, value = update_locations(dataset, children=current_children[:level], values=value)
     except TypeError as e:
         pass
 
