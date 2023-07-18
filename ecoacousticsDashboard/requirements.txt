@@ -1,8 +1,10 @@
+bigtree
 dash
 dash-core-components
 dash-html-components
 dash-bootstrap-components
 dash-mantine-components
+dash-iconify
 dash-daq
 pandas
 plotly

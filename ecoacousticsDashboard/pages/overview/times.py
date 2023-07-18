@@ -2,7 +2,7 @@
 from pathlib import Path
 
 import dash
-from dash import Dash, html, dash_table, dcc, callback, Output, Input
+from dash import Dash, html, dash_table, dcc, callback, Output, Input, ALL
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
@@ -38,12 +38,13 @@ layout = html.Div([
     Output(component_id='times-graph', component_property='figure'),
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
-    Input('checklist-locations-hierarchy', component_property='value'),
-    Input('checklist-locations', component_property='value'),
+    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
+    # Input('checklist-locations-hierarchy', component_property='value'),
+    # Input('checklist-locations', component_property='value'),
     Input('feature-dropdown', component_property='value'),
 )
-def update_graph(dataset, dates, locations, recorders, feature):
-    data = load_and_filter_dataset(dataset, dates, feature, locations, recorders)
+def update_graph(dataset, dates, locations, feature):
+    data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.assign(date=pd.to_datetime(data.timestamp.dt.date), hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0)
 
     fig = px.scatter(data, x='date', y='hour', color='location', hover_name='file', opacity=0.25)
