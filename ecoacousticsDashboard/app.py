@@ -10,13 +10,14 @@ this feature you must install dash-bootstrap-components >= 0.11.0.
 For more details on building multi-page Dash applications, check out the Dash
 documentation: https://dash.plot.ly/urls
 """
+import itertools
 from datetime import date, datetime, timedelta
 
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import pandas as pd
-from dash import Dash, callback, html, Output, Input, dcc, ALL, Patch
+from dash import Dash, callback, html, Output, Input, dcc, ALL, Patch, MATCH, ALLSMALLER, State
 from dash_iconify import DashIconify
 import bigtree as bt
 
@@ -34,6 +35,8 @@ header = dmc.Header(
 )
 
 datasets = [d.name for d in root_dir.glob("*") if d.is_dir()]
+ds = datasets[1]
+
 dataset_input = dmc.Select(
     id='dataset-select',
     label='Dataset',
@@ -42,7 +45,7 @@ dataset_input = dmc.Select(
     searchable=True,
     nothingFound="No options found",
     clearable=False,
-    value=datasets[0],
+    value=ds,
     # style={"width": 200},
     persistence=True,
 )
@@ -52,8 +55,8 @@ dataset_input = dmc.Select(
 # df = pd.read_parquet(filepath, columns=['timestamp', 'location', 'recorder', 'feature']).drop_duplicates()
 # df = df.assign(date=df.timestamp.dt.date)#, habitat_code=df['habitat code'])
 
-df = load_and_filter_dataset(datasets[0])
-tree = load_and_filter_sites(datasets[0])
+df = load_and_filter_dataset(ds)
+tree = load_and_filter_sites(ds)
 
 date_input = dmc.DateRangePicker(
         id="date-picker",
@@ -204,6 +207,73 @@ def path_name(node):
     return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
 
 
+def update_locations(children=None, values=None):
+    '''Update the locations options.
+
+    This function provides either the initial location options or updates it when selections are made.
+    Children and values are passed when the options are already instantiated and being updated.
+    Children are a list of child objects to keep, so everything below the last passed-in level is replaced.
+    '''
+    wrap_in_accordian = children is None
+    children = children if children is not None else []
+
+    try:
+        flatvalues = list(itertools.chain(*values))
+    except TypeError:
+        pass
+
+    for i in range(len(children)+1, tree.max_depth):
+
+        # Get a sorted list of nodes that match selected parents at the depth in question
+        nodes = list(sorted(filter(
+                    lambda n: values is None or n.parent.path_name in flatvalues,
+                    bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i + 1)
+                ), key=lambda n: n.path_name))
+
+        # Create children
+        kids = [
+                dmc.Chip(
+                    path_name(r),
+                    value=r.path_name,
+                    variant='filled',
+                    size='xs'
+                ) for r in nodes #bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i + 1) if (values is None or r.parent.path_name in flatvalues)
+            ] + []
+
+        if values is not None:
+            values[i-1] = [r.path_name for r in nodes]
+            flatvalues = list(itertools.chain(*values))
+
+        if wrap_in_accordian:
+            acc = dmc.AccordionItem(
+                [
+                    dmc.AccordionControl(f"Level {i}/{tree.max_depth - 1}"),
+                    dmc.AccordionPanel(children=dmc.ChipGroup(
+                        kids,
+                        value=[r.path_name for r in nodes
+                               # bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i + 1)
+                        ],
+                        id={
+                            'type': 'checklist-locations-hierarchy',
+                            'index': i
+                        },
+                        multiple=True,
+                        persistence=True,
+                    )),
+                ],
+                value=f"level_{i}",
+            )
+            children.append(acc)
+        else:
+            children.append(kids)
+
+    print('Children: ', children)
+
+    if values is not None:
+        return children, values
+
+    return children
+
 @callback(
     Output(date_input, component_property='minDate'),
     Output(date_input, component_property='maxDate'),
@@ -235,28 +305,7 @@ def update_menu(dataset, value):
     tree = load_and_filter_sites(dataset)
     # print(tree.max_depth)
     # bt.print_tree(tree, all_attrs=True)
-    location_hierarchy = html.Div(dmc.Accordion(children=[
-        dmc.AccordionItem(
-            [
-                dmc.AccordionControl(f"Level {i}/{tree.max_depth-1}"),
-                dmc.AccordionPanel(children=[
-                    dmc.ChipGroup(
-                        [
-                            dmc.Chip(path_name(r), value=r.path_name, variant='filled', size='xs') for r in bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i+1)
-                        ] + [],
-                        value=[path_name(r) for r in tree.children],
-                        id={
-                            'type': 'checklist-locations-hierarchy',
-                            'index': 0
-                        },
-                        multiple=True,
-                        persistence=True,
-                    )]
-                ),
-            ],
-            value=f"level_{i}",
-        ) for i in range(1, tree.max_depth)
-    ]), id="checklist-locations-div")
+    location_hierarchy = html.Div(dmc.Accordion(children=update_locations()), id="checklist-locations-div")
 
     location_values = sorted(df.location.unique())
     location_options = [dmc.Chip(r, value=r, variant='filled', size='xs') for r in location_values]
@@ -278,58 +327,33 @@ def update_menu(dataset, value):
 def update_dataset(dataset):
     return dataset
 
-# @callback(
-#     Output("checklist-locations-div", component_property="children"),
-#     Input(dataset_input, component_property='value'),
-#     [Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value')]
-# )
-# def update_location_hierarchy(dataset, values):
-#     tree = load_and_filter_sites(dataset)
-#
-#     children = [dmc.Group([
-#         dmc.Text(f"Sites (Lvl {1}/{tree.depth})"),
-#         dmc.ButtonGroup([
-#             dmc.Button('All', size='xs', compact=True),
-#             dmc.Button('Clear', size='xs', compact=True),
-#         ])
-#     ]),
-#     dmc.ChipGroup(
-#         #TODO Add a + button chip for those who can expand.
-#         [
-#             dmc.Chip(r.name, value=r.path_name, variant='filled', size='xs') for r in tree.children
-#         ] + [dmc.ActionIcon(
-#             DashIconify(icon="material-symbols:expand-more"),
-#             size="xs",
-#             variant="subtle",
-#             id={'type': 'expand', 'index': 0},
-#             n_clicks=0,
-#             mb=10,
-#         )],
-#         value=[r.path_name for r in tree.children],
-#         id={
-#             'type': 'checklist-locations-hierarchy',
-#             'index': 0
-#         },
-#         multiple=True,
-#         persistence=True,
-#     )]
-#
-#     print(values)
-#     return children
-#
-#     # patched_children = Patch()
-#     # print(values)
-#     # return patched_children
-#
-# @callback(
-#     Output("checklist-locations-div", component_property="children"),
-#     [Input({'type': 'expand', 'index': ALL}, component_property='value')]
-# )
-# def update_location_hierarchy(values):
-#     children = Patch()
-#
-#     print(values)
-#     return children
+
+@callback(
+    Output({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'children'),
+    Output({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
+    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'children'),
+    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
+)
+def display_output(current_children, value):#, all_values, previous_values):
+    print(value)
+    print(current_children)
+
+    # print(children)
+    print('Prop IDs: ', dash.callback_context.triggered_prop_ids)
+    try:
+        print('Trig IDs: ', dash.callback_context.triggered_id['index'])
+    except TypeError as e:
+        pass
+    print('Args Grouping: ', dash.callback_context.args_grouping[0])
+
+    try:
+        level = dash.callback_context.triggered_id['index']
+        print(f'Current Children Level {level}: ', current_children[:level])
+        current_children, value = update_locations(children=current_children[:level], values=value)
+    except TypeError as e:
+        pass
+
+    return current_children, value
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', debug=True)

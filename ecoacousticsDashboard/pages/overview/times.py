@@ -38,7 +38,7 @@ layout = html.Div([
     Output(component_id='times-graph', component_property='figure'),
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
-    Input('checklist-locations-hierarchy', component_property='value'),
+    # Input('checklist-locations-hierarchy', component_property='value'),
     Input('checklist-locations', component_property='value'),
     Input('feature-dropdown', component_property='value'),
 )

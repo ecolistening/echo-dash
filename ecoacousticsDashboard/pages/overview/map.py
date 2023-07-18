@@ -30,7 +30,7 @@ layout = html.Div([
     Output(main_plot, component_property='figure'),
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
-    Input('checklist-locations-hierarchy', component_property='value'),
+    # Input('checklist-locations-hierarchy', component_property='value'),
     Input('checklist-locations', component_property='value'),
     Input('feature-dropdown', component_property='value'),
 )
