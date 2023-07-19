@@ -24,6 +24,16 @@ def load_and_filter_dataset(dataset: str, dates=None, feature: str=None, locatio
     #     recorders = [int(r) for r in recorders]
     #     data = data[data.recorder.isin(recorders)]
 
+    # Compute Site Hierarchy levels
+    data = data.assign(**{f'sitelevel_{k}': v for k,v in data.site.str.split('/', expand=True).to_dict(orient='list').items()})
+
+    # Compute Temporal Splits
+    data['hour'] = data.timestamp.dt.hour
+    data['weekday'] = data.timestamp.dt.day_name()
+    data['date'] = data.timestamp.dt.date
+    data['month'] = data.timestamp.dt.month_name()
+    data['year'] = data.timestamp.dt.year
+
     return data
 
 def load_and_filter_locations(dataset: str, dates=None, feature: str=None, locations: List=None, recorders: List=None):
