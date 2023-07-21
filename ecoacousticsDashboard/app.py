@@ -35,7 +35,7 @@ header = dmc.Header(
 )
 
 datasets = [d.name for d in root_dir.glob("*") if d.is_dir()]
-ds = datasets[1]
+ds = datasets[0]
 
 dataset_input = dmc.Select(
     id='dataset-select',
