@@ -6,8 +6,10 @@ dash-bootstrap-components
 dash-mantine-components
 dash-iconify
 dash-daq
+openpyxl
 pandas
 plotly
 plotly-calplot
 pyarrow
 xarray
+umap-learn
