@@ -11,17 +11,16 @@ For more details on building multi-page Dash applications, check out the Dash
 documentation: https://dash.plot.ly/urls
 """
 import itertools
-from datetime import date, datetime, timedelta
+from datetime import date
 
+import bigtree as bt
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import pandas as pd
-from dash import Dash, callback, html, Output, Input, dcc, ALL, Patch, MATCH, ALLSMALLER, State
-from dash_iconify import DashIconify
-import bigtree as bt
+from dash import Dash, callback, html, Output, Input, dcc, ALL
 
-from config import filepath, root_dir
+from config import root_dir
 from utils import load_and_filter_dataset, load_and_filter_sites
 
 app = Dash(__name__, use_pages=True, external_stylesheets=[
@@ -242,10 +241,6 @@ def update_locations(dataset, children=None, values=None):
     Output(date_input, component_property='maxDate'),
     Output(date_input, component_property='value'),
     Output(location_hierarchy, component_property='children'),
-    # Output(locations, component_property='children'),
-    # Output(locations, component_property='value'),
-    # Output(recorders, component_property='children'),
-    # Output(recorders, component_property='value'),
     Input(dataset_input, component_property='value'),
     Input(date_input, component_property='value'),
 )
@@ -281,14 +276,6 @@ def update_menu(dataset, value):
             # ,
             # location_options, location_values, recorder_options, recorder_values) #, patched_children)
 
-# @callback(
-#     Output(dataset_name, component_property='data'),
-#     Input(dataset_input, component_property='value'),
-# )
-# def update_dataset(dataset):
-#     return dataset
-
-
 @callback(
     Output({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'children'),
     Output({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
@@ -297,20 +284,8 @@ def update_menu(dataset, value):
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
 )
 def display_output(dataset, current_children, value):#, all_values, previous_values):
-    # print(value)
-    # print(current_children)
-    #
-    # # print(children)
-    # print('Prop IDs: ', dash.callback_context.triggered_prop_ids)
-    # try:
-    #     print('Trig IDs: ', dash.callback_context.triggered_id['index'])
-    # except TypeError as e:
-    #     pass
-    # print('Args Grouping: ', dash.callback_context.args_grouping[0])
-
     try:
         level = dash.callback_context.triggered_id['index']
-        # print(f'Current Children Level {level}: ', current_children[:level])
         current_children, value = update_locations(dataset, children=current_children[:level], values=value)
     except TypeError as e:
         pass
