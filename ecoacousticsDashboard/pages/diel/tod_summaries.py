@@ -1,18 +1,10 @@
 # Import packages
-import json
-from datetime import date
-from pathlib import Path
 
 import dash
-import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-from dash import Dash, html, dash_table, dcc, callback, Output, Input, State, Patch, ALL
-import dash_daq as daq
-import pandas as pd
 import plotly.express as px
-from plotly_calplot import calplot
+from dash import html, dcc, callback, Output, Input, ALL
 
-from config import filepath, is_docker
 from utils import load_and_filter_dataset
 
 dash.register_page(__name__, title='Summaries', name='Summaries')
@@ -28,14 +20,15 @@ colours = {
 
 colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
 outliers_tickbox = dmc.Chip('Outliers', value='outlier', checked=True, persistence=True, id='outliers-tickbox')
-separate_plots_tickbox = dmc.Chip('Plot per Recorder', value='subplots', checked=False, persistence=True, id='separate-plots')
+separate_plots_tickbox = dmc.Chip('Plot per Recorder', value='subplots', checked=False, persistence=True,
+                                  id='separate-plots')
 
 time_aggregation = dmc.SegmentedControl(
     id='time-aggregation',
     data=[
-            {'value': 'time', 'label': '15 minutes'},
-            {'value': 'hour', 'label': '1 hour'},
-            {'value': 'dddn', 'label': 'Dawn-Day-Dusk-Night'}
+        {'value': 'time', 'label': '15 minutes'},
+        {'value': 'hour', 'label': '1 hour'},
+        {'value': 'dddn', 'label': 'Dawn-Day-Dusk-Night'}
     ],
     value='time',
     persistence=True
@@ -57,10 +50,12 @@ layout = html.Div([
     ),
     html.Div([
         dmc.Title('Acoustic Evenness Index', order=3),
-        dmc.Text('The Acoustic Evenness Index (AEI), from Villanueva-Rivera et al. 2011 (band evenness using the Gini index), is calculated by dividing the spectrogram into bins (default 10, each one of 1000 Hz) and taking the proportion of the signals in each bin above a threshold (default -50 dBFS). The AEI is the result of the Gini index applied to these bins.')
+        dmc.Text(
+            'The Acoustic Evenness Index (AEI), from Villanueva-Rivera et al. 2011 (band evenness using the Gini index), is calculated by dividing the spectrogram into bins (default 10, each one of 1000 Hz) and taking the proportion of the signals in each bin above a threshold (default -50 dBFS). The AEI is the result of the Gini index applied to these bins.')
     ]),
     drilldown_file_div := html.Div(),
 ])
+
 
 # Add controls to build the interaction
 @callback(
@@ -80,12 +75,12 @@ def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.sort_values(by='recorder')
     data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
-                   minute=data.timestamp.dt.minute)
+                       minute=data.timestamp.dt.minute)
 
     category_orders = {
         'time': None,
         'hour': None,
-        'dddn': {'dddn': ['dawn','day','dusk','night']}
+        'dddn': {'dddn': ['dawn', 'day', 'dusk', 'night']}
     }
 
     fig = px.box(data, x=time_agg, y='value',

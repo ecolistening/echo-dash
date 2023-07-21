@@ -1,14 +1,10 @@
 # Import packages
-from pathlib import Path
 
 import dash
-from dash import Dash, html, dash_table, dcc, callback, Output, Input, ALL
-import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
-from plotly_calplot import calplot
+from dash import html, dcc, callback, Output, Input, ALL
 
-from config import filepath, is_docker
 from utils import load_and_filter_dataset
 
 dash.register_page(__name__)
@@ -33,6 +29,7 @@ layout = html.Div([
     dcc.Graph(id='times-graph')
 ])
 
+
 # Add controls to build the interaction
 @callback(
     Output(component_id='times-graph', component_property='figure'),
@@ -45,7 +42,8 @@ layout = html.Div([
 )
 def update_graph(dataset, dates, locations, feature):
     data = load_and_filter_dataset(dataset, dates, feature, locations)
-    data = data.assign(date=pd.to_datetime(data.timestamp.dt.date), hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0)
+    data = data.assign(date=pd.to_datetime(data.timestamp.dt.date),
+                       hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0)
 
     fig = px.scatter(data, x='date', y='hour', color='location', hover_name='file', opacity=0.25)
     fig.update_xaxes(type='category')

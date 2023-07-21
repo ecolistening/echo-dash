@@ -93,44 +93,6 @@ location_hierarchy = html.Div([
     ),
 ], id="checklist-locations-div")
 
-# location_top = html.Div([
-#     dmc.Group([
-#         dmc.Text("Locations"),
-#         dmc.ButtonGroup([
-#             dmc.Button('All', size='xs', compact=True),
-#             dmc.Button('Clear', size='xs', compact=True),
-#         ])
-#     ]),
-#     locations := dmc.ChipGroup(
-#         [
-#             dmc.Chip(r, value=r, variant='filled', size='xs') for r in sorted(df.location.unique())
-#         ] + [],
-#         value=[str(l) for l in df.location.unique()],
-#         id="checklist-locations-top",
-#         multiple=True,
-#         persistence=True,
-#     ),
-# ])
-
-# location_input = html.Div([
-#     dmc.Group([
-#         dmc.Text("Recorders"),
-#         dmc.ButtonGroup([
-#             dmc.Button('All', size='xs', compact=True),
-#             dmc.Button('Clear', size='xs', compact=True),
-#             dmc.Button('Per Site', size='xs', compact=True, variant='outline')
-#         ])
-#     ]),
-#     recorders := dmc.ChipGroup(
-#         [
-#             dmc.Chip(str(r), value=str(r), variant='filled', size='xs', persistence=True) for r in sorted(df.recorder.unique())
-#         ],
-#         value=[str(l) for l in df.recorder.unique()],
-#         id="checklist-locations",
-#         multiple=True
-#     ),
-# ])
-
 feature_input = html.Div([
     dmc.Select(
         label="Acoustic Index",

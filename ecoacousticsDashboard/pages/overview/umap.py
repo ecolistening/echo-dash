@@ -2,38 +2,41 @@
 
 import dash
 import dash_mantine_components as dmc
-import plotly.express as px
-from dash import html, dcc, callback, Output, Input, ALL, Patch, ctx
-from sklearn.pipeline import Pipeline, make_pipeline
-from sklearn.preprocessing import RobustScaler
-
-from umap import UMAP
 import numpy as np
 import pandas as pd
+import plotly.express as px
+from dash import html, dcc, callback, Output, Input, ALL, ctx
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import RobustScaler
+from umap import UMAP
 
-from utils import load_and_filter_dataset, load_and_filter_sites
+from utils import load_and_filter_dataset
 
 dash.register_page(__name__, title='UMAP', name='UMAP')
 
 # FIXME use of 'location' is deprecated. This should select a level from 'site'
 index = ['file', 'site', 'timestamp',
-             'location',
-             # 'hours after dawn', 'hours after sunrise', 'hours after noon', 'hours after sunset', 'hours after dusk',
-             # 'dddn'
+         'location',
+         # 'hours after dawn', 'hours after sunrise', 'hours after noon', 'hours after sunset', 'hours after dusk',
+         # 'dddn'
          ]
-tod_timing = ['hours after dawn', 'hours after sunrise', 'hours after noon', 'hours after sunset', 'hours after dusk', 'dddn']
+tod_timing = ['hours after dawn', 'hours after sunrise', 'hours after noon', 'hours after sunset', 'hours after dusk',
+              'dddn']
 # Level of site
 # Time breakdowns
 
 # colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
-normalised_tickbox = dmc.Chip('Normalised', value='normalised', checked=False, persistence=True, id='normalised-tickbox')
+normalised_tickbox = dmc.Chip('Normalised', value='normalised', checked=False, persistence=True,
+                              id='normalised-tickbox')
 diel_tickbox = dmc.Chip('Plot per Time of Day', value='diel', checked=False, persistence=True, id='separate-tod')
-separate_plots_tickbox = dmc.Chip('Plot per Location', value='location', checked=False, persistence=True, id='separate-plots')
+separate_plots_tickbox = dmc.Chip('Plot per Location', value='location', checked=False, persistence=True,
+                                  id='separate-plots')
 
 colour_select = dmc.Select(
     id='umap-plot-options-color-by',
     label="Colour by",
-    data=[{'value': i, 'label': i, 'group': 'Base'} for i in index] + [{'value': i, 'label': i, 'group': 'Time of Day'} for i in tod_timing],
+    data=[{'value': i, 'label': i, 'group': 'Base'} for i in index] + [{'value': i, 'label': i, 'group': 'Time of Day'}
+                                                                       for i in tod_timing],
     searchable=True,
     clearable=True,
     style={"width": 200},
@@ -72,7 +75,7 @@ opacity_slider = dmc.Slider(
     min=0, max=100, step=5, value=50,
     labelAlwaysOn=True,
     marks=[
-        {'value': i, 'label': f'{i}%'} for i in range(0,100,20)
+        {'value': i, 'label': f'{i}%'} for i in range(0, 100, 20)
     ],
     persistence=True
 )
@@ -80,9 +83,9 @@ opacity_slider = dmc.Slider(
 time_aggregation = dmc.SegmentedControl(
     id='time-aggregation',
     data=[
-            {'value': 'time', 'label': '15 minutes'},
-            {'value': 'hour', 'label': '1 hour'},
-            {'value': 'dddn', 'label': 'Dawn-Day-Dusk-Night'}
+        {'value': 'time', 'label': '15 minutes'},
+        {'value': 'hour', 'label': '1 hour'},
+        {'value': 'dddn', 'label': 'Dawn-Day-Dusk-Night'}
     ],
     value='time',
     persistence=True
@@ -99,10 +102,10 @@ appendix = dmc.Grid(
             dmc.Title('Download', order=2),
             dmc.Text('Download the data in the current plot. Select a format below.'),
             dmc.ButtonGroup([
-                    dmc.Button("csv", variant="filled", id='dl_csv'),
-                    dmc.Button("excel", variant="filled", id='dl_xls'),
-                    dmc.Button("json", variant="filled", id='dl_json'),
-                    dmc.Button("parquet", variant="filled", id='dl_parquet'),
+                dmc.Button("csv", variant="filled", id='dl_csv'),
+                dmc.Button("excel", variant="filled", id='dl_xls'),
+                dmc.Button("json", variant="filled", id='dl_json'),
+                dmc.Button("parquet", variant="filled", id='dl_parquet'),
             ]),
             dcc.Download(id='download-dataframe')
         ]), span=4),
@@ -139,6 +142,7 @@ layout = html.Div([
     appendix,
 ])
 
+
 @callback(
     Output("download-dataframe", "data"),
     Input('dataset-select', component_property='value'),
@@ -162,6 +166,7 @@ def download_data(dataset, dates, locations, csv, xls, json, parquet):
     elif ctx.triggered_id == 'dl_parquet':
         return dcc.send_data_frame(data.to_parquet, f'{dataset}.parquet')
         # return dcc.send_bytes()
+
 
 # @callback(
 #     Output(colour_select, component_property='data'),
@@ -209,17 +214,18 @@ def download_data(dataset, dates, locations, csv, xls, json, parquet):
     # Input(diel_tickbox, component_property='checked'),
     # Input(separate_plots_tickbox, component_property='checked'),
 )
-def update_graph(dataset, dates, locations, feature, colour_by, symbolise_by, row_facet, col_facet, opacity):#, normalised, diel_plots, separate_plots):
+def update_graph(dataset, dates, locations, feature, colour_by, symbolise_by, row_facet, col_facet,
+                 opacity):  # , normalised, diel_plots, separate_plots):
 
     data = load_and_filter_dataset(dataset, dates, feature=None, locations=locations)
 
-    #Updating Plot Options
+    # Updating Plot Options
     sitelevel_cols = list(filter(lambda a: a.startswith('sitelevel_'), data.columns))
     temporal_cols = ['hour', 'weekday', 'date', 'month', 'year']
 
-    options = [{'value': i, 'label': i, 'group': 'Base'} for i in index] +\
-              [{'value': i, 'label': i, 'group': 'Time of Day'} for i in tod_timing] +\
-              [{'value': i, 'label': i, 'group': 'Site Level'} for i in sitelevel_cols] +\
+    options = [{'value': i, 'label': i, 'group': 'Base'} for i in index] + \
+              [{'value': i, 'label': i, 'group': 'Time of Day'} for i in tod_timing] + \
+              [{'value': i, 'label': i, 'group': 'Site Level'} for i in sitelevel_cols] + \
               [{'value': i, 'label': i, 'group': 'Temporal'} for i in temporal_cols]
 
     colour_by = colour_by if colour_by in [o['value'] for o in options] else None
@@ -229,8 +235,8 @@ def update_graph(dataset, dates, locations, feature, colour_by, symbolise_by, ro
 
     # Updating Plot
     idx_cols = list(filter(lambda a: a not in ['feature', 'value'], data.columns))
-    #FIXME This is a bit of a hack. The dataset should be clean by the time it gets here.
-    data_nodup = data.drop_duplicates(subset=idx_cols+['feature'], keep='first')
+    # FIXME This is a bit of a hack. The dataset should be clean by the time it gets here.
+    data_nodup = data.drop_duplicates(subset=idx_cols + ['feature'], keep='first')
     # data_nodup = data.set_index(idx_cols)
     # data_nodup = data_nodup[~data_nodup.index.duplicated(keep='first')]
 
@@ -245,7 +251,7 @@ def update_graph(dataset, dates, locations, feature, colour_by, symbolise_by, ro
 
     fig = px.scatter(
         graph_data, x=0, y=1,
-        opacity=opacity/100.0,
+        opacity=opacity / 100.0,
         color=colour_by,
         symbol=symbolise_by,
         facet_row=row_facet,

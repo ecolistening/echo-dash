@@ -1,16 +1,13 @@
 # Import packages
-from pathlib import Path
 
 import dash
-from dash import Dash, html, dash_table, dcc, callback, Output, Input, ALL
 import dash_mantine_components as dmc
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly_calplot import calplot
+from dash import html, dcc, callback, Output, Input, ALL
 
-from config import filepath, is_docker, root_dir
-from utils import load_and_filter_dataset
+from config import root_dir
 
 dash.register_page(__name__)
 
@@ -24,6 +21,7 @@ layout = html.Div([
     dmc.Divider(variant='dotted'),
     main_plot := dcc.Graph(id='map-overview-graph')
 ])
+
 
 # Add controls to build the interaction
 @callback(

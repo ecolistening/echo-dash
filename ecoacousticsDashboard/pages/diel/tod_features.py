@@ -1,17 +1,10 @@
 # Import packages
-import json
-from datetime import date
-from pathlib import Path
 
 import dash
-from dash import Dash, html, dash_table, dcc, callback, Output, Input, State, Patch, ALL
 import dash_mantine_components as dmc
-import dash_bootstrap_components as dbc
-import pandas as pd
 import plotly.express as px
-from plotly_calplot import calplot
+from dash import html, dcc, callback, Output, Input, ALL
 
-from config import filepath, is_docker
 from utils import load_and_filter_dataset
 
 dash.register_page(__name__, title='Acoustic Indices', name='Acoustic Indices')
@@ -45,6 +38,7 @@ layout = html.Div([
     drilldown_file_div := html.Div(),
 ])
 
+
 # Add controls to build the interaction
 @callback(
     Output('tod-features-graph', component_property='figure'),
@@ -58,8 +52,10 @@ layout = html.Div([
 )
 def update_graph(dataset, dates, locations, feature, colour_date):
     data = load_and_filter_dataset(dataset, dates, feature, locations)
-    data = data.assign(month=data.timestamp.dt.month, hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, minute=data.timestamp.dt.minute)
-    fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['file', 'timestamp', 'timestamp'], opacity=0.5, facet_col='recorder',
+    data = data.assign(month=data.timestamp.dt.month, hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
+                       minute=data.timestamp.dt.minute)
+    fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['file', 'timestamp', 'timestamp'],
+                     opacity=0.5, facet_col='recorder',
                      color='month' if colour_date else None)
     return fig
 
