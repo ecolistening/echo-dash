@@ -19,6 +19,7 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import pandas as pd
 from dash import Dash, callback, html, Output, Input, dcc, ALL
+from dash_iconify import DashIconify
 
 from config import root_dir
 from utils import load_and_filter_dataset, load_and_filter_sites
@@ -47,6 +48,53 @@ dataset_input = dmc.Select(
     value=ds,
     # style={"width": 200},
     persistence=True,
+)
+
+dataset_settings_button = dmc.Button(
+            "Settings",
+            variant="filled",
+            leftIcon=DashIconify(icon="fluent:settings-32-regular"),
+            # size="md",
+            compact=True,
+            id="dataset_settings_button",
+            n_clicks=0,
+            mb=10,
+        )
+
+settings_drawer = dmc.Drawer(
+    title="Settings",
+    id="settings-drawer",
+    padding="md",
+    size="55%",
+    position='right',
+    zIndex=10000,
+    children=[
+        dmc.Title(ds, order=2),
+        dmc.Stack([
+            dmc.ButtonGroup([
+                dmc.Button(
+                    'Save',
+                    variant="filled",
+                    leftIcon=DashIconify(icon='fluent:save-28-filled'),
+                    # size="md",
+                    compact=True,
+                    id="dataset_settings_button",
+                    n_clicks=0,
+                    mb=10,
+                ),
+                dmc.Button(
+                    'Cancel',
+                    variant="filled",
+                    leftIcon=DashIconify(icon='material-symbols:cancel'),
+                    # size="md",
+                    compact=True,
+                    id="dataset_settings_button",
+                    n_clicks=0,
+                    mb=10,
+                ),
+            ])
+        ]),
+    ]
 )
 
 #TODO This is redundant with the filepath selection based on the menu. Remove.
@@ -141,6 +189,7 @@ navbar = dmc.Navbar(
             dmc.Divider(),
             dmc.Title("Data", order=3),
             dataset_input,
+            dataset_settings_button,
             dmc.Title("Filters", order=3),
             filters,
             dataset_name := dcc.Store(id='dataset_name')
@@ -161,12 +210,20 @@ app.layout = dmc.MantineProvider(
     inherit=True,
     withGlobalStyles=True,
     withNormalizeCSS=True,
-    children=dmc.AppShell(children=dash.page_container, navbar=navbar),#, header=header),
+    # children=dmc.AppShell(children=[dash.page_container, settings_drawer], navbar=navbar),
+    children=dmc.AppShell(children=dash.page_container, navbar=navbar),
 )
 
 def path_name(node):
     return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
 
+# @callback(
+#     Output('settings-drawer', "opened"),
+#     Input("dataset_settings_button", "n_clicks"),
+#     prevent_initial_call=True,
+# )
+# def open_settings_drawer(n_clicks):
+#     return True
 
 def update_locations(dataset, children=None, values=None):
     '''Update the locations options.
