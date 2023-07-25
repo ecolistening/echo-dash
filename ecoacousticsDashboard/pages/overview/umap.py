@@ -163,7 +163,7 @@ def update_sampling_slider(dataset, dates, locations, feature, sample):
         {'value': i, 'label': f'{i}'} for i in np.linspace(1, max, num=5, endpoint=True, dtype=int)
     ]
 
-    return max, step, value, marks
+    return (max, step, value, marks)
 
 
 @callback(

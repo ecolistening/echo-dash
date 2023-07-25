@@ -7,7 +7,6 @@ import dash_mantine_components as dmc
 import pandas as pd
 from dash import html, callback, Output, Input, ALL
 
-from app import path_name
 from config import root_dir
 from menu.dataset import ds, dataset_input
 from utils import load_and_filter_dataset, load_and_filter_sites
@@ -28,6 +27,9 @@ date_input = dmc.DateRangePicker(
         persistence=True,
     )
 
+def path_name(node):
+    return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
+
 location_hierarchy = html.Div([
     dmc.Group([
         dmc.Text(f"Sites (Lvl {1}/{tree.depth})"),
@@ -37,15 +39,10 @@ location_hierarchy = html.Div([
         ])
     ]),
     dmc.ChipGroup(
-        #TODO Add a + button chip for those who can expand.
         [
-            dmc.Chip(r.name, value=r.path_name, variant='filled', size='xs') for r in tree.children
+            dmc.Chip(r.name, value=path_name(r), variant='filled', size='xs') for r in tree.children
         ] + [],
-        value=[r.path_name for r in tree.children],
-        # id={
-        #     'type': 'checklist-locations-hierarchy',
-        #     'index': 0
-        # },
+        value=[path_name(r) for r in tree.children],
         multiple=True,
         persistence=True,
     ),
@@ -90,9 +87,9 @@ def update_locations(dataset, children=None, values=None):
 
         # Get a sorted list of nodes that match selected parents at the depth in question
         nodes = list(sorted(filter(
-            lambda n: values is None or n.parent.path_name in flatvalues,
+            lambda n: values is None or path_name in flatvalues,
             bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i + 1)
-        ), key=lambda n: n.path_name))
+        ), key=lambda n: path_name))
 
         # Create children
         kids = [

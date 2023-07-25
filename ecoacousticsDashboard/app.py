@@ -16,7 +16,7 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 from dash import Dash, dcc
 
-from menu.dataset import dataset_input, dataset_settings_button
+from menu.dataset import dataset_input, dataset_settings_button, settings_drawer
 from menu.filter import filters
 
 app = Dash(__name__, use_pages=True, external_stylesheets=[
@@ -61,7 +61,7 @@ navbar = dmc.Navbar(
                                dataset_settings_button,
                                dmc.Title("Filters", order=3),
                                filters,
-                               dataset_name := dcc.Store(id='dataset_name')
+                               dataset_name := dcc.Store(id='dataset_name'),
                            ])
     )
 )
@@ -79,13 +79,9 @@ app.layout = dmc.MantineProvider(
     inherit=True,
     withGlobalStyles=True,
     withNormalizeCSS=True,
+    # children=dmc.AppShell(children=[dash.page_container, settings_drawer], navbar=navbar),
     children=dmc.AppShell(children=dash.page_container, navbar=navbar),
 )
-
-
-def path_name(node):
-    return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
-
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', debug=True)

@@ -5,6 +5,7 @@ from config import root_dir
 
 datasets = [d.name for d in root_dir.glob("*") if d.is_dir()]
 ds = datasets[0]
+
 dataset_input = dmc.Select(
     id='dataset-select',
     label='Dataset',
@@ -17,6 +18,7 @@ dataset_input = dmc.Select(
     # style={"width": 200},
     persistence=True,
 )
+
 dataset_settings_button = dmc.Button(
             "Settings",
             variant="filled",
@@ -27,6 +29,7 @@ dataset_settings_button = dmc.Button(
             n_clicks=0,
             mb=10,
         )
+
 settings_drawer = dmc.Drawer(
     title="Settings",
     id="settings-drawer",
