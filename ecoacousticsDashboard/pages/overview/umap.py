@@ -5,12 +5,12 @@ import dash_mantine_components as dmc
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from dash import html, dcc, callback, Output, Input, ALL, ctx
+from dash import html, dcc, callback, Output, Input, ALL, ctx, State
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
 from umap import UMAP
 
-from utils import load_and_filter_dataset
+from utils import load_and_filter_dataset, load_config
 
 dash.register_page(__name__, title='UMAP', name='UMAP')
 
@@ -172,10 +172,9 @@ def update_sampling_slider(dataset, dates, locations, feature, sample):
     Input('date-picker', component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
     Input('feature-dropdown', component_property='value'),
-    Input(sample_slider, component_property='value'),
 )
-def update_dataset(dataset, dates, locations, feature, sample):
-    data = load_and_filter_dataset(dataset, dates, feature, locations, sample)
+def update_dataset(dataset, dates, locations, feature):
+    data = load_and_filter_dataset(dataset, dates, feature, locations)
 
     return data.to_json(date_format='iso', orient='split')
 
@@ -211,10 +210,14 @@ def download_data(dataset, json_data, *args, **kwargs):
     Output(row_facet_select, component_property='data'),
     Output(col_facet_select, component_property='data'),
     Input('plot-data', component_property='data'),
+    Input(sample_slider, component_property='value'),
+    State('dataset-select', component_property='value'),
+    prevent_initial_call=True
 )
-def update_graph_data(json_data):
+def update_graph_data(json_data, sample, dataset):
 
     data = pd.read_json(json_data, orient='split')
+    config = load_config(dataset)
 
     # Updating Plot Options
     sitelevel_cols = list(filter(lambda a: a.startswith('sitelevel_'), data.columns))
@@ -222,19 +225,19 @@ def update_graph_data(json_data):
 
     options = [{'value': i, 'label': i, 'group': 'Base'} for i in index] + \
               [{'value': i, 'label': i, 'group': 'Time of Day'} for i in tod_timing] + \
-              [{'value': i, 'label': i, 'group': 'Site Level'} for i in sitelevel_cols] + \
+              [{'value': i, 'label': config.get('Site Hierarchy', i, fallback=i), 'group': 'Site Level'} for i in sitelevel_cols] + \
               [{'value': i, 'label': i, 'group': 'Temporal'} for i in temporal_cols]
 
     # Updating Plot
     idx_cols = list(filter(lambda a: a not in ['feature', 'value'], data.columns))
     # FIXME This is a bit of a hack. The dataset should be clean by the time it gets here.
     data_nodup = data.drop_duplicates(subset=idx_cols + ['feature'], keep='first')
-    # data_nodup = data.set_index(idx_cols)
-    # data_nodup = data_nodup[~data_nodup.index.duplicated(keep='first')]
 
-    # idx_data = data_nodup.pivot(columns='feature', index=idx_cols, values='value')
     idx_data = data_nodup.pivot(columns='feature', index=idx_cols, values='value')
     idx_data = idx_data.loc[np.isfinite(idx_data).all(axis=1), :]
+
+    # Random Sample
+    idx_data = idx_data.sample(n=sample, axis=0)
 
     pipe = make_pipeline(RobustScaler(), UMAP())
 

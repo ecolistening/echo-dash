@@ -1,3 +1,4 @@
+import configparser
 import itertools
 from datetime import date
 from typing import List
@@ -7,7 +8,7 @@ import bigtree as bt
 from config import root_dir
 
 
-def load_and_filter_dataset(dataset: str, dates=None, feature: str=None, locations: List=None, sample=None):#, recorders: List=None):
+def load_and_filter_dataset(dataset: str, dates=None, feature: str=None, locations: List=None, sample=None):
     data = pd.read_parquet(root_dir / dataset / 'indices.parquet')#.drop_duplicates()
 
     if dates is not None:
@@ -19,10 +20,6 @@ def load_and_filter_dataset(dataset: str, dates=None, feature: str=None, locatio
 
     if locations is not None and len(locations) > 0:
         data = data[data['site'].isin([l.strip('/') for l in locations[-1]])]
-
-    # if recorders is not None and len(recorders) > 0:
-    #     recorders = [int(r) for r in recorders]
-    #     data = data[data.recorder.isin(recorders)]
 
     # Randomly sample
     if sample is not None:
@@ -40,28 +37,21 @@ def load_and_filter_dataset(dataset: str, dates=None, feature: str=None, locatio
 
     return data
 
-def load_and_filter_locations(dataset: str, dates=None, feature: str=None, locations: List=None, recorders: List=None):
-    data = pd.read_parquet(root_dir / dataset / 'locations.parquet')#.drop_duplicates()
-
-    # dates = [date.fromisoformat(d) for d in dates]
-    # if dates is not None:
-    #     data = data[data.timestamp.dt.date.between(*dates)]
-    #
-    # if feature is not None:
-    #     data = data[data.feature == feature]
-    #
-    # if locations is not None and len(locations) > 0:
-    #     data = data[data['location'].isin(locations)]
-    #
-    # if recorders is not None and len(recorders) > 0:
-    #     recorders = [int(r) for r in recorders]
-    #     data = data[data.recorder.isin(recorders)]
-
-    return data
-
 def load_and_filter_sites(dataset: str, dates=None, feature: str=None, locations: List=None, recorders: List=None):
     data = pd.read_parquet(root_dir / dataset / 'locations.parquet')
 
     tree = bt.dataframe_to_tree(data.reset_index(drop=True), path_col='site')
 
     return tree
+
+def load_config(dataset: str):
+    # Initialise config parser
+    config = configparser.ConfigParser()
+    try:
+        config.read(root_dir / dataset / 'config.ini')
+    except (IOError, TypeError) as e:
+        pass
+    if not config.has_section('Site Hierarchy'):
+        config.add_section('Site Hierarchy')
+
+    return config

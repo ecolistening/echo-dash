@@ -14,7 +14,7 @@ documentation: https://dash.plot.ly/urls
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-from dash import Dash, dcc
+from dash import Dash, dcc, Output, Input, callback
 
 from menu.dataset import dataset_input, dataset_settings_button, settings_drawer
 from menu.filter import filters
@@ -28,6 +28,7 @@ header = dmc.Header(
     height=60,
     children=dmc.Center(dmc.Title("Eyeballing Ecoacoustics", order=1))
 )
+
 
 def menu_from_page_registry():
     pages = {m: m.split('.')[1:] for m in dash.page_registry}
@@ -61,7 +62,8 @@ navbar = dmc.Navbar(
                                dataset_settings_button,
                                dmc.Title("Filters", order=3),
                                filters,
-                               dataset_name := dcc.Store(id='dataset_name'),
+                               dataset_name := dcc.Store(id='dataset-name'),
+                               settings_drawer
                            ])
     )
 )
@@ -78,10 +80,19 @@ app.layout = dmc.MantineProvider(
     },
     inherit=True,
     withGlobalStyles=True,
-    withNormalizeCSS=True,
-    # children=dmc.AppShell(children=[dash.page_container, settings_drawer], navbar=navbar),
-    children=dmc.AppShell(children=dash.page_container, navbar=navbar),
+    # withNormalizeCSS=True,
+    children=dmc.AppShell(children=[dash.page_container, settings_drawer], navbar=navbar),
+    # children=dmc.AppShell(children=dash.page_container, navbar=navbar),
 )
+
+@callback(
+    Output('dataset-name', component_property='data'),
+    Input('dataset-select', component_property='value'),
+    prevent_initial_call=True,
+)
+def update_dataset_name(dataset):
+    return dataset
+
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', debug=True)

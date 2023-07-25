@@ -9,7 +9,7 @@ from dash import html, callback, Output, Input, ALL
 
 from config import root_dir
 from menu.dataset import ds, dataset_input
-from utils import load_and_filter_dataset, load_and_filter_sites
+from utils import load_and_filter_dataset, load_and_filter_sites, load_config
 
 # Initial load of dataset and tree
 df = load_and_filter_dataset(ds)
@@ -32,7 +32,7 @@ def path_name(node):
 
 location_hierarchy = html.Div([
     dmc.Group([
-        dmc.Text(f"Sites (Lvl {1}/{tree.depth})"),
+        dmc.Text('Loading...'),
         dmc.ButtonGroup([
             dmc.Button('All', size='xs', compact=True),
             dmc.Button('Clear', size='xs', compact=True),
@@ -87,9 +87,9 @@ def update_locations(dataset, children=None, values=None):
 
         # Get a sorted list of nodes that match selected parents at the depth in question
         nodes = list(sorted(filter(
-            lambda n: values is None or path_name in flatvalues,
+            lambda n: values is None or n.parent.path_name in flatvalues,
             bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i + 1)
-        ), key=lambda n: path_name))
+        ), key=lambda m: m.path_name))
 
         # Create children
         kids = [
@@ -107,9 +107,11 @@ def update_locations(dataset, children=None, values=None):
             flatvalues = list(itertools.chain(*values))
 
         if wrap_in_accordian:
+            config = load_config(dataset)
+
             acc = dmc.AccordionItem(
                 [
-                    dmc.AccordionControl(f"Level {i}/{tree.max_depth - 1}"),
+                    dmc.AccordionControl(config.get('Site Hierarchy', f'sitelevel_{i}', fallback=f"Level {i}/{tree.max_depth - 1}")),
                     dmc.AccordionPanel(children=dmc.ChipGroup(
                         kids,
                         value=[r.path_name for r in nodes],
