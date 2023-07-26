@@ -174,7 +174,7 @@ def update_sampling_slider(dataset, dates, locations, feature, sample):
     Input('feature-dropdown', component_property='value'),
 )
 def update_dataset(dataset, dates, locations, feature):
-    data = load_and_filter_dataset(dataset, dates, feature, locations)
+    data = load_and_filter_dataset(dataset, dates=dates, locations=locations)
 
     return data.to_json(date_format='iso', orient='split')
 
@@ -223,10 +223,10 @@ def update_graph_data(json_data, sample, dataset):
     sitelevel_cols = list(filter(lambda a: a.startswith('sitelevel_'), data.columns))
     temporal_cols = ['hour', 'weekday', 'date', 'month', 'year']
 
-    options = [{'value': i, 'label': i, 'group': 'Base'} for i in index] + \
+    options = [{'value': i, 'label': config.get( 'Site Hierarchy', i, fallback=i), 'group': 'Site Level'} for i in sitelevel_cols] + \
               [{'value': i, 'label': i, 'group': 'Time of Day'} for i in tod_timing] + \
-              [{'value': i, 'label': config.get('Site Hierarchy', i, fallback=i), 'group': 'Site Level'} for i in sitelevel_cols] + \
-              [{'value': i, 'label': i, 'group': 'Temporal'} for i in temporal_cols]
+              [{'value': i, 'label': i, 'group': 'Temporal'} for i in temporal_cols] + \
+              [{'value': i, 'label': i, 'group': 'Other Metadata'} for i in index]
 
     # Updating Plot
     idx_cols = list(filter(lambda a: a not in ['feature', 'value'], data.columns))
