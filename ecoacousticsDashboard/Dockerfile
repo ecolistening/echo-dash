@@ -10,8 +10,10 @@ COPY requirements.txt /code/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 COPY app.py /code/app.py
-COPY pages/* /code/pages/
-COPY utils/* /code/utils/
+COPY config.py /code/config.py
+COPY pages/ /code/pages/
+COPY utils/ /code/utils/
+COPY menu/ /code/menu/
 
 EXPOSE 8050
 CMD ["python", "app.py"]
