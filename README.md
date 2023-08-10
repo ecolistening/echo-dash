@@ -8,5 +8,6 @@ However, for development, running the Dashboard in a conda environment (or virtu
 
 
 ### Docker
+The Docker image is not public yet, so please use Flask. You can build your own Docker image that you can use as well if you want.
 
 ### Flask (using Anaconda)
