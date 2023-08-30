@@ -1,0 +1,9 @@
+services:
+  app:
+    image: ecodash:latest
+    command: python app.py
+    ports:
+      - 127.0.0.1:8050:8050
+    working_dir: /code
+    volumes:
+      - ../data:/data
