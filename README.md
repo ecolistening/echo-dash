@@ -13,7 +13,13 @@ However, for development, running the Dashboard in a conda environment (or virtu
 
 
 ### Docker
-The Docker image is not public yet, so please use Flask. You can build your own Docker image that you can use as well if you want.
+Run using:
+
+```
+docker compose up
+```
+
+After an initial build (if you don't have an image already built). The app should then be available at `http://localhost:8050/`.
 
 ### Flask (using Anaconda)
 Checkout the respository (fork, if necessary, or close) and install required python libraries using `requirements.txt`.
