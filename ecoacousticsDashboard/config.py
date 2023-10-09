@@ -8,9 +8,11 @@ def is_docker():
             os.path.isfile(cgroup) and any('docker' in line for line in open(cgroup))
     )
 
-root_dir = Path('/data/')
-if not is_docker():
-    root_dir = Path('/Users/ca492/Documents/sussex/projects/ecoacoustics-dashboard/data')
+if is_docker():
+    root_dir = Path('/data/')
+else:
+    cwd = Path.cwd()
+    root_dir = Path(cwd.parents[0], 'data')
 
 #TODO this is redundant with filepath selection based on the menu. Remove.
 # Incorporate data
