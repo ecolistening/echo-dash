@@ -33,7 +33,7 @@ Install the latest version of docker, at minimum version 3+
 Navigate to `ecoacoustics-dashboard/ecoacousticsDashboard/` where `compose.yaml` is located and run using:
 
 ```
-docker compose up
+docker compose up --build -d
 ```
 
 After an initial build (if you don't have an image already built) the app should be available at `http://localhost:8050/`.
