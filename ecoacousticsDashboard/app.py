@@ -103,6 +103,7 @@ def update_dataset_name(dataset):
 
 
 if __name__ == '__main__':
+    logger.info("Start server.")
     app.run_server(host='0.0.0.0', debug=True)
-    logger.info("Started Server.")
     app.enable_dev_tools(dev_tools_ui=True, dev_tools_serve_dev_bundles=True)
+    logger.info("Server shutdown.")
