@@ -229,11 +229,13 @@ def get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opac
 
     return fig
 
+
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
 #       Callbacks       #
 #                       #
 # ~~~~~~~~~~~~~~~~~~~~~ #
+
 @callback(
     Output("download-dataframe", "data"),
     State('dataset-select', component_property='value'),
@@ -255,6 +257,7 @@ def download_data(dataset, json_data, *args, **kwargs):
         return dcc.send_data_frame(data.to_json, f'{dataset}.json')
     elif ctx.triggered_id == 'dl_parquet':
         return dcc.send_data_frame(data.to_parquet, f'{dataset}.parquet')
+
 
 @callback(
     Output("plot-data", component_property="data"),
@@ -290,7 +293,7 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, r
     # Sort out sample slider
     max = idx_data.shape[0]
     step = 1
-    sample = sample if sample is not None and sample < max else (1000 if max > 1000 else max)
+    sample = sample if sample is not None and sample <= max else (1000 if max > 1000 else max)
     marks = [
         {'value': i, 'label': f'{i}'} for i in np.linspace(1, max, num=5, endpoint=True, dtype=int)
     ]
@@ -304,43 +307,6 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, r
             fig, options, options, options, options, \
             max, step, sample, marks
 
-
-# @callback(
-#     Output("plot-data", "data"),
-#     Input('dataset-select', component_property='value'),
-#     Input('date-picker', component_property='value'),
-#     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-#     Input('feature-dropdown', component_property='value'),
-# )
-# def update_dataset(dataset, dates, locations, feature):
-    
-#     logger.debug(f"Load dataset..")
-#     data = load_and_filter_dataset(dataset, dates=dates, locations=locations)
-#     logger.debug(f"Dataset {dataset} shape: {data.shape}.")
-
-#     return data.to_json(date_format='iso', orient='split')
-
-
-
-# @callback(
-#     Output('plot-data-umap', component_property='data'),
-#     Output(colour_select, component_property='data'),
-#     Output(symbol_select, component_property='data'),
-#     Output(row_facet_select, component_property='data'),
-#     Output(col_facet_select, component_property='data'),
-#     Input('plot-data', component_property='data'),
-#     Input(sample_slider, component_property='value'),
-#     State('dataset-select', component_property='value'),
-#     State('date-picker', component_property='value'),
-#     State({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-#     State('feature-dropdown', component_property='value'),
-#     prevent_initial_call=True
-# )
-# def update_graph_data(json_data, sample, dataset, dates, locations, feature):
-
-#     graph_data, options = get_graph_data(json_data, sample, dataset)
-
-#     return graph_data.to_json(date_format='iso', orient='split'), options, options, options, options
 
 @callback(
     Output(main_plot, component_property='figure', allow_duplicate=True),
