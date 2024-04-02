@@ -11,16 +11,18 @@ For more details on building multi-page Dash applications, check out the Dash
 documentation: https://dash.plot.ly/urls
 """
 
-import dash
-import dash_bootstrap_components as dbc
-import dash_mantine_components as dmc
-from dash import Dash, dcc, Output, Input, callback
-
 # Setup Logging
 import os
 from loguru import logger
 os.makedirs('log',exist_ok=True)
 logger.add("log/{time}.log", rotation="00:00", retention="90 days")
+
+logger.info("Setup server..")
+
+import dash
+import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
+from dash import Dash, dcc, Output, Input, callback
 
 from menu.dataset import dataset_input, dataset_settings_button, settings_drawer
 from menu.filter import filters
@@ -103,7 +105,7 @@ def update_dataset_name(dataset):
 
 
 if __name__ == '__main__':
-    logger.info("Start server.")
+    logger.info("Start server..")
     app.run_server(host='0.0.0.0', debug=True)
     app.enable_dev_tools(dev_tools_ui=True, dev_tools_serve_dev_bundles=True)
     logger.info("Server shutdown.")

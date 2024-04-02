@@ -1,4 +1,5 @@
 # Import packages
+from io import StringIO
 
 import dash
 import dash_mantine_components as dmc
@@ -6,6 +7,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from dash import html, dcc, callback, Output, Input, ALL, ctx, State
+from loguru import logger
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
 from umap import UMAP
@@ -24,6 +26,14 @@ tod_timing = ['hours after dawn', 'hours after sunrise', 'hours after noon', 'ho
               'dddn']
 # Level of site
 # Time breakdowns
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~ #
+#                       #
+#         Layout        #
+#                       #
+# ~~~~~~~~~~~~~~~~~~~~~ #
 
 # colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
 normalised_tickbox = dmc.Chip('Normalised', value='normalised', checked=False, persistence=True,
@@ -142,81 +152,19 @@ layout = html.Div([
     appendix,
 ])
 
-@callback(
-    Output(sample_slider, 'max'),
-    Output(sample_slider, 'step'),
-    Output(sample_slider, 'value'),
-    Output(sample_slider, 'marks'),
-    Input('dataset-select', component_property='value'),
-    Input('date-picker', component_property='value'),
-    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-    Input('feature-dropdown', component_property='value'),
-    Input(sample_slider, component_property='value'),
-)
-def update_sampling_slider(dataset, dates, locations, feature, sample):
-    data = load_and_filter_dataset(dataset, dates, feature, locations)
 
-    max = data.shape[0]
-    step = 1
-    value = sample if sample is not None and sample < max else (1000 if max > 1000 else max)
-    marks = [
-        {'value': i, 'label': f'{i}'} for i in np.linspace(1, max, num=5, endpoint=True, dtype=int)
-    ]
+# ~~~~~~~~~~~~~~~~~~~~~ #
+#                       #
+#       Functions       #
+#                       #
+# ~~~~~~~~~~~~~~~~~~~~~ #
 
-    return (max, step, value, marks)
-
-
-@callback(
-    Output("plot-data", "data"),
-    Input('dataset-select', component_property='value'),
-    Input('date-picker', component_property='value'),
-    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-    Input('feature-dropdown', component_property='value'),
-)
-def update_dataset(dataset, dates, locations, feature):
+def get_idx_data(dataset, dates, locations):
     data = load_and_filter_dataset(dataset, dates=dates, locations=locations)
+    sample_no = data.shape[0]
+    logger.debug(f"Dataset {dataset} shape: {data.shape}.")
 
-    return data.to_json(date_format='iso', orient='split')
-
-@callback(
-    Output("download-dataframe", "data"),
-    Input('dataset-select', component_property='value'),
-    Input("plot-data", "data"),
-    Input("dl_csv", "n_clicks"),
-    Input("dl_xls", "n_clicks"),
-    Input("dl_json", "n_clicks"),
-    Input("dl_parquet", "n_clicks"),
-    prevent_initial_call=True,
-)
-def download_data(dataset, json_data, *args, **kwargs):
-    if not ctx.triggered_id.startswith('dl'):
-        return
-
-    data = pd.read_json(json_data, orient='split')
-
-    if ctx.triggered_id == 'dl_csv':
-        return dcc.send_data_frame(data.to_csv, f'{dataset}.csv')
-    elif ctx.triggered_id == 'dl_xls':
-        return dcc.send_data_frame(data.to_excel, f'{dataset}.xlsx', sheet_name="Sheet_name_1")
-    elif ctx.triggered_id == 'dl_json':
-        return dcc.send_data_frame(data.to_json, f'{dataset}.json')
-    elif ctx.triggered_id == 'dl_parquet':
-        return dcc.send_data_frame(data.to_parquet, f'{dataset}.parquet')
-
-@callback(
-    Output('plot-data-umap', component_property='data'),
-    Output(colour_select, component_property='data'),
-    Output(symbol_select, component_property='data'),
-    Output(row_facet_select, component_property='data'),
-    Output(col_facet_select, component_property='data'),
-    Input('plot-data', component_property='data'),
-    Input(sample_slider, component_property='value'),
-    State('dataset-select', component_property='value'),
-    prevent_initial_call=True
-)
-def update_graph_data(json_data, sample, dataset):
-
-    data = pd.read_json(json_data, orient='split')
+    logger.debug(f"Load config..")
     config = load_config(dataset)
 
     # Updating Plot Options
@@ -230,38 +178,41 @@ def update_graph_data(json_data, sample, dataset):
 
     # Updating Plot
     idx_cols = list(filter(lambda a: a not in ['feature', 'value'], data.columns))
+
     # FIXME This is a bit of a hack. The dataset should be clean by the time it gets here.
+    logger.debug(f"Check for duplicates..")
     data_nodup = data.drop_duplicates(subset=idx_cols + ['feature'], keep='first')
+    if sample_no>data_nodup.shape[0]:
+        logger.debug(f"Removed {sample_no-data_nodup.shape[0]} duplicate samples.")
 
+    logger.debug(f"Select columns {idx_cols}")
     idx_data = data_nodup.pivot(columns='feature', index=idx_cols, values='value')
+    sample_no = idx_data.shape[0]
     idx_data = idx_data.loc[np.isfinite(idx_data).all(axis=1), :]
+    if sample_no>idx_data.shape[0]:
+        logger.debug(f"Removed {sample_no-idx_data.shape[0]} NaN samples.")
 
+    return idx_data, options
+
+def get_graph_data(idx_data, sample):
     # Random Sample
-    idx_data = idx_data.sample(n=sample, axis=0)
+    logger.debug(f"Select {sample}/{idx_data.shape[0]} random samples..")
+    sel_data = idx_data.sample(n=sample, axis=0)
 
     pipe = make_pipeline(RobustScaler(), UMAP())
 
-    proj = pipe.fit_transform(idx_data)
-    graph_data = pd.DataFrame(proj, index=idx_data.index).reset_index()
+    logger.debug(f"Apply RobustScaler and UMAP..")
+    proj = pipe.fit_transform(sel_data)
 
-    return graph_data.to_json(date_format='iso', orient='split'), options, options, options, options
+    logger.debug(f"Write results into pd dataframe..")
+    graph_data = pd.DataFrame(proj, index=sel_data.index).reset_index()
 
-@callback(
-    Output(main_plot, component_property='figure'),
-    Output(colour_select, component_property='value'),
-    Output(symbol_select, component_property='value'),
-    Output(row_facet_select, component_property='value'),
-    Output(col_facet_select, component_property='value'),
-    Input('plot-data-umap', component_property='data'),
-    Input(colour_select, component_property='value'),
-    Input(symbol_select, component_property='value'),
-    Input(row_facet_select, component_property='value'),
-    Input(col_facet_select, component_property='value'),
-    Input(opacity_slider, component_property='value'),
-)
-def update_graph_visuals(json_data, colour_by, symbolise_by, row_facet, col_facet, opacity):
+    logger.debug(f"Return graph data and options.")
+    return graph_data
 
-    graph_data = pd.read_json(json_data, orient='split')
+def get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity):
+
+    logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbolise_by=} {row_facet=} {col_facet=} {opacity=}")
 
     fig = px.scatter(
         graph_data, x=0, y=1,
@@ -275,5 +226,143 @@ def update_graph_visuals(json_data, colour_by, symbolise_by, row_facet, col_face
         # labels={'color': 'Site'},
         height=800
     )
+
+    return fig
+
+# ~~~~~~~~~~~~~~~~~~~~~ #
+#                       #
+#       Callbacks       #
+#                       #
+# ~~~~~~~~~~~~~~~~~~~~~ #
+@callback(
+    Output("download-dataframe", "data"),
+    State('dataset-select', component_property='value'),
+    State("plot-data", "data"),
+    Input("dl_csv", "n_clicks"),
+    Input("dl_xls", "n_clicks"),
+    Input("dl_json", "n_clicks"),
+    Input("dl_parquet", "n_clicks"),
+    prevent_initial_call=True,
+)
+def download_data(dataset, json_data, *args, **kwargs):
+    data = pd.read_json(json_data, orient='split')
+
+    if ctx.triggered_id == 'dl_csv':
+        return dcc.send_data_frame(data.to_csv, f'{dataset}.csv')
+    elif ctx.triggered_id == 'dl_xls':
+        return dcc.send_data_frame(data.to_excel, f'{dataset}.xlsx', sheet_name="Sheet_name_1")
+    elif ctx.triggered_id == 'dl_json':
+        return dcc.send_data_frame(data.to_json, f'{dataset}.json')
+    elif ctx.triggered_id == 'dl_parquet':
+        return dcc.send_data_frame(data.to_parquet, f'{dataset}.parquet')
+
+@callback(
+    Output("plot-data", component_property="data"),
+    Output('plot-data-umap', component_property='data'),
+
+    Output(main_plot, component_property='figure', allow_duplicate=True),
+    Output(colour_select, component_property='data'),
+    Output(symbol_select, component_property='data'),
+    Output(row_facet_select, component_property='data'),
+    Output(col_facet_select, component_property='data'),
+
+    Output(sample_slider, 'max'),
+    Output(sample_slider, 'step'),
+    Output(sample_slider, 'value'),
+    Output(sample_slider, 'marks'),
+
+    Input('dataset-select', component_property='value'),
+    Input('date-picker', component_property='value'),
+    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value'),
+    Input(sample_slider, component_property='value'),
+
+    State(colour_select, component_property='value'),
+    State(symbol_select, component_property='value'),
+    State(row_facet_select, component_property='value'),
+    State(col_facet_select, component_property='value'),
+    State(opacity_slider, component_property='value'),
+
+    prevent_initial_call=True
+)
+def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, row_facet, col_facet, opacity):
+    idx_data, options = get_idx_data(dataset, dates, locations)
+
+    # Sort out sample slider
+    max = idx_data.shape[0]
+    step = 1
+    sample = sample if sample is not None and sample < max else (1000 if max > 1000 else max)
+    marks = [
+        {'value': i, 'label': f'{i}'} for i in np.linspace(1, max, num=5, endpoint=True, dtype=int)
+    ]
+
+    graph_data = get_graph_data(idx_data, sample)
+
+    fig = fig = get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity)
+
+    return  idx_data.to_json(date_format='iso', orient='split'), \
+            graph_data.to_json(date_format='iso', orient='split'), \
+            fig, options, options, options, options, \
+            max, step, sample, marks
+
+
+# @callback(
+#     Output("plot-data", "data"),
+#     Input('dataset-select', component_property='value'),
+#     Input('date-picker', component_property='value'),
+#     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
+#     Input('feature-dropdown', component_property='value'),
+# )
+# def update_dataset(dataset, dates, locations, feature):
+    
+#     logger.debug(f"Load dataset..")
+#     data = load_and_filter_dataset(dataset, dates=dates, locations=locations)
+#     logger.debug(f"Dataset {dataset} shape: {data.shape}.")
+
+#     return data.to_json(date_format='iso', orient='split')
+
+
+
+# @callback(
+#     Output('plot-data-umap', component_property='data'),
+#     Output(colour_select, component_property='data'),
+#     Output(symbol_select, component_property='data'),
+#     Output(row_facet_select, component_property='data'),
+#     Output(col_facet_select, component_property='data'),
+#     Input('plot-data', component_property='data'),
+#     Input(sample_slider, component_property='value'),
+#     State('dataset-select', component_property='value'),
+#     State('date-picker', component_property='value'),
+#     State({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
+#     State('feature-dropdown', component_property='value'),
+#     prevent_initial_call=True
+# )
+# def update_graph_data(json_data, sample, dataset, dates, locations, feature):
+
+#     graph_data, options = get_graph_data(json_data, sample, dataset)
+
+#     return graph_data.to_json(date_format='iso', orient='split'), options, options, options, options
+
+@callback(
+    Output(main_plot, component_property='figure', allow_duplicate=True),
+    Output(colour_select, component_property='value'),
+    Output(symbol_select, component_property='value'),
+    Output(row_facet_select, component_property='value'),
+    Output(col_facet_select, component_property='value'),
+
+    State('plot-data-umap', component_property='data'),
+    
+    Input(colour_select, component_property='value'),
+    Input(symbol_select, component_property='value'),
+    Input(row_facet_select, component_property='value'),
+    Input(col_facet_select, component_property='value'),
+    Input(opacity_slider, component_property='value'),
+
+    prevent_initial_call=True
+)
+def update_graph_visuals(json_data, colour_by, symbolise_by, row_facet, col_facet, opacity):
+    logger.debug(f"Read json data ({len(json_data)}B)..")
+    graph_data = pd.read_json(StringIO(json_data), orient='split')
+
+    fig = get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity)
 
     return fig, colour_by, symbolise_by, row_facet, col_facet
