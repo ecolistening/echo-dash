@@ -22,10 +22,11 @@ ecoacoustics-dashboard
 ```
 
 ## Running the dashboard
-There are two ways of running the Ecoacoustics Dashboard.
-For ease-of-deployment, the dashboard can be run in Docker.
-However, for development, running the Dashboard in a virtual environment allows the developer to use Flask to auto-reload on changes to the codebase.
+There are multiple ways of running the Ecoacoustics Dashboard.
 
+For development, running the Dashboard in a virtual environment allows the developer to use Flask's development server to auto-reload on changes to the codebase.
+
+For ease-of-deployment, the dashboard can be run in Docker. Docker uses gunicorn as the server backend as it is more reliable than the development server that ships with flask.
 
 ### Docker
 Install the latest version of docker, at minimum version 3+
@@ -53,6 +54,8 @@ pip install -r requirements.txt
 ```
 
 Run the dashboard with the command `python ecoacousticsDashboard/app.py`. Flask should now start on `http://localhost:8050/` and you should be able to load the app.
+
+Alternatively you can manually run the app using gunicorn using `gunicron app:server` run from the `ecoacousticsDashboard` folder.
 
 # State of Development (August 2023)
 There are a number of different plots (pages) in various states of development. The most advanced and recent is `overview > UMAP` and the structure of that page (the options menu at the top and the 'About' and 'Download' sections at the bottom) should be used as a basis for redeveloping the other pages.
