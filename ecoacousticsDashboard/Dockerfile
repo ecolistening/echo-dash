@@ -16,4 +16,4 @@ COPY utils/ /code/utils/
 COPY menu/ /code/menu/
 
 EXPOSE 8050
-CMD ["gunicorn", "app:server"]
+CMD ["gunicorn"  , "-b", "0.0.0.0:8050", "app:server"]
