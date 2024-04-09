@@ -13,3 +13,4 @@ plotly-calplot
 pyarrow
 xarray
 umap-learn
+gunicorn

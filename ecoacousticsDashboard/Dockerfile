@@ -16,4 +16,4 @@ COPY utils/ /code/utils/
 COPY menu/ /code/menu/
 
 EXPOSE 8050
-CMD ["python", "app.py"]
+CMD ["gunicorn", "app:server"]

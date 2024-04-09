@@ -24,6 +24,8 @@ app = Dash(__name__, use_pages=True, external_stylesheets=[
     "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;900&display=swap"
 ])
 
+server = app.server
+
 header = dmc.Header(
     height=60,
     children=dmc.Center(dmc.Title("Eyeballing Ecoacoustics", order=1))
