@@ -3,10 +3,13 @@
 import dash
 import dash_mantine_components as dmc
 import plotly.express as px
-from dash import html, dcc, callback, Output, Input, ALL
+from dash import html, dcc, callback, Output, Input, State, ALL
+from loguru import logger
 
 from utils import load_and_filter_dataset
+from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
 
+PAGENAME = 'tod-summaries'
 dash.register_page(__name__, title='Summaries', name='Summaries')
 
 colours = {
@@ -45,9 +48,8 @@ layout = html.Div([
         outliers_tickbox,
         separate_plots_tickbox
     ]),
-    html.Div(
-        main_plot := dcc.Graph(),
-    ),
+    dcc.Graph(id=f'{PAGENAME}-graph'),
+    get_modal_sound_sample(PAGENAME),
     html.Div([
         dmc.Title('Acoustic Evenness Index', order=3),
         dmc.Text(
@@ -59,7 +61,7 @@ layout = html.Div([
 
 # Add controls to build the interaction
 @callback(
-    Output(main_plot, component_property='figure'),
+    Output(f'{PAGENAME}-graph', component_property='figure'),
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
@@ -72,6 +74,7 @@ layout = html.Div([
     Input(separate_plots_tickbox, component_property='checked'),
 )
 def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_locations, separate_plots):
+    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=} {time_agg=} {outliers=} {colour_locations=} {separate_plots=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.sort_values(by='recorder')
     data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
@@ -91,6 +94,9 @@ def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_
                  color='recorder' if colour_locations else None,
                  category_orders=category_orders[time_agg])
 
+    # Select sample for audio modal
+    fig.update_layout(clickmode='event+select')
+
     return fig
 
 # @callback(
@@ -109,3 +115,27 @@ def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_
 #     # Plot the feature curves
 #     feature_plot = dcc.Graph(figure=fig)
 #     return feature_plot
+
+@callback(
+    Output(f'modal_sound_sample_{PAGENAME}', 'is_open'),
+    Output(f'modal_sound_header_{PAGENAME}', 'children'),
+    Output(f'modal_sound_file_{PAGENAME}', 'children'),
+    Output(f'modal_sound_audio_{PAGENAME}', 'src'),
+    Output(f'modal_sound_audio_{PAGENAME}', 'controls'),
+    Output(f'modal_sound_details_{PAGENAME}', 'children'),
+    
+    Input(f'{PAGENAME}-graph', component_property='selectedData'),
+
+    State('dataset-select', component_property='value'),
+
+    suppress_callback_exceptions=True,
+    prevent_initial_call=True,
+)
+def display_sound_modal(selectedData,dataset):
+    logger.debug(f"Trigger Callback: {selectedData=} {dataset=}")
+    selected, return_values = get_modal_state(selectedData,dataset)
+    if not selected:
+        return return_values
+
+    # Custom Data missing
+    return *return_values, ['']
