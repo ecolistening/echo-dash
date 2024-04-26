@@ -4,6 +4,8 @@ import dash_mantine_components as dmc
 from dash import callback, Output, Input, ctx, ALL, State
 from dash_iconify import DashIconify
 
+from loguru import logger
+
 from config import root_dir
 from utils import load_and_filter_sites, load_config
 

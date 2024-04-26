@@ -4,13 +4,17 @@ dash-core-components
 dash-html-components
 dash-bootstrap-components
 dash-mantine-components
-dash-iconify
 dash-daq
+gunicorn			# Not available in conda
+loguru
 openpyxl
 pandas
 plotly
-plotly-calplot
 pyarrow
-xarray
+scikit-learn
 umap-learn
-gunicorn
+xarray
+
+dash-iconify			# Not available in conda
+gunicorn			# Not available in conda
+plotly-calplot			# Not available in conda
