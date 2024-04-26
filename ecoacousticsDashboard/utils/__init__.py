@@ -109,6 +109,26 @@ def load_config_lru(dataset: str):
 
     return config
 
+@lru_cache(maxsize=10)
+def get_path_from_config_lru(dataset: str, section: str, option:str):
+    '''
+        Gets a path stored as 'option' in the 'section' of the config of a given 'dataset'.
+
+        Storing result in cache brings the risk that changes in the config will not be effective until reset or cache is filled.
+    '''
+    logger.debug(f"Extract path \'{option}\' from config section \'{section}\' for dataset \'{dataset}\'..")
+    config = load_config(dataset)
+    if config.has_option(section, option):
+        extract_path = config.get(section, option)
+        logger.debug(f"Extracted path \'{extract_path}\'")
+        if not os.path.isabs(extract_path):
+            extract_path = os.path.join(root_dir,dataset,extract_path)
+            logger.debug(f"Transformed path: \'{extract_path}\'")
+    else:
+        extract_path = None
+        logger.debug(f"Could not find path.")
+    return extract_path
+
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
 #          API          #
@@ -134,3 +154,7 @@ def load_and_filter_sites(dataset: str, dates=None, feature: str=None, locations
 def load_config(dataset: str):
     logger.debug(f"Load config for {dataset=}")
     return load_config_lru(str(dataset))
+
+def get_path_from_config(dataset: str, section: str, option:str):
+    logger.debug(f"Get path for {dataset=} {section=} {option=}")
+    return get_path_from_config_lru(str(dataset), str(section), str(option))

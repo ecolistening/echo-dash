@@ -13,8 +13,10 @@ from sklearn.preprocessing import RobustScaler
 from umap import UMAP
 
 from utils import load_and_filter_dataset, load_config
+from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
 
-dash.register_page(__name__, title='UMAP', name='UMAP')
+PAGENAME = 'UMAP'
+dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
 
 # FIXME use of 'location' is deprecated. This should select a level from 'site'
 index = ['file', 'site', 'timestamp',
@@ -26,7 +28,6 @@ tod_timing = ['hours after dawn', 'hours after sunrise', 'hours after noon', 'ho
               'dddn']
 # Level of site
 # Time breakdowns
-
 
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
@@ -130,7 +131,7 @@ appendix = dmc.Grid(
 )
 
 layout = html.Div([
-    dmc.Title('UMAP', order=1),
+    dmc.Title(PAGENAME, order=1),
     dmc.Divider(variant='dotted'),
     dmc.Group(children=[
         colour_select,
@@ -145,11 +146,10 @@ layout = html.Div([
         sample_slider
     ], grow=True),
     dmc.Divider(variant='dotted'),
-    html.Div(
-        main_plot := dcc.Graph(),
-    ),
+    dcc.Graph(id=f'{PAGENAME}-graph'),
+    get_modal_sound_sample(PAGENAME),
     drilldown_file_div := html.Div(),
-    appendix,
+    appendix
 ])
 
 
@@ -227,6 +227,9 @@ def get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opac
         height=800
     )
 
+    # Select sample for audio modal
+    fig.update_layout(clickmode='event+select')
+
     return fig
 
 
@@ -247,7 +250,8 @@ def get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opac
     prevent_initial_call=True,
 )
 def download_data(dataset, json_data, *args, **kwargs):
-    data = pd.read_json(json_data, orient='split')
+    logger.debug(f"Trigger Callback: {dataset=} json data ({len(json_data)}B) {ctx.triggered_id=}")
+    data = pd.read_json(StringIO(json_data), orient='split')
 
     if ctx.triggered_id == 'dl_csv':
         return dcc.send_data_frame(data.to_csv, f'{dataset}.csv')
@@ -263,7 +267,7 @@ def download_data(dataset, json_data, *args, **kwargs):
     Output("plot-data", component_property="data"),
     Output('plot-data-umap', component_property='data'),
 
-    Output(main_plot, component_property='figure', allow_duplicate=True),
+    Output(f'{PAGENAME}-graph', component_property='figure', allow_duplicate=True),
     Output(colour_select, component_property='data'),
     Output(symbol_select, component_property='data'),
     Output(row_facet_select, component_property='data'),
@@ -288,6 +292,7 @@ def download_data(dataset, json_data, *args, **kwargs):
     prevent_initial_call=True
 )
 def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, row_facet, col_facet, opacity):
+    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=} {colour_by=} {symbolise_by=} {row_facet=} {col_facet=} {opacity=}")
     idx_data, options = get_idx_data(dataset, dates, locations)
 
     # Sort out sample slider
@@ -309,7 +314,7 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, r
 
 
 @callback(
-    Output(main_plot, component_property='figure', allow_duplicate=True),
+    Output(f'{PAGENAME}-graph', component_property='figure', allow_duplicate=True),
     Output(colour_select, component_property='value'),
     Output(symbol_select, component_property='value'),
     Output(row_facet_select, component_property='value'),
@@ -326,9 +331,34 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, r
     prevent_initial_call=True
 )
 def update_graph_visuals(json_data, colour_by, symbolise_by, row_facet, col_facet, opacity):
-    logger.debug(f"Read json data ({len(json_data)}B)..")
+    logger.debug(f"Trigger Callback: json data ({len(json_data)}B) {colour_by=} {symbolise_by=} {row_facet=} {col_facet=} {opacity=}")
     graph_data = pd.read_json(StringIO(json_data), orient='split')
 
     fig = get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity)
 
     return fig, colour_by, symbolise_by, row_facet, col_facet
+
+@callback(
+    Output(f'modal_sound_sample_{PAGENAME}', 'is_open'),
+    Output(f'modal_sound_header_{PAGENAME}', 'children'),
+    Output(f'modal_sound_file_{PAGENAME}', 'children'),
+    Output(f'modal_sound_audio_{PAGENAME}', 'src'),
+    Output(f'modal_sound_audio_{PAGENAME}', 'controls'),
+    Output(f'modal_sound_details_{PAGENAME}', 'children'),
+    
+    Input(f'{PAGENAME}-graph', component_property='selectedData'),
+
+    State('dataset-select', component_property='value'),
+
+    suppress_callback_exceptions=True,
+    prevent_initial_call=True,
+)
+def display_sound_modal(selectedData, dataset):
+    logger.debug(f"Trigger Callback: {selectedData=} {dataset=}")
+    selected, return_values = get_modal_state(selectedData,dataset)
+    if not selected:
+        return return_values
+
+    pt = selectedData['points'][0]
+
+    return *return_values, [' | '.join(pt['customdata'])]

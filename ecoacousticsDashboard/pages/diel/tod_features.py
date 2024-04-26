@@ -3,10 +3,13 @@
 import dash
 import dash_mantine_components as dmc
 import plotly.express as px
-from dash import html, dcc, callback, Output, Input, ALL
+from dash import html, dcc, callback, Output, Input, State, ALL
+from loguru import logger
 
 from utils import load_and_filter_dataset
+from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
 
+PAGENAME = 'tod-features'
 dash.register_page(__name__, title='Acoustic Indices', name='Acoustic Indices')
 
 # df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
@@ -32,16 +35,15 @@ layout = html.Div([
     dmc.Group(children=[
         colours_tickbox,
     ]),
-    html.Div(
-        dcc.Graph(id='tod-features-graph'),
-    ),
+    dcc.Graph(id=f'{PAGENAME}-graph'),
+    get_modal_sound_sample(PAGENAME),
     drilldown_file_div := html.Div(),
 ])
 
 
 # Add controls to build the interaction
 @callback(
-    Output('tod-features-graph', component_property='figure'),
+    Output(f'{PAGENAME}-graph', component_property='figure'),
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
@@ -51,12 +53,17 @@ layout = html.Div([
     Input(colours_tickbox, component_property='checked'),
 )
 def update_graph(dataset, dates, locations, feature, colour_date):
+    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=} {colour_date=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.assign(month=data.timestamp.dt.month, hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
                        minute=data.timestamp.dt.minute)
     fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['file', 'timestamp', 'timestamp'],
                      opacity=0.5, facet_col='recorder',
                      color='month' if colour_date else None)
+    
+    # Select sample for audio modal
+    fig.update_layout(clickmode='event+select')
+
     return fig
 
 # @callback(
@@ -74,3 +81,30 @@ def update_graph(dataset, dates, locations, feature, colour_date):
 #     # Plot the feature curves
 #     feature_plot = dcc.Graph(figure=fig)
 #     return feature_plot
+
+@callback(
+    Output(f'modal_sound_sample_{PAGENAME}', 'is_open'),
+    Output(f'modal_sound_header_{PAGENAME}', 'children'),
+    Output(f'modal_sound_file_{PAGENAME}', 'children'),
+    Output(f'modal_sound_audio_{PAGENAME}', 'src'),
+    Output(f'modal_sound_audio_{PAGENAME}', 'controls'),
+    Output(f'modal_sound_details_{PAGENAME}', 'children'),
+    
+    Input(f'{PAGENAME}-graph', component_property='selectedData'),
+
+    State('dataset-select', component_property='value'),
+
+    suppress_callback_exceptions=True,
+    prevent_initial_call=True,
+)
+def display_sound_modal(selectedData,dataset):
+    logger.debug(f"Trigger Callback: {selectedData=} {dataset=}")
+    selected, return_values = get_modal_state(selectedData,dataset)
+    if not selected:
+        return return_values
+
+    pt = selectedData['points'][0]
+
+    details = [pt['customdata'][1]]
+
+    return *return_values, details
