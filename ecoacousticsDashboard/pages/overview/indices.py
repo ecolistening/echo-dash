@@ -4,6 +4,7 @@ import dash
 import dash_mantine_components as dmc
 import plotly.express as px
 from dash import html, dcc, callback, Output, Input, ALL
+from loguru import logger
 
 from utils import load_and_filter_dataset
 
@@ -64,6 +65,7 @@ layout = html.Div([
 )
 def update_graph(dataset, dates, locations, feature, normalised, diel_plots,
                  separate_plots):  # , time_agg, outliers, colour_locations, ):
+    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=} {normalised=} {diel_plots=} {separate_plots=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.sort_values(by='recorder')
 

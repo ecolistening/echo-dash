@@ -4,6 +4,7 @@ import dash
 import dash_mantine_components as dmc
 import pandas as pd
 from dash import html, dcc, callback, Output, Input, ALL
+from loguru import logger
 from plotly_calplot import calplot
 
 from utils import load_and_filter_dataset
@@ -33,6 +34,7 @@ layout = html.Div([
     Input('feature-dropdown', component_property='value'),
 )
 def update_graph(dataset, dates, locations, feature):
+    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.assign(date=pd.to_datetime(data.timestamp.dt.date))
 
