@@ -1,0 +1,19 @@
+bigtree
+dash
+dash-core-components
+dash-html-components
+dash-bootstrap-components
+dash-mantine-components
+dash-daq
+loguru
+openpyxl
+pandas
+plotly
+pyarrow
+scikit-learn
+umap-learn
+xarray
+
+dash-iconify        # Not available in conda
+gunicorn            # Not available in conda
+plotly-calplot      # Not available in conda
