@@ -7,12 +7,13 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from dash import html, dcc, callback, Output, Input, ALL, ctx, State
+from functools import lru_cache
 from loguru import logger
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
 from umap import UMAP
 
-from utils import load_and_filter_dataset, load_config
+from utils import load_and_filter_dataset, load_config, list2tuple
 from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
 
 PAGENAME = 'UMAP'
@@ -155,11 +156,12 @@ layout = html.Div([
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
-#       Functions       #
+#         Cache         #
 #                       #
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
-def get_idx_data(dataset, dates, locations):
+@lru_cache(maxsize=10)
+def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
     data = load_and_filter_dataset(dataset, dates=dates, locations=locations)
     sample_no = data.shape[0]
     logger.debug(f"Dataset {dataset} shape: {data.shape}.")
@@ -193,6 +195,16 @@ def get_idx_data(dataset, dates, locations):
         logger.debug(f"Removed {sample_no-idx_data.shape[0]} NaN samples.")
 
     return idx_data, options
+
+# ~~~~~~~~~~~~~~~~~~~~~ #
+#                       #
+#       Functions       #
+#                       #
+# ~~~~~~~~~~~~~~~~~~~~~ #
+
+def get_idx_data(dataset, dates, locations):
+    logger.debug(f"Get index data: {dataset=} {dates} {locations=}")
+    return get_idx_data_lru(str(dataset), list2tuple(dates), list2tuple(locations))
 
 def get_graph_data(idx_data, sample):
     # Random Sample
@@ -264,6 +276,35 @@ def download_data(dataset, json_data, *args, **kwargs):
 
 
 @callback(
+    Output(sample_slider, 'max'),
+    Output(sample_slider, 'step'),
+    Output(sample_slider, 'value'),
+    Output(sample_slider, 'marks'),
+
+    Input('dataset-select', component_property='value'),
+    Input('date-picker', component_property='value'),
+    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value'),
+    State(sample_slider, component_property='value'), 
+)
+def update_sample_slider(dataset, dates, locations, sample):
+    '''
+    Handle any dataset changes
+    '''
+    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=}")
+
+    idx_data, _ = get_idx_data(dataset, dates, locations)
+
+    # Sort out sample slider
+    max_sample = idx_data.shape[0]
+    step = 1
+    sample = sample if sample is not None and sample <= max_sample else (1000 if max_sample > 1000 else max_sample)
+    marks = [
+        {'value': i, 'label': f'{i}'} for i in np.linspace(1, max_sample, num=5, endpoint=True, dtype=int)
+    ]
+
+    return max_sample, step, sample, marks
+
+@callback(
     Output("plot-data", component_property="data"),
     Output('plot-data-umap', component_property='data'),
 
@@ -273,14 +314,9 @@ def download_data(dataset, json_data, *args, **kwargs):
     Output(row_facet_select, component_property='data'),
     Output(col_facet_select, component_property='data'),
 
-    Output(sample_slider, 'max'),
-    Output(sample_slider, 'step'),
-    Output(sample_slider, 'value'),
-    Output(sample_slider, 'marks'),
-
-    Input('dataset-select', component_property='value'),
-    Input('date-picker', component_property='value'),
-    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value'),
+    State('dataset-select', component_property='value'),
+    State('date-picker', component_property='value'),
+    State({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value'), 
     Input(sample_slider, component_property='value'),
 
     State(colour_select, component_property='value'),
@@ -292,25 +328,19 @@ def download_data(dataset, json_data, *args, **kwargs):
     prevent_initial_call=True
 )
 def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, row_facet, col_facet, opacity):
+    '''
+    Dataset changes will change sample_slider, which will trigger this function. Has to be seperated to allow trigger by initial call.
+    '''
     logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=} {colour_by=} {symbolise_by=} {row_facet=} {col_facet=} {opacity=}")
     idx_data, options = get_idx_data(dataset, dates, locations)
 
-    # Sort out sample slider
-    max = idx_data.shape[0]
-    step = 1
-    sample = sample if sample is not None and sample <= max else (1000 if max > 1000 else max)
-    marks = [
-        {'value': i, 'label': f'{i}'} for i in np.linspace(1, max, num=5, endpoint=True, dtype=int)
-    ]
-
     graph_data = get_graph_data(idx_data, sample)
 
-    fig = fig = get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity)
+    fig = get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity)
 
     return  idx_data.to_json(date_format='iso', orient='split'), \
             graph_data.to_json(date_format='iso', orient='split'), \
-            fig, options, options, options, options, \
-            max, step, sample, marks
+            fig, options, options, options, options
 
 
 @callback(
