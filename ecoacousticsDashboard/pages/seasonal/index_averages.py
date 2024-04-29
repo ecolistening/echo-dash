@@ -5,7 +5,9 @@ import dash
 import dash_mantine_components as dmc
 import pandas as pd
 import plotly.express as px
+import warnings
 from dash import html, dcc, callback, Output, Input, ALL
+from loguru import logger
 
 from utils import load_and_filter_dataset
 
@@ -60,6 +62,7 @@ layout = html.Div([
     # Input(separate_plots_tickbox, component_property='checked'),
 )
 def update_graph(dataset, dates, locations, feature):  # , time_agg, outliers, colour_locations, separate_plots):
+    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.sort_values(by='recorder')
     data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
@@ -71,12 +74,22 @@ def update_graph(dataset, dates, locations, feature):  # , time_agg, outliers, c
         'dddn': {'dddn': ['dawn', 'day', 'dusk', 'night']}
     }
 
-    data = data.sort_values('timestamp'). \
-        groupby(by=['location', 'recorder', 'feature', 'dddn']). \
-        rolling(window=timedelta(days=7), center=True, on='timestamp'). \
-        agg({'value': ['mean', 'std']}).reset_index(). \
-        groupby(
-        by=['location', 'recorder', 'feature', 'dddn', pd.Grouper(freq='1D', key='timestamp')]).mean().reset_index()
+    # data = data.sort_values('timestamp'). \
+    #     groupby(by=['location', 'recorder', 'feature', 'dddn']). \
+    #     rolling(window=timedelta(days=7), center=True, on='timestamp'). \
+    #     agg({'value': ['mean', 'std']}).reset_index(). \
+    #     groupby(
+    #     by=['location', 'recorder', 'feature', 'dddn', pd.Grouper(freq='1D', key='timestamp')]).mean().reset_index()
+
+    data = data.sort_values('timestamp')
+    data = data.groupby(by=['location', 'recorder', 'feature', 'dddn'])
+    data = data.rolling(window=timedelta(days=7), center=True, on='timestamp')
+    data = data.agg({'value': ['mean', 'std']}).reset_index()
+    data = data.groupby(by=['location', 'recorder', 'feature', 'dddn', pd.Grouper(freq='1D', key='timestamp')])
+
+    # Suppress Pandas Performance Warning
+    with warnings.catch_warnings(action="ignore"):
+        data = data.mean().reset_index()
 
     data.columns = [list(filter(lambda x: x != '' and x != 'value', col))[0] for col in data.columns.values]
 

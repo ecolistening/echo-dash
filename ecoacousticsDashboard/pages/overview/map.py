@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import html, dcc, callback, Output, Input, ALL
+from loguru import logger
 
 from config import root_dir
 
@@ -34,6 +35,7 @@ layout = html.Div([
     Input('feature-dropdown', component_property='value'),
 )
 def update_graph(dataset, dates, locations, feature):
+    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=}")
     # data = load_and_filter_dataset(dataset, dates, feature, locations)
     # data = data.assign(date=pd.to_datetime(data.timestamp.dt.date))
     #
@@ -43,6 +45,7 @@ def update_graph(dataset, dates, locations, feature):
     try:
         data = pd.read_parquet(root_dir / dataset / 'locations.parquet')
     except FileNotFoundError as e:
+        logger.warning(e)
         return go.Figure(go.Scattergeo())
 
     extents = data.describe()
