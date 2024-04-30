@@ -13,7 +13,8 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
 from umap import UMAP
 
-from utils import load_and_filter_dataset, load_config, list2tuple
+from utils import list2tuple
+from utils.data import load_and_filter_dataset, load_config
 from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
 
 PAGENAME = 'UMAP'
@@ -241,6 +242,13 @@ def get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opac
 
     # Select sample for audio modal
     fig.update_layout(clickmode='event+select')
+
+    # Add centered title
+    fig.update_layout(title={'text':f"UMAP",
+                             'x':0.5,
+                             'y':0.92,
+                             'font':{'size':24}
+                             })
 
     return fig
 

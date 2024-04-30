@@ -9,7 +9,7 @@ import warnings
 from dash import html, dcc, callback, Output, Input, ALL
 from loguru import logger
 
-from utils import load_and_filter_dataset
+from utils.data import load_and_filter_dataset
 
 dash.register_page(__name__, title='Index Averages', name='Index Averages')
 
@@ -40,16 +40,14 @@ layout = html.Div([
     #     outliers_tickbox,
     #     separate_plots_tickbox
     # ]),
-    html.Div(
-        main_plot := dcc.Graph(),
-    ),
+    dcc.Graph(id=f'idx-averages-graph'),
     drilldown_file_div := html.Div(),
 ])
 
 
 # Add controls to build the interaction
 @callback(
-    Output(main_plot, component_property='figure'),
+    Output('idx-averages-graph', component_property='figure'),
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
@@ -105,5 +103,12 @@ def update_graph(dataset, dates, locations, feature):  # , time_agg, outliers, c
     # )
 
     fig.update_layout(height=800)
+
+    # Add centered title
+    fig.update_layout(title={'text':f"Seasonal Index Averages ({feature})",
+                             'x':0.5,
+                             'y':0.98,
+                             'font':{'size':24}
+                             })
 
     return fig
