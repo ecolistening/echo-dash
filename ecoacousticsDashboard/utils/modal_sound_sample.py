@@ -5,7 +5,7 @@ import dash_bootstrap_components as dbc
 from dash import callback, Input, Output, State, html, no_update
 from loguru import logger
 
-from utils import get_path_from_config
+from utils.data import get_path_from_config
 
 def get_modal_sound_sample(pagename):
     modal_sound_sample = html.Div(

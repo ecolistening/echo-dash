@@ -9,7 +9,7 @@ from dash import html, callback, Output, Input, ALL
 
 from config import root_dir
 from menu.dataset import ds, dataset_input
-from utils import load_and_filter_dataset, load_and_filter_sites, load_config
+from utils.data import load_and_filter_dataset, load_and_filter_sites, load_config
 
 # Initial load of dataset and tree
 df = load_and_filter_dataset(ds)
