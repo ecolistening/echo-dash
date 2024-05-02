@@ -1,0 +1,32 @@
+name: deploy to echodash.co.uk
+run-name: Deploy to echodash.co.uk by @${{ github.actor }}
+on:
+  push:
+    branches:
+      - develop
+      - deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+       - name: Deploy Dash app
+         uses: appleboy/ssh-action@v1.0.3
+         with:
+           host: ${{secrets.SSH_HOST}} # IP address of the server
+           key: ${{secrets.SSH_KEY}} # Private or public key of the server
+           username: ${{ secrets.SSH_USERNAME }} # User of the server
+           port: ${{ secrets.SSH_PORT }}
+           script: |
+             if ! [ -d "$HOME/ecoacoustics-dashboard/" ]; then
+               echo 'repo does not exist!'
+               exit 1
+             fi
+             cd $HOME/ecoacoustics-dashboard/
+             ./deploy-app.sh
+             if [ $? != 0 ]; then
+               echo "deploy-app.sh failed, check the server logs!"
+               exit 1
+             fi
+             echo 'Deployment to echodash.co.uk succesful!'
+
