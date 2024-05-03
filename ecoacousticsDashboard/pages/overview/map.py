@@ -2,18 +2,16 @@
 
 import dash
 import dash_mantine_components as dmc
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import html, dcc, callback, Output, Input, ALL
 from loguru import logger
 
-from config import root_dir
+from utils.data import read_sites
 
 dash.register_page(__name__)
-
-# df = pd.read_parquet(filepath)
-# df = df.assign(date=pd.to_datetime(df.timestamp.dt.date))
 
 layout = html.Div([
     html.Div(
@@ -36,33 +34,34 @@ layout = html.Div([
 )
 def update_graph(dataset, dates, locations, feature):
     logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=}")
-    # data = load_and_filter_dataset(dataset, dates, feature, locations)
-    # data = data.assign(date=pd.to_datetime(data.timestamp.dt.date))
-    #
-    # data = data.groupby('date').agg('count').reset_index()
-    #
-    # fig = calplot(data, x='date', y='file')
-    try:
-        data = pd.read_parquet(root_dir / dataset / 'locations.parquet')
-    except FileNotFoundError as e:
-        logger.warning(e)
+
+    data = read_sites(dataset)
+    if data is None:
         return go.Figure(go.Scattergeo())
 
+
+    '''
+        Calculate Zoom Level for World Map
+
+        https://docs.mapbox.com/help/glossary/zoom-level/#zoom-levels-and-geographical-distance
+    '''
     extents = data.describe()
+    longitude_range = extents.loc['max', 'longitude'] - extents.loc['min', 'longitude']
+    latitude_range = extents.loc['max', 'latitude'] - extents.loc['min', 'latitude']
+
+    # The 111 is a constant to convert decimal degrees to kilometers
+    max_bound = max(longitude_range, latitude_range) * 111
+
+    # Formula established by trial-and-error
+    zoom = 12 - np.log(max_bound)*1.1
+
+    logger.debug(f"{dataset=} {latitude_range=:.4f} {longitude_range=:.4f} {max_bound=:.4f} {np.log(max_bound)=:.4f} {zoom=:.4f}")
 
     fig = px.scatter_mapbox(data, lat="latitude", lon="longitude", hover_name="site",
                             hover_data=['timezone'],
                             # color_discrete_sequence=["fuchsia"],
-                            zoom=1, height=500)
+                            zoom=zoom, height=500)
     fig.update_layout(mapbox_style="open-street-map")
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-    # fig.update_layout(mapbox_bounds={
-    #     "west": extents.loc['min', 'longitude'],
-    #     "east": extents.loc['max', 'longitude'],
-    #     "south": extents.loc['min', 'latitude'],
-    #     "north": extents.loc['max', 'latitude']
-    # })
-    # fig.show()
-    # fig.update_geos(fitbounds='locations')
 
     return fig
