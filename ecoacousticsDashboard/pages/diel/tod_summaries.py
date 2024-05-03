@@ -6,7 +6,7 @@ import plotly.express as px
 from dash import html, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 
-from utils import load_and_filter_dataset
+from utils.data import load_and_filter_dataset
 from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
 
 PAGENAME = 'tod-summaries'
@@ -96,6 +96,13 @@ def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_
 
     # Select sample for audio modal
     fig.update_layout(clickmode='event+select')
+
+    # Add centered title
+    fig.update_layout(title={'text':f"Feature Summaries by Time of Day ({feature})",
+                             'x':0.5,
+                             'y':0.93,
+                             'font':{'size':24}
+                             })
 
     return fig
 

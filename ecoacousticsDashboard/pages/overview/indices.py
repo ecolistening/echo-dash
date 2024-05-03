@@ -6,11 +6,9 @@ import plotly.express as px
 from dash import html, dcc, callback, Output, Input, ALL
 from loguru import logger
 
-from utils import load_and_filter_dataset
+from utils.data import load_and_filter_dataset
 
 dash.register_page(__name__, title='Index Distributions', name='Index Distributions')
-
-# df = pd.read_parquet(filepath).drop_duplicates()
 
 # colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
 normalised_tickbox = dmc.Chip('Normalised', value='normalised', checked=False, persistence=True,
@@ -69,13 +67,20 @@ def update_graph(dataset, dates, locations, feature, normalised, diel_plots,
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.sort_values(by='recorder')
 
-    fig = px.histogram(data, x='value', color='location', marginal='rug',
-                       # category_orders={'habitat code': ['EC1','EC2','EC3','UK1','UK2','UK3']},
-                       facet_col='dddn' if diel_plots else None,
-                       facet_row='location' if separate_plots else None,
-                       histnorm='percent' if normalised else None,
-                       category_orders={'dddn': ['dawn', 'day', 'dusk', 'night']}
+    fig = px.histogram( data, x='value', color='location', marginal='rug',
+                        # category_orders={'habitat code': ['EC1','EC2','EC3','UK1','UK2','UK3']},
+                        facet_col='dddn' if diel_plots else None,
+                        facet_row='location' if separate_plots else None,
+                        histnorm='percent' if normalised else None,
+                        category_orders={'dddn': ['dawn', 'day', 'dusk', 'night']}
                        )
     fig.update_traces(opacity=0.75)
+
+    # Add centered title
+    fig.update_layout(title={'text':f"Acoustic Index Distributions ({feature})",
+                             'x':0.5,
+                             'y':0.92,
+                             'font':{'size':24}
+                             })
 
     return fig

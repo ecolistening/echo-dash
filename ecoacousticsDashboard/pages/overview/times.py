@@ -6,7 +6,7 @@ import plotly.express as px
 from dash import html, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 
-from utils import load_and_filter_dataset
+from utils.data import load_and_filter_dataset
 from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
 
 PAGENAME = 'Times'
@@ -42,7 +42,9 @@ layout = html.Div([
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
     # Input('checklist-locations-hierarchy', component_property='value'),
     # Input('checklist-locations', component_property='value'),
-    Input('feature-dropdown', component_property='value'),
+
+    # Feature is not required, but helps with caching the dataset
+    State('feature-dropdown', component_property='value'),
 )
 def update_graph(dataset, dates, locations, feature):
     logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=}")
@@ -54,8 +56,17 @@ def update_graph(dataset, dates, locations, feature):
     fig.update_xaxes(type='category')
     fig.update_layout(scattermode="group", scattergap=0.75)
 
+    # Add centered title
+    fig.update_layout(title={'text':'Recording Times',
+                             'x':0.5,
+                             'y':0.95,
+                             'font':{'size':24}
+                             })
+
     # Select sample for audio modal
     fig.update_layout(clickmode='event+select')
+
+
 
     return fig
 
