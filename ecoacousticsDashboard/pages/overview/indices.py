@@ -79,7 +79,7 @@ def update_graph(dataset, dates, locations, feature, normalised, diel_plots,
     # Add centered title
     fig.update_layout(title={'text':f"Acoustic Index Distributions ({feature})",
                              'x':0.5,
-                             'y':0.92,
+                             'y':0.97,
                              'font':{'size':24}
                              })
 
