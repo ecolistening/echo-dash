@@ -18,11 +18,11 @@ from utils import list2tuple
 #                       #
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
-def read_dataset(dataset: str):
+def read_dataset(dataset: str, columns: list = None):
     datapath = os.path.join(root_dir,dataset,'indices.parquet')
     logger.debug(f"Read dataset from \"{datapath}\"..")
     try:
-        data = pd.read_parquet(datapath)
+        data = pd.read_parquet(datapath, columns=columns).drop_duplicates()
     except Exception as e:
         data = None
         logger.error(e)
@@ -53,6 +53,10 @@ def read_config(dataset: str):
         logger.error(e)
     return config
 
+
+def get_dataset_names():
+    return [d.name for d in root_dir.glob("*") if d.is_dir()]
+
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
 #         Cache         #
@@ -61,7 +65,29 @@ def read_config(dataset: str):
 
 @lru_cache(maxsize=10)
 def load_and_filter_dataset_lru(dataset: str, dates: tuple=None, feature: str=None, locations: tuple=None, sample: int=None):
-    data = read_dataset(dataset)
+     
+    if any((dates,feature,locations,sample)):
+        logger.debug(f"Use preloaded dataset..")
+        data = load_and_filter_dataset(dataset)
+    else:
+        data = read_dataset(dataset)
+
+        sample_no = data.shape[0]
+        data = data.drop_duplicates()
+        if sample_no>data.shape[0]:
+            logger.debug(f"Removed {sample_no-data.shape[0]} duplicate samples: {data.shape=}")
+
+        # Compute Site Hierarchy levels
+        data = data.assign(**{f'sitelevel_{k}': v for k,v in data.site.str.split('/', expand=True).iloc[:,1:].to_dict(orient='list').items()})
+        logger.debug(f"Computed site hierarchy levels")
+
+        # Compute Temporal Splits
+        data['hour'] = data.timestamp.dt.hour
+        data['weekday'] = data.timestamp.dt.day_name()
+        data['date'] = data.timestamp.dt.date
+        data['month'] = data.timestamp.dt.month_name()
+        data['year'] = data.timestamp.dt.year
+        logger.debug(f"Computed temporal splits")
 
     if dates is not None:
         dates = [date.fromisoformat(d) for d in dates]
@@ -77,22 +103,11 @@ def load_and_filter_dataset_lru(dataset: str, dates: tuple=None, feature: str=No
         data = data[data['site'].isin([l.strip('/') for l in locations])]
         logger.debug(f"Seleted Locations: {data.shape=}")
 
+
     # Randomly sample
     if sample is not None:
         data = data.sample(n=sample)
         logger.debug(f"Selected {sample} random samples: {data.shape=}")
-
-    # Compute Site Hierarchy levels
-    data = data.assign(**{f'sitelevel_{k}': v for k,v in data.site.str.split('/', expand=True).iloc[:,1:].to_dict(orient='list').items()})
-    logger.debug(f"Computed site hierarchy levels")
-
-    # Compute Temporal Splits
-    data['hour'] = data.timestamp.dt.hour
-    data['weekday'] = data.timestamp.dt.day_name()
-    data['date'] = data.timestamp.dt.date
-    data['month'] = data.timestamp.dt.month_name()
-    data['year'] = data.timestamp.dt.year
-    logger.debug(f"Computed temporal splits")
 
     return data
 
