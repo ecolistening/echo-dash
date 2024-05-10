@@ -221,15 +221,15 @@ def get_graph_data(idx_data, sample):
     logger.debug(f"Return graph data and options.")
     return graph_data
 
-def get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity):
+def get_UMAP_fig(graph_data, colour_by, symbol_by, row_facet, col_facet, opacity):
 
-    logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbolise_by=} {row_facet=} {col_facet=} {opacity=}")
+    logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
 
     fig = px.scatter(
         graph_data, x=0, y=1,
         opacity=opacity / 100.0,
         color=colour_by,
-        symbol=symbolise_by,
+        symbol=symbol_by,
         facet_row=row_facet,
         facet_col=col_facet,
         hover_name='file',
@@ -320,6 +320,11 @@ def update_sample_slider(dataset, dates, locations, sample):
     Output(row_facet_select, component_property='data'),
     Output(col_facet_select, component_property='data'),
 
+    Output(colour_select, component_property='value'),
+    Output(symbol_select, component_property='value'),
+    Output(row_facet_select, component_property='value'),
+    Output(col_facet_select, component_property='value'),
+
     State('dataset-select', component_property='value'),
     State('date-picker', component_property='value'),
     State({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value'), 
@@ -333,20 +338,29 @@ def update_sample_slider(dataset, dates, locations, sample):
 
     prevent_initial_call=True
 )
-def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, row_facet, col_facet, opacity):
+def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity):
     '''
     Dataset changes will change sample_slider, which will trigger this function. Has to be seperated to allow trigger by initial call.
     '''
-    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=} {colour_by=} {symbolise_by=} {row_facet=} {col_facet=} {opacity=}")
+    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
     idx_data, options = get_idx_data(dataset, dates, locations)
 
     graph_data = get_graph_data(idx_data, sample)
 
-    fig = get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity)
+    # Ensure option is available for dataset
+    valid_options = [opt['value'] for opt in options]
+    if colour_by not in valid_options: colour_by = None
+    if symbol_by not in valid_options: symbol_by = None
+    if row_facet not in valid_options: row_facet = None
+    if col_facet not in valid_options: col_facet = None
+
+    fig = get_UMAP_fig(graph_data, colour_by, symbol_by, row_facet, col_facet, opacity)
 
     return  idx_data.to_json(date_format='iso', orient='split'), \
             graph_data.to_json(date_format='iso', orient='split'), \
-            fig, options, options, options, options
+            fig, options, options, options, options, \
+            colour_by, symbol_by, row_facet, col_facet
+
 
 
 @callback(
@@ -366,13 +380,13 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, r
 
     prevent_initial_call=True
 )
-def update_graph_visuals(json_data, colour_by, symbolise_by, row_facet, col_facet, opacity):
-    logger.debug(f"Trigger Callback: json data ({len(json_data)}B) {colour_by=} {symbolise_by=} {row_facet=} {col_facet=} {opacity=}")
+def update_graph_visuals(json_data, colour_by, symbol_by, row_facet, col_facet, opacity):
+    logger.debug(f"Trigger Callback: json data ({len(json_data)}B) {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
     graph_data = pd.read_json(StringIO(json_data), orient='split')
 
-    fig = get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity)
+    fig = get_UMAP_fig(graph_data, colour_by, symbol_by, row_facet, col_facet, opacity)
 
-    return fig#, colour_by, symbolise_by, row_facet, col_facet
+    return fig#, colour_by, symbol_by, row_facet, col_facet
 
 @callback(
     Output(f'modal_sound_sample_{PAGENAME}', 'is_open'),
