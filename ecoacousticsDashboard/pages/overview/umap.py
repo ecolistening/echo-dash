@@ -282,6 +282,7 @@ def download_data(dataset, json_data, *args, **kwargs):
 
 
 @callback(
+    Output(sample_slider, 'min'),
     Output(sample_slider, 'max'),
     Output(sample_slider, 'step'),
     Output(sample_slider, 'value'),
@@ -301,6 +302,7 @@ def update_sample_slider(dataset, dates, locations, sample):
     idx_data, _ = get_idx_data(dataset, dates, locations)
 
     # Sort out sample slider
+    min_sample = 1
     max_sample = idx_data.shape[0]
     step = 1
     sample = sample if sample is not None and sample <= max_sample else (1000 if max_sample > 1000 else max_sample)
@@ -308,7 +310,7 @@ def update_sample_slider(dataset, dates, locations, sample):
         {'value': i, 'label': f'{i}'} for i in np.linspace(1, max_sample, num=5, endpoint=True, dtype=int)
     ]
 
-    return max_sample, step, sample, marks
+    return min_sample, max_sample, step, sample, marks
 
 @callback(
     Output("plot-data", component_property="data"),
