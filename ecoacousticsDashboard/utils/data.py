@@ -18,11 +18,11 @@ from utils import list2tuple
 #                       #
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
-def read_dataset(dataset: str):
+def read_dataset(dataset: str, columns: list = None):
     datapath = os.path.join(root_dir,dataset,'indices.parquet')
     logger.debug(f"Read dataset from \"{datapath}\"..")
     try:
-        data = pd.read_parquet(datapath)
+        data = pd.read_parquet(datapath, columns=columns).drop_duplicates()
     except Exception as e:
         data = None
         logger.error(e)
@@ -51,7 +51,15 @@ def read_config(dataset: str):
         config.read(configpath)
     except (IOError, TypeError) as e:
         logger.error(e)
+    else:
+        if not config.has_section('Site Hierarchy'):
+            config.add_section('Site Hierarchy')
+
     return config
+
+
+def get_dataset_names():
+    return [d.name for d in root_dir.glob("*") if d.is_dir()]
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
@@ -60,8 +68,32 @@ def read_config(dataset: str):
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
 @lru_cache(maxsize=10)
-def load_and_filter_dataset_lru(dataset: str, dates: tuple=None, feature: str=None, locations: tuple=None, sample: int=None):
+def load_dataset_lru(dataset: str):
     data = read_dataset(dataset)
+
+    sample_no = data.shape[0]
+    data = data.drop_duplicates()
+    if sample_no>data.shape[0]:
+        logger.debug(f"Removed {sample_no-data.shape[0]} duplicate samples: {data.shape=}")
+
+    # Compute Site Hierarchy levels
+    data = data.assign(**{f'sitelevel_{k}': v for k,v in data.site.str.split('/', expand=True).iloc[:,1:].to_dict(orient='list').items()})
+    logger.debug(f"Computed site hierarchy levels")
+
+    # Compute Temporal Splits
+    data['hour'] = data.timestamp.dt.hour
+    data['weekday'] = data.timestamp.dt.day_name()
+    data['date'] = data.timestamp.dt.date
+    data['month'] = data.timestamp.dt.month_name()
+    data['year'] = data.timestamp.dt.year
+    logger.debug(f"Computed temporal splits")
+
+    return data
+
+@lru_cache(maxsize=10)
+def load_and_filter_dataset_lru(dataset: str, dates: tuple=None, feature: str=None, locations: tuple=None):
+     
+    data = load_dataset(dataset)
 
     if dates is not None:
         dates = [date.fromisoformat(d) for d in dates]
@@ -76,23 +108,6 @@ def load_and_filter_dataset_lru(dataset: str, dates: tuple=None, feature: str=No
         # changed it from locations[-1] after unpacking nested list in list2tuple - Potential source for problems
         data = data[data['site'].isin([l.strip('/') for l in locations])]
         logger.debug(f"Seleted Locations: {data.shape=}")
-
-    # Randomly sample
-    if sample is not None:
-        data = data.sample(n=sample)
-        logger.debug(f"Selected {sample} random samples: {data.shape=}")
-
-    # Compute Site Hierarchy levels
-    data = data.assign(**{f'sitelevel_{k}': v for k,v in data.site.str.split('/', expand=True).iloc[:,1:].to_dict(orient='list').items()})
-    logger.debug(f"Computed site hierarchy levels")
-
-    # Compute Temporal Splits
-    data['hour'] = data.timestamp.dt.hour
-    data['weekday'] = data.timestamp.dt.day_name()
-    data['date'] = data.timestamp.dt.date
-    data['month'] = data.timestamp.dt.month_name()
-    data['year'] = data.timestamp.dt.year
-    logger.debug(f"Computed temporal splits")
 
     return data
 
@@ -110,9 +125,7 @@ def load_config_lru(dataset: str):
         Storing result in cache brings the risk that changes in the config will not be effective until reset or cache is filled.
     '''
     config = read_config(dataset)
-    if not config.has_section('Site Hierarchy'):
-        config.add_section('Site Hierarchy')
-
+    
     return config
 
 @lru_cache(maxsize=10)
@@ -141,19 +154,36 @@ def get_path_from_config_lru(dataset: str, section: str, option:str):
 #                       #
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
+def load_dataset(dataset: str):
+    logger.debug(f"Load {dataset=}")
+    return load_dataset_lru(str(dataset))
+
 ## In order to cache the data, input types need to be hashable - all lists need to be converted to tuples
 def load_and_filter_dataset(dataset: str, dates: list=None, feature: str=None, locations: list=None, sample: int=None):
 
-    dataset = str(dataset)
-    if dates is not None: dates = list2tuple(dates)
-    if feature is not None: feature = str(feature)
-    if locations is not None: locations = list2tuple(locations)
-    if sample is not None: sample = int(sample)
-    
-    logger.debug(f"Load {dataset=} {dates=} {feature=} {locations=} {sample=}")
-    return load_and_filter_dataset_lru(dataset, dates, feature, locations, sample)
+    # Prevent double caching of unfiltered datasets
+    if not any((dates,feature,locations)):
+        logger.debug(f"No filters selected, redirect")
+        data = load_dataset(dataset)
 
-def load_and_filter_sites(dataset: str, dates=None, feature: str=None, locations: List=None, recorders: List=None):
+    else:
+        dataset = str(dataset)
+        if dates is not None: dates = list2tuple(dates)
+        if feature is not None: feature = str(feature)
+        if locations is not None: locations = list2tuple(locations)
+
+        logger.debug(f"Load {dataset=} and filter {dates=} {feature=} {locations=}")
+        data = load_and_filter_dataset_lru(dataset, dates, feature, locations)
+
+    # Randomly sample
+    if sample is not None:
+        sample = int(sample)
+        data = data.sample(n=sample, random_state=42)
+        logger.debug(f"Selected {sample} random samples: {data.shape=}")
+
+    return data
+
+def load_and_filter_sites(dataset: str):
     logger.debug(f"Load site data for {dataset=}")
     return load_and_filter_sites_lru(str(dataset))
 

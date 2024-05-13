@@ -21,13 +21,12 @@ PAGENAME = 'UMAP'
 dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
 
 # FIXME use of 'location' is deprecated. This should select a level from 'site'
-index = ['file', 'site', 'timestamp',
-         'location',
-         # 'hours after dawn', 'hours after sunrise', 'hours after noon', 'hours after sunset', 'hours after dusk',
-         # 'dddn'
-         ]
-tod_timing = ['hours after dawn', 'hours after sunrise', 'hours after noon', 'hours after sunset', 'hours after dusk',
-              'dddn']
+index = ['file', 'site', 'timestamp', 'location']
+
+
+#'hours after dawn', 'hours after sunrise', 'hours after noon', 'hours after sunset', 'hours after dusk'
+tod_timing = [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night'}]
+
 # Level of site
 # Time breakdowns
 
@@ -48,8 +47,7 @@ separate_plots_tickbox = dmc.Chip('Plot per Location', value='location', checked
 colour_select = dmc.Select(
     id='umap-plot-options-color-by',
     label="Colour by",
-    data=[{'value': i, 'label': i, 'group': 'Base'} for i in index] + [{'value': i, 'label': i, 'group': 'Time of Day'}
-                                                                       for i in tod_timing],
+    # data=[{'value': i, 'label': i, 'group': 'Base'} for i in index] + [{'value': i, 'label': i, 'group': 'Time of Day'} for i in tod_timing],
     searchable=True,
     clearable=True,
     style={"width": 200},
@@ -58,7 +56,7 @@ colour_select = dmc.Select(
 symbol_select = dmc.Select(
     id='umap-plot-options-symbol-by',
     label="Symbolise by",
-    data=index,
+    # data=index,
     searchable=True,
     clearable=True,
     style={"width": 200},
@@ -67,7 +65,7 @@ symbol_select = dmc.Select(
 row_facet_select = dmc.Select(
     id='umap-plot-options-rowfacet-by',
     label="Facet Rows by",
-    data=index,
+    # data=index,
     searchable=True,
     clearable=True,
     style={"width": 200},
@@ -76,7 +74,7 @@ row_facet_select = dmc.Select(
 col_facet_select = dmc.Select(
     id='umap-plot-options-colfacet-by',
     label="Facet Columns by",
-    data=index,
+    # data=index,
     searchable=True,
     clearable=True,
     style={"width": 200},
@@ -97,16 +95,16 @@ sample_slider = dmc.Slider(
     persistence=True
 )
 
-time_aggregation = dmc.SegmentedControl(
-    id='time-aggregation',
-    data=[
-        {'value': 'time', 'label': '15 minutes'},
-        {'value': 'hour', 'label': '1 hour'},
-        {'value': 'dddn', 'label': 'Dawn-Day-Dusk-Night'}
-    ],
-    value='time',
-    persistence=True
-)
+# time_aggregation = dmc.SegmentedControl(
+#     id='time-aggregation',
+#     data=[
+#         {'value': 'time', 'label': '15 minutes'},
+#         {'value': 'hour', 'label': '1 hour'},
+#         {'value': 'dddn', 'label': 'Dawn-Day-Dusk-Night'}
+#     ],
+#     value='time',
+#     persistence=True
+# )
 
 appendix = dmc.Grid(
     children=[
@@ -175,9 +173,9 @@ def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
     temporal_cols = ['hour', 'weekday', 'date', 'month', 'year']
 
     options = [{'value': i, 'label': config.get( 'Site Hierarchy', i, fallback=i), 'group': 'Site Level'} for i in sitelevel_cols] + \
-              [{'value': i, 'label': i, 'group': 'Time of Day'} for i in tod_timing] + \
-              [{'value': i, 'label': i, 'group': 'Temporal'} for i in temporal_cols] + \
-              [{'value': i, 'label': i, 'group': 'Other Metadata'} for i in index]
+              [i | {'group': 'Time of Day'} for i in tod_timing] + \
+              [{'value': i, 'label': i.capitalize(), 'group': 'Temporal'} for i in temporal_cols] + \
+              [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata'} for i in index]
 
     # Updating Plot
     idx_cols = list(filter(lambda a: a not in ['feature', 'value'], data.columns))
@@ -223,15 +221,15 @@ def get_graph_data(idx_data, sample):
     logger.debug(f"Return graph data and options.")
     return graph_data
 
-def get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity):
+def get_UMAP_fig(graph_data, colour_by, symbol_by, row_facet, col_facet, opacity):
 
-    logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbolise_by=} {row_facet=} {col_facet=} {opacity=}")
+    logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
 
     fig = px.scatter(
         graph_data, x=0, y=1,
         opacity=opacity / 100.0,
         color=colour_by,
-        symbol=symbolise_by,
+        symbol=symbol_by,
         facet_row=row_facet,
         facet_col=col_facet,
         hover_name='file',
@@ -284,6 +282,7 @@ def download_data(dataset, json_data, *args, **kwargs):
 
 
 @callback(
+    Output(sample_slider, 'min'),
     Output(sample_slider, 'max'),
     Output(sample_slider, 'step'),
     Output(sample_slider, 'value'),
@@ -303,6 +302,7 @@ def update_sample_slider(dataset, dates, locations, sample):
     idx_data, _ = get_idx_data(dataset, dates, locations)
 
     # Sort out sample slider
+    min_sample = 1
     max_sample = idx_data.shape[0]
     step = 1
     sample = sample if sample is not None and sample <= max_sample else (1000 if max_sample > 1000 else max_sample)
@@ -310,7 +310,7 @@ def update_sample_slider(dataset, dates, locations, sample):
         {'value': i, 'label': f'{i}'} for i in np.linspace(1, max_sample, num=5, endpoint=True, dtype=int)
     ]
 
-    return max_sample, step, sample, marks
+    return min_sample, max_sample, step, sample, marks
 
 @callback(
     Output("plot-data", component_property="data"),
@@ -321,6 +321,11 @@ def update_sample_slider(dataset, dates, locations, sample):
     Output(symbol_select, component_property='data'),
     Output(row_facet_select, component_property='data'),
     Output(col_facet_select, component_property='data'),
+
+    Output(colour_select, component_property='value'),
+    Output(symbol_select, component_property='value'),
+    Output(row_facet_select, component_property='value'),
+    Output(col_facet_select, component_property='value'),
 
     State('dataset-select', component_property='value'),
     State('date-picker', component_property='value'),
@@ -335,28 +340,37 @@ def update_sample_slider(dataset, dates, locations, sample):
 
     prevent_initial_call=True
 )
-def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, row_facet, col_facet, opacity):
+def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity):
     '''
     Dataset changes will change sample_slider, which will trigger this function. Has to be seperated to allow trigger by initial call.
     '''
-    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=} {colour_by=} {symbolise_by=} {row_facet=} {col_facet=} {opacity=}")
+    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
     idx_data, options = get_idx_data(dataset, dates, locations)
 
     graph_data = get_graph_data(idx_data, sample)
 
-    fig = get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity)
+    # Ensure option is available for dataset
+    valid_options = [opt['value'] for opt in options]
+    if colour_by not in valid_options: colour_by = None
+    if symbol_by not in valid_options: symbol_by = None
+    if row_facet not in valid_options: row_facet = None
+    if col_facet not in valid_options: col_facet = None
+
+    fig = get_UMAP_fig(graph_data, colour_by, symbol_by, row_facet, col_facet, opacity)
 
     return  idx_data.to_json(date_format='iso', orient='split'), \
             graph_data.to_json(date_format='iso', orient='split'), \
-            fig, options, options, options, options
+            fig, options, options, options, options, \
+            colour_by, symbol_by, row_facet, col_facet
+
 
 
 @callback(
     Output(f'{PAGENAME}-graph', component_property='figure', allow_duplicate=True),
-    Output(colour_select, component_property='value'),
-    Output(symbol_select, component_property='value'),
-    Output(row_facet_select, component_property='value'),
-    Output(col_facet_select, component_property='value'),
+    # Output(colour_select, component_property='value'),
+    # Output(symbol_select, component_property='value'),
+    # Output(row_facet_select, component_property='value'),
+    # Output(col_facet_select, component_property='value'),
 
     State('plot-data-umap', component_property='data'),
     
@@ -368,13 +382,13 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbolise_by, r
 
     prevent_initial_call=True
 )
-def update_graph_visuals(json_data, colour_by, symbolise_by, row_facet, col_facet, opacity):
-    logger.debug(f"Trigger Callback: json data ({len(json_data)}B) {colour_by=} {symbolise_by=} {row_facet=} {col_facet=} {opacity=}")
+def update_graph_visuals(json_data, colour_by, symbol_by, row_facet, col_facet, opacity):
+    logger.debug(f"Trigger Callback: json data ({len(json_data)}B) {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
     graph_data = pd.read_json(StringIO(json_data), orient='split')
 
-    fig = get_UMAP_fig(graph_data, colour_by, symbolise_by, row_facet, col_facet, opacity)
+    fig = get_UMAP_fig(graph_data, colour_by, symbol_by, row_facet, col_facet, opacity)
 
-    return fig, colour_by, symbolise_by, row_facet, col_facet
+    return fig#, colour_by, symbol_by, row_facet, col_facet
 
 @callback(
     Output(f'modal_sound_sample_{PAGENAME}', 'is_open'),

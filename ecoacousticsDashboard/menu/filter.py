@@ -7,9 +7,8 @@ import dash_mantine_components as dmc
 import pandas as pd
 from dash import html, callback, Output, Input, ALL
 
-from config import root_dir
 from menu.dataset import ds, dataset_input
-from utils.data import load_and_filter_dataset, load_and_filter_sites, load_config
+from utils.data import load_and_filter_dataset, load_and_filter_sites, load_config #, read_dataset
 
 # Initial load of dataset and tree
 df = load_and_filter_dataset(ds)
@@ -148,8 +147,9 @@ def update_locations(dataset, children=None, values=None):
 def update_menu(dataset, value):
     value = [date.fromisoformat(v) for v in value]
 
-    data = pd.read_parquet(root_dir / dataset / 'indices.parquet',
-                           columns=['timestamp', 'location', 'recorder']).drop_duplicates()
+    #data = read_dataset(dataset, columns=['timestamp', 'location', 'recorder'])
+    data = load_and_filter_dataset(dataset)
+
     data = data.assign(date=data.timestamp.dt.date)
     min_date = data.timestamp.dt.date.min()
     max_date = data.timestamp.dt.date.max()

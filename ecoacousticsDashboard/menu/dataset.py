@@ -7,9 +7,9 @@ from dash_iconify import DashIconify
 from loguru import logger
 
 from config import root_dir
-from utils.data import load_and_filter_sites, load_config
+from utils.data import get_dataset_names, load_and_filter_sites, load_config
 
-datasets = [d.name for d in root_dir.glob("*") if d.is_dir()]
+datasets = get_dataset_names()
 ds = datasets[0]
 
 tree = load_and_filter_sites(ds)
