@@ -20,15 +20,9 @@ from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
 PAGENAME = 'UMAP'
 dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
 
-# FIXME use of 'location' is deprecated. This should select a level from 'site'
-index = ['file', 'site', 'timestamp', 'location']
 
-
-#'hours after dawn', 'hours after sunrise', 'hours after noon', 'hours after sunset', 'hours after dusk'
-tod_timing = [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night'}]
-
-# Level of site
-# Time breakdowns
+tod_timing = [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'type': 'categorical'}] + \
+            [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
 
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
@@ -168,15 +162,6 @@ def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
     logger.debug(f"Load config..")
     config = load_config(dataset)
 
-    # Updating Plot Options
-    sitelevel_cols = list(filter(lambda a: a.startswith('sitelevel_'), data.columns))
-    temporal_cols = ['hour', 'weekday', 'date', 'month', 'year']
-
-    options = [{'value': i, 'label': config.get( 'Site Hierarchy', i, fallback=i), 'group': 'Site Level'} for i in sitelevel_cols] + \
-              [i | {'group': 'Time of Day'} for i in tod_timing] + \
-              [{'value': i, 'label': i.capitalize(), 'group': 'Temporal'} for i in temporal_cols] + \
-              [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata'} for i in index]
-
     # Updating Plot
     idx_cols = list(filter(lambda a: a not in ['feature', 'value'], data.columns))
 
@@ -193,6 +178,23 @@ def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
     if sample_no>idx_data.shape[0]:
         logger.debug(f"Removed {sample_no-idx_data.shape[0]} NaN samples.")
 
+
+    # Updating Plot Options
+    sitelevel_cols = list(filter(lambda a: a.startswith('sitelevel_'), data.columns))
+    temporal_cols = ['hour', 'weekday', 'date', 'month', 'year']
+
+    options = [{'value': i, 'label': config.get( 'Site Hierarchy', i, fallback=i), 'group': 'Site Level', 'type': 'categorical'} for i in sitelevel_cols] + \
+              [i | {'group': 'Time of Day'} for i in tod_timing] + \
+              [{'value': i, 'label': i.capitalize(), 'group': 'Temporal', 'type': 'categorical'} for i in temporal_cols]
+
+    # Filter options to ensure they are present in the dataset
+    options = [opt for opt in options if opt['value'] in idx_cols]
+
+    # deprecated since they are already covered or offer no visualisation value
+    # index = ['file', 'site', 'timestamp', 'location']
+    # [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata'} for i in index]
+
+
     return idx_data, options
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
@@ -202,7 +204,7 @@ def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
 def get_idx_data(dataset, dates, locations):
-    logger.debug(f"Get index data: {dataset=} {dates} {locations=}")
+    logger.debug(f"Get index data: {dataset=} {dates=} {locations=}")
     return get_idx_data_lru(str(dataset), list2tuple(dates), list2tuple(locations))
 
 def get_graph_data(idx_data, sample):
@@ -345,22 +347,26 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
     Dataset changes will change sample_slider, which will trigger this function. Has to be seperated to allow trigger by initial call.
     '''
     logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
-    idx_data, options = get_idx_data(dataset, dates, locations)
-
+    idx_data, all_options = get_idx_data(dataset, dates, locations)
     graph_data = get_graph_data(idx_data, sample)
 
+    # Select only categorical options
+    cat_options = [opt for opt in all_options if opt['type'] in ('categorical')]
+
     # Ensure option is available for dataset
-    valid_options = [opt['value'] for opt in options]
-    if colour_by not in valid_options: colour_by = None
-    if symbol_by not in valid_options: symbol_by = None
-    if row_facet not in valid_options: row_facet = None
-    if col_facet not in valid_options: col_facet = None
+    val_all_options = [opt['value'] for opt in all_options]
+    val_cat_options = [opt['value'] for opt in cat_options]
+
+    if colour_by not in val_all_options: colour_by = None
+    if symbol_by not in val_cat_options: symbol_by = None
+    if row_facet not in val_cat_options: row_facet = None
+    if col_facet not in val_cat_options: col_facet = None
 
     fig = get_UMAP_fig(graph_data, colour_by, symbol_by, row_facet, col_facet, opacity)
 
     return  idx_data.to_json(date_format='iso', orient='split'), \
             graph_data.to_json(date_format='iso', orient='split'), \
-            fig, options, options, options, options, \
+            fig, all_options, cat_options, cat_options, cat_options,  \
             colour_by, symbol_by, row_facet, col_facet
 
 
