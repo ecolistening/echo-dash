@@ -83,7 +83,8 @@ def load_dataset_lru(dataset: str):
     # Compute Temporal Splits
     data['hour'] = data.timestamp.dt.hour
     data['weekday'] = data.timestamp.dt.day_name()
-    data['date'] = data.timestamp.dt.date
+    #data['date'] = data.timestamp.dt.date
+    data['date'] = data.timestamp.dt.strftime('%Y-%m-%d')
     data['month'] = data.timestamp.dt.month_name()
     data['year'] = data.timestamp.dt.year
     logger.debug(f"Computed temporal splits")
