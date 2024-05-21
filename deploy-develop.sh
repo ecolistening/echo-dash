@@ -5,15 +5,8 @@ if ! [ -d "$HOME/ecoacoustics-dashboard/" ]; then
     exit 1
 fi
 
-cd $HOME/ecoacoustics-dashboard/
-git pull
-if [ $? != 0 ]; then
-    echo "git pull failed, check the server logs!"
-    exit 1
-fi
-
 cd $HOME/ecoacoustics-dashboard/ecoacousticsDashboard/
-docker compose up --build -d
+docker compose --env-file ./.env.develop up --build -d
 if [ $? != 0 ]; then
     echo "docker compose failed, check the server logs!"
     exit 1
