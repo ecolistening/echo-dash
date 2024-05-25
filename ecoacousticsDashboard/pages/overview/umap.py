@@ -244,7 +244,7 @@ def get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet
 
     logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")    
 
-    category_orders = {opt['value']: opt.get('order',None) for opt in options}
+    category_orders = {opt['value']: opt.get('order') for opt in options if opt.get('order',None) is not None}
 
     fig = px.scatter(
         graph_data, x=0, y=1,
