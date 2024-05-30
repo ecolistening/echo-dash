@@ -7,7 +7,9 @@ from dash import html, dcc, callback, Output, Input, ALL
 from loguru import logger
 
 from utils.data import load_and_filter_dataset
+from utils.save_plot_fig import get_save_plot
 
+PAGENAME = 'indices'
 dash.register_page(__name__, title='Index Distributions', name='Index Distributions')
 
 # colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
@@ -28,6 +30,14 @@ time_aggregation = dmc.SegmentedControl(
     persistence=True
 )
 
+appendix = dmc.Grid(
+    children=[
+        dmc.Col(html.Div(), span=8),
+        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
+    ],
+    gutter="xl",
+)
+
 layout = html.Div([
     dmc.Title('Acoustic Index Distributions', order=1),
     dmc.Divider(variant='dotted'),
@@ -39,16 +49,15 @@ layout = html.Div([
         diel_tickbox,
         separate_plots_tickbox
     ]),
-    html.Div(
-        main_plot := dcc.Graph(),
-    ),
+    dcc.Graph(id=f'{PAGENAME}-graph'),
     drilldown_file_div := html.Div(),
+    appendix,
 ])
 
 
 # Add controls to build the interaction
 @callback(
-    Output(main_plot, component_property='figure'),
+    Output(f'{PAGENAME}-graph', component_property='figure'),
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),

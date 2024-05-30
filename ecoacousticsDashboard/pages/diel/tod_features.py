@@ -8,6 +8,7 @@ from loguru import logger
 
 from utils.data import load_and_filter_dataset
 from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
+from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'tod-features'
 dash.register_page(__name__, title='Acoustic Indices', name='Acoustic Indices')
@@ -25,6 +26,14 @@ dash.register_page(__name__, title='Acoustic Indices', name='Acoustic Indices')
 
 colours_tickbox = dmc.Chip('Colour by Month', value='colour', checked=True, persistence=True, id='colour-date')
 
+appendix = dmc.Grid(
+    children=[
+        dmc.Col(html.Div(), span=8),
+        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
+    ],
+    gutter="xl",
+)
+
 # App layout
 # app.\
 layout = html.Div([
@@ -36,6 +45,7 @@ layout = html.Div([
         colours_tickbox,
     ]),
     dcc.Graph(id=f'{PAGENAME}-graph'),
+    appendix,
     get_modal_sound_sample(PAGENAME),
     drilldown_file_div := html.Div(),
 ])

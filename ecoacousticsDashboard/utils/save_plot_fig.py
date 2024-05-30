@@ -26,20 +26,20 @@ def get_save_plot(plot_name):
                 return dict;
             } 
         """,
-        Output("rqst-plot", "data"),
+        Output(f"rqst-plot-{plot_name}", "data"),
         Input("dl_jpg", "n_clicks"),
         Input("dl_png", "n_clicks"),
         Input("dl_pdf", "n_clicks"),
         Input("dl_svg", "n_clicks"),
-        State("save-plot-target", "data"),
+        State(plot_name, "id"),
         prevent_initial_call=True
     )
 
     @callback(
-        Output("download-plot", "data"),
+        Output(f'download-plot-{plot_name}', component_property='data'),
         State('dataset-select', component_property='value'),
         State(plot_name, component_property='figure'),
-        Input("rqst-plot", "data"),
+        Input(f"rqst-plot-{plot_name}", "data"),
         prevent_initial_call=True,
     )
     def download_fig(dataset, fig_dict, rqst):
@@ -57,7 +57,6 @@ def get_save_plot(plot_name):
                 dmc.Button("SVG", variant="filled", id='dl_svg'),
                 dmc.Button("PDF", variant="filled", id='dl_pdf'),
             ]),
-            dcc.Store(id='rqst-plot'),
-            dcc.Store(id='save-plot-target',data=plot_name),
-            dcc.Download(id='download-plot'),
+            dcc.Store(id=f'rqst-plot-{plot_name}'),
+            dcc.Download(id=f'download-plot-{plot_name}'),
         ])
