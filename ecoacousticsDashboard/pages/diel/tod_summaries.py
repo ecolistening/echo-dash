@@ -8,6 +8,7 @@ from loguru import logger
 
 from utils.data import load_and_filter_dataset
 from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
+from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'tod-summaries'
 dash.register_page(__name__, title='Summaries', name='Summaries')
@@ -37,6 +38,18 @@ time_aggregation = dmc.SegmentedControl(
     persistence=True
 )
 
+appendix = dmc.Grid(
+    children=[
+        dmc.Col(html.Div([
+            dmc.Title('Acoustic Evenness Index', order=3),
+            dmc.Text(
+                'The Acoustic Evenness Index (AEI), from Villanueva-Rivera et al. 2011 (band evenness using the Gini index), is calculated by dividing the spectrogram into bins (default 10, each one of 1000 Hz) and taking the proportion of the signals in each bin above a threshold (default -50 dBFS). The AEI is the result of the Gini index applied to these bins.')
+        ]), span=8),
+        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
+    ],
+    gutter="xl",
+)
+
 layout = html.Div([
     html.Div(
         [html.H1('Feature Summaries by Time of Day')],
@@ -49,12 +62,8 @@ layout = html.Div([
         separate_plots_tickbox
     ]),
     dcc.Graph(id=f'{PAGENAME}-graph'),
+    appendix,
     get_modal_sound_sample(PAGENAME),
-    html.Div([
-        dmc.Title('Acoustic Evenness Index', order=3),
-        dmc.Text(
-            'The Acoustic Evenness Index (AEI), from Villanueva-Rivera et al. 2011 (band evenness using the Gini index), is calculated by dividing the spectrogram into bins (default 10, each one of 1000 Hz) and taking the proportion of the signals in each bin above a threshold (default -50 dBFS). The AEI is the result of the Gini index applied to these bins.')
-    ]),
     drilldown_file_div := html.Div(),
 ])
 
