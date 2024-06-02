@@ -299,7 +299,7 @@ def get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet
 def download_data(dataset, json_data, *args, **kwargs):
     logger.debug(f"Trigger Callback: {dataset=} json data ({len(json_data)}B) {ctx.triggered_id=}")
 
-    data = pd.read_json(StringIO(json_data), orient='split')
+    data = pd.read_json(StringIO(json_data), orient='table')
 
     if ctx.triggered_id == 'dl_csv':
         return dcc.send_data_frame(data.to_csv, f'{dataset}.csv')
@@ -395,7 +395,7 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
 
     fig = get_UMAP_fig(graph_data, all_options, colour_by, symbol_by, row_facet, col_facet, opacity)
 
-    return  sel_data.to_json(date_format='iso', orient='split'), \
+    return  sel_data.to_json(date_format='iso', orient='table'), \
             graph_data.to_json(date_format='iso', orient='split'), \
             fig, all_options, cat_options, cat_options, cat_options,  \
             colour_by, symbol_by, row_facet, col_facet
