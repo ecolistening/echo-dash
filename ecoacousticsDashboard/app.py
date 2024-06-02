@@ -43,11 +43,12 @@ header = dmc.Header(
 def menu_from_page_registry():
     pages = {m: m.split('.')[1:] for m in dash.page_registry}
     children = {}
-
     for p in pages:
         page = dash.page_registry[p]
-
-        if len(pages[p]) == 1:
+        if len(pages[p]) == 0:
+            logger.warning(f"Can't find page {p}")
+            continue
+        elif len(pages[p]) == 1:
             children[pages[p][0]] = dmc.NavLink(label=page['name'], href=page["relative_path"])
         else:
             if pages[p][0] not in children:
@@ -55,7 +56,6 @@ def menu_from_page_registry():
             children[pages[p][0]].children.append(
                 dmc.NavLink(label=page['name'], href=page["relative_path"])
             )
-
     return list(children.values())
 
 
