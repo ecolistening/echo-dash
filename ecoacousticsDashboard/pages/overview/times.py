@@ -1,6 +1,7 @@
 # Import packages
 
 import dash
+import dash_mantine_components as dmc
 import pandas as pd
 import plotly.express as px
 from dash import html, dcc, callback, Output, Input, State, ALL
@@ -8,6 +9,7 @@ from loguru import logger
 
 from utils.data import load_and_filter_dataset
 from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
+from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'Times'
 dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
@@ -18,6 +20,14 @@ dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
 # fig = px.scatter(df, x='date', y='hour', symbol='recorder', hover_name='file', opacity=0.5)
 # fig.update_xaxes(type='category')
 # fig.update_layout(scattermode="group", scattergap=0.75)
+
+appendix = dmc.Grid(
+    children=[
+        dmc.Col(html.Div(), span=8),
+        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
+    ],
+    gutter="xl",
+)
 
 # App layout
 # app.\
@@ -30,6 +40,7 @@ layout = html.Div([
     # dcc.RadioItems(options=['pop', 'lifeExp', 'gdpPercap'], value='lifeExp', id='my-final-radio-item-example'),
     # dash_table.DataTable(data=df.to_dict('records'), page_size=6),
     dcc.Graph(id=f'{PAGENAME}-graph'),
+    appendix,
     get_modal_sound_sample(PAGENAME),
 ])
 

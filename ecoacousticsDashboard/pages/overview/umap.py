@@ -6,7 +6,8 @@ import dash_mantine_components as dmc
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from dash import html, dcc, callback, Output, Input, ALL, ctx, State
+
+from dash import html, dcc, clientside_callback, callback, Output, Input, ALL, ctx, State
 from functools import lru_cache
 from loguru import logger
 from sklearn.pipeline import make_pipeline
@@ -16,6 +17,7 @@ from umap import UMAP
 from utils import list2tuple
 from utils.data import load_and_filter_dataset, load_config
 from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
+from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'UMAP'
 dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
@@ -101,13 +103,15 @@ sample_slider = dmc.Slider(
 
 appendix = dmc.Grid(
     children=[
+
         dmc.Col(html.Div(children=[
             dmc.Title('About', order=2),
             dmc.Text('A UMAP is a way of projecting high-dimensional data onto fewer dimensions.'),
-            dmc.Anchor('[details]', href='https://pair-code.github.io/understanding-umap/'),
-        ]), span=8),
+            dmc.Anchor('[details]', href='https://pair-code.github.io/understanding-umap/', target="_blank"), # target="_blank" opens link in a new tab
+        ]), span=4),
+
         dmc.Col(html.Div(children=[
-            dmc.Title('Download', order=2),
+            dmc.Title('Download Data', order=2),
             dmc.Text('Download the data in the current plot. Select a format below.'),
             dmc.ButtonGroup([
                 dmc.Button("csv", variant="filled", id='dl_csv'),
@@ -119,6 +123,9 @@ appendix = dmc.Grid(
             dcc.Store(id='plot-data'),
             dcc.Store(id='plot-data-umap')
         ]), span=4),
+
+        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
+
     ],
     gutter="xl",
 )
@@ -237,14 +244,14 @@ def get_graph_data(idx_data, sample):
     logger.debug(f"Write results into pd dataframe..")
     graph_data = pd.DataFrame(proj, index=sel_data.index).reset_index()
 
-    logger.debug(f"Return graph data and options.")
-    return graph_data
+    logger.debug(f"Return graph data and selected samples.")
+    return graph_data, sel_data
 
 def get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet, opacity):
 
     logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")    
 
-    category_orders = {opt['value']: opt.get('order',None) for opt in options}
+    category_orders = {opt['value']: opt.get('order') for opt in options if opt.get('order',None) is not None}
 
     fig = px.scatter(
         graph_data, x=0, y=1,
@@ -291,7 +298,8 @@ def get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet
 )
 def download_data(dataset, json_data, *args, **kwargs):
     logger.debug(f"Trigger Callback: {dataset=} json data ({len(json_data)}B) {ctx.triggered_id=}")
-    data = pd.read_json(StringIO(json_data), orient='split')
+
+    data = pd.read_json(StringIO(json_data), orient='table')
 
     if ctx.triggered_id == 'dl_csv':
         return dcc.send_data_frame(data.to_csv, f'{dataset}.csv')
@@ -303,6 +311,9 @@ def download_data(dataset, json_data, *args, **kwargs):
         return dcc.send_data_frame(data.to_parquet, f'{dataset}.parquet')
 
 
+#########################################################################################################
+#   Pre-load the dataset and update the sample slider, which will trigger the main data load function   #
+#########################################################################################################
 @callback(
     Output(sample_slider, 'min'),
     Output(sample_slider, 'max'),
@@ -368,7 +379,7 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
     '''
     logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
     idx_data, all_options = get_idx_data(dataset, dates, locations)
-    graph_data = get_graph_data(idx_data, sample)
+    graph_data, sel_data = get_graph_data(idx_data, sample)
 
     # Select only categorical options
     cat_options = [opt for opt in all_options if opt['type'] in ('categorical')]
@@ -384,7 +395,7 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
 
     fig = get_UMAP_fig(graph_data, all_options, colour_by, symbol_by, row_facet, col_facet, opacity)
 
-    return  idx_data.to_json(date_format='iso', orient='split'), \
+    return  sel_data.to_json(date_format='iso', orient='table'), \
             graph_data.to_json(date_format='iso', orient='split'), \
             fig, all_options, cat_options, cat_options, cat_options,  \
             colour_by, symbol_by, row_facet, col_facet

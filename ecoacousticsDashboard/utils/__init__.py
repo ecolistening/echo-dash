@@ -1,3 +1,5 @@
+from base64 import b64encode
+from dash import dcc
 from loguru import logger
 
 def list2tuple(arr):
@@ -19,3 +21,17 @@ def list2tuple(arr):
         else:
             val.append(obj)
     return tuple(val)
+
+def render_fig_as_image_file(fig,format_str:str,name:str):
+    for format in ('jpg','png','pdf','svg'):
+        if format in format_str.lower():
+            break
+    else:
+        logger.error(f"Unknown format string \"{format_str}\"")
+        return None
+    
+    img_bytes = fig.to_image(format=format)
+    encoding = b64encode(img_bytes).decode()
+    img_b64 = f"data:image/{format};base64," + encoding
+
+    return dcc.send_bytes(img_bytes, f"{name}.{format}")

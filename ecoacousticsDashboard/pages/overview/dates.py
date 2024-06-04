@@ -8,24 +8,35 @@ from loguru import logger
 from plotly_calplot import calplot
 
 from utils.data import load_and_filter_dataset
+from utils.save_plot_fig import get_save_plot
 
-dash.register_page(__name__)
+PAGENAME = 'Dates'
+dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
 #
 # df = pd.read_parquet(filepath)
 # df = df.assign(date=pd.to_datetime(df.timestamp.dt.date))
+
+appendix = dmc.Grid(
+    children=[
+        dmc.Col(html.Div(), span=8),
+        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
+    ],
+    gutter="xl",
+)
 
 layout = html.Div([
     html.Div(
         [dmc.Title('Recording Dates', order=1)],
     ),
     dmc.Divider(variant='dotted'),
-    main_plot := dcc.Graph(id='dates-graph')
+    dcc.Graph(id=f'{PAGENAME}-graph'),
+    appendix,
 ])
 
 
 # Add controls to build the interaction
 @callback(
-    Output(main_plot, component_property='figure'),
+    Output(f'{PAGENAME}-graph', component_property='figure'),
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
