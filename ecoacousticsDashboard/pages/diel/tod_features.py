@@ -48,6 +48,12 @@ col_facet_select = dmc.Select(
     persistence=True
 )
 
+size_slider = dmc.Slider(
+    id=f'{PAGENAME}-plot-size',
+    min=1, max=20, step=1, value=3,
+    persistence=True
+)
+
 appendix = dmc.Grid(
     children=[
         dmc.Col(html.Div(), span=8),
@@ -67,8 +73,15 @@ layout = html.Div([
         colour_select,
         symbol_select,
         row_facet_select,
-        col_facet_select
-    ]),
+        col_facet_select,
+        dmc.Text('Dot Size', size='sm', align='right'),
+        size_slider,
+    ], grow=True),
+    dmc.Divider(variant='dotted'),
+    # dmc.Group([
+    #     dmc.Text('Dot Size', size='sm', align='right'),
+    #     size_slider,
+    # ], grow=True),
     dcc.Graph(id=f'{PAGENAME}-graph'),
     appendix,
     get_modal_sound_sample(PAGENAME),
@@ -122,8 +135,8 @@ def update_options(dataset, colour_by, symbol_by, row_facet, col_facet,):
     Input(symbol_select, component_property='value'),
     Input(row_facet_select, component_property='value'),
     Input(col_facet_select, component_property='value'),
+    Input(size_slider, component_property='value'),
 
-    
     Input('date-picker', component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
     Input('feature-dropdown', component_property='value'),
@@ -131,7 +144,7 @@ def update_options(dataset, colour_by, symbol_by, row_facet, col_facet,):
     State('dataset-select', component_property='value'),
     prevent_initial_call=True,
 )
-def update_fig(options, colour_by, symbol_by, row_facet, col_facet, dates, locations, feature, dataset):
+def load_fig(options, colour_by, symbol_by, row_facet, col_facet, dot_size, dates, locations, feature, dataset):
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.assign(month=data.timestamp.dt.month, hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
                        minute=data.timestamp.dt.minute)
@@ -155,6 +168,9 @@ def update_fig(options, colour_by, symbol_by, row_facet, col_facet, dates, locat
                              'y':0.95,
                              'font':{'size':24}
                              })
+    
+    # Adjust size of scatter dots
+    fig.update_traces(marker=dict(size=dot_size))
     
     return fig
 
