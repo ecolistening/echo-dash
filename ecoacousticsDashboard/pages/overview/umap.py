@@ -72,7 +72,7 @@ opacity_slider = dmc.Slider(
     id=f'{PAGENAME}-plot-options-opacity',
     min=0, max=100, step=5, value=50,
     marks=[
-        {'value': i, 'label': f'{i}%'} for i in range(0, 100, 20)
+        {'value': i, 'label': f'{i}%'} for i in range(0, 101, 20)
     ],
     persistence=True
 )
@@ -120,12 +120,15 @@ layout = html.Div([
         row_facet_select,
         col_facet_select
     ]),
-    dmc.Group([
-        dmc.Text('Opacity', size='sm', align='right'),
-        opacity_slider,
-        dmc.Text('Sample Size', size='sm', align='right'),
-        sample_slider
-    ], grow=True),
+    dmc.Divider(variant='dotted',style={"margin-top": "15px"}),
+    dmc.Grid([
+        dmc.Col(html.Div(), span=1),
+        dmc.Col(html.Div(dmc.Text('Opacity', size='sm', align='right')), span=1),
+        dmc.Col(html.Div(opacity_slider), span=4),
+        dmc.Col(html.Div(dmc.Text('Sample Size', size='sm', align='right')), span=1),
+        dmc.Col(html.Div(sample_slider), span=4),
+        dmc.Col(html.Div(), span=1),
+    ]),
     dmc.Divider(variant='dotted'),
     dcc.Graph(id=f'{PAGENAME}-graph'),
     get_modal_sound_sample(PAGENAME),
@@ -140,7 +143,7 @@ layout = html.Div([
 #                       #
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
-@lru_cache(maxsize=10)
+@lru_cache(maxsize=2) #Just keep one per dataset
 def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
     data = load_and_filter_dataset(dataset, dates=dates, locations=locations)
 
