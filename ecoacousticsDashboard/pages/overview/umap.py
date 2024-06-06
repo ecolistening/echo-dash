@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-from dash import html, dcc, clientside_callback, callback, Output, Input, ALL, ctx, State
+from dash import html, dcc, callback, Output, Input, ALL, ctx, State
 from functools import lru_cache
 from loguru import logger
 from sklearn.pipeline import make_pipeline
@@ -15,16 +15,12 @@ from sklearn.preprocessing import RobustScaler
 from umap import UMAP
 
 from utils import list2tuple
-from utils.data import load_and_filter_dataset, load_config
+from utils.data import load_and_filter_dataset, get_options_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'UMAP'
 dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
-
-# tod_timing = [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'type': 'categorical'}] + \
-#             [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
-
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
@@ -40,36 +36,32 @@ separate_plots_tickbox = dmc.Chip('Plot per Location', value='location', checked
                                   id='separate-plots')
 
 colour_select = dmc.Select(
-    id='umap-plot-options-color-by',
+    id=f'{PAGENAME}-plot-options-color-by',
     label="Colour by",
-    # data=[{'value': i, 'label': i, 'group': 'Base'} for i in index] + [{'value': i, 'label': i, 'group': 'Time of Day'} for i in tod_timing],
     searchable=True,
     clearable=True,
     style={"width": 200},
     persistence=True
 )
 symbol_select = dmc.Select(
-    id='umap-plot-options-symbol-by',
+    id=f'{PAGENAME}-plot-options-symbol-by',
     label="Symbolise by",
-    # data=index,
     searchable=True,
     clearable=True,
     style={"width": 200},
     persistence=True
 )
 row_facet_select = dmc.Select(
-    id='umap-plot-options-rowfacet-by',
+    id=f'{PAGENAME}-plot-options-rowfacet-by',
     label="Facet Rows by",
-    # data=index,
     searchable=True,
     clearable=True,
     style={"width": 200},
     persistence=True
 )
 col_facet_select = dmc.Select(
-    id='umap-plot-options-colfacet-by',
+    id=f'{PAGENAME}-plot-options-colfacet-by',
     label="Facet Columns by",
-    # data=index,
     searchable=True,
     clearable=True,
     style={"width": 200},
@@ -77,7 +69,7 @@ col_facet_select = dmc.Select(
 )
 
 opacity_slider = dmc.Slider(
-    id='umap-plot-options-opacity',
+    id=f'{PAGENAME}-plot-options-opacity',
     min=0, max=100, step=5, value=50,
     marks=[
         {'value': i, 'label': f'{i}%'} for i in range(0, 100, 20)
@@ -86,20 +78,9 @@ opacity_slider = dmc.Slider(
 )
 
 sample_slider = dmc.Slider(
-    id='umap-plot-options-sample',
+    id=f'{PAGENAME}-plot-options-sample',
     persistence=True
 )
-
-# time_aggregation = dmc.SegmentedControl(
-#     id='time-aggregation',
-#     data=[
-#         {'value': 'time', 'label': '15 minutes'},
-#         {'value': 'hour', 'label': '1 hour'},
-#         {'value': 'dddn', 'label': 'Dawn-Day-Dusk-Night'}
-#     ],
-#     value='time',
-#     persistence=True
-# )
 
 appendix = dmc.Grid(
     children=[
@@ -166,9 +147,6 @@ def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
     sample_no = data.shape[0]
     logger.debug(f"Dataset {dataset} shape: {data.shape}.")
 
-    logger.debug(f"Load config..")
-    config = load_config(dataset)
-
     # Updating Plot
     idx_cols = list(filter(lambda a: a not in ['feature', 'value'], data.columns))
 
@@ -186,36 +164,7 @@ def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
     if sample_no>idx_data.shape[0]:
         logger.debug(f"Removed {sample_no-idx_data.shape[0]} NaN samples.")
 
-
-    # Updating Plot Options
-    options = []
-
-    # Add site hierarchies
-    sitelevel_cols = list(filter(lambda a: a.startswith('sitelevel_'), data.columns))
-    options += [{'value': feat, 'label': config.get( 'Site Hierarchy', feat, fallback=feat), 'group': 'Site Level', 'type': 'categorical'} for feat in sitelevel_cols]
-
-    # Add time of the day
-    options += [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'group': 'Time of Day', 'type': 'categorical'}]
-    options += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
-
-    # Add temporal columns with facet order
-    temporal_cols = (   
-                        ('hour', list(range(24))),
-                        ('weekday', ('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')),
-                        ('date', sorted(data['date'].unique())),
-                        ('month', ('January','February','March','April','May','June','July','August','September','October','November','December')),
-                        ('year', sorted(data['year'].unique())),
-                    )
-    options += [{'value': feat, 'label': feat.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for feat,order in temporal_cols]
-
-    # deprecated since they are already covered or offer no visualisation value
-    # index = ['file', 'site', 'timestamp', 'location']
-    # [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata'} for i in index]
-
-    # Filter options to ensure they are present in the dataset
-    options = [opt for opt in options if opt['value'] in idx_cols]
-
-    return idx_data, options
+    return idx_data
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
@@ -332,7 +281,7 @@ def update_sample_slider(dataset, dates, locations, sample):
     '''
     logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=}")
 
-    idx_data, _ = get_idx_data(dataset, dates, locations)
+    idx_data = get_idx_data(dataset, dates, locations)
 
     # Sort out sample slider
     min_sample = 1
@@ -378,8 +327,10 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
     Dataset changes will change sample_slider, which will trigger this function. Has to be seperated to allow trigger by initial call.
     '''
     logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
-    idx_data, all_options = get_idx_data(dataset, dates, locations)
+    idx_data = get_idx_data(dataset, dates, locations)
     graph_data, sel_data = get_graph_data(idx_data, sample)
+
+    all_options = get_options_for_dataset(dataset)
 
     # Select only categorical options
     cat_options = [opt for opt in all_options if opt['type'] in ('categorical')]
