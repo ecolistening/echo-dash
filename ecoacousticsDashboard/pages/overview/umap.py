@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-from dash import html, dcc, callback, Output, Input, ALL, ctx, State
+from dash import html, dcc, callback, Output, Input, ALL, ctx, State, no_update
 from functools import lru_cache
 from loguru import logger
 from sklearn.pipeline import make_pipeline
@@ -131,6 +131,7 @@ layout = html.Div([
     ]),
     dmc.Divider(variant='dotted'),
     dcc.Graph(id=f'{PAGENAME}-graph'),
+    dcc.Store(id=f'{PAGENAME}-hash'),
     get_modal_sound_sample(PAGENAME),
     drilldown_file_div := html.Div(),
     appendix
@@ -176,7 +177,7 @@ def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
 def get_idx_data(dataset, dates, locations):
-    logger.debug(f"Get index data: {dataset=} {dates=} {locations=}")
+    logger.debug(f"Get index data: {dataset=} dates:{len(dates)} locations:{len(locations)}")
     return get_idx_data_lru(str(dataset), list2tuple(dates), list2tuple(locations))
 
 def get_graph_data(idx_data, sample):
@@ -198,6 +199,10 @@ def get_graph_data(idx_data, sample):
 
     logger.debug(f"Return graph data and selected samples.")
     return graph_data, sel_data
+
+def get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity):
+    string = "-".join(str(v) for v in (dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity))
+    return str(hash(string))
 
 def get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet, opacity):
 
@@ -249,7 +254,7 @@ def get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet
     prevent_initial_call=True,
 )
 def download_data(dataset, json_data, *args, **kwargs):
-    logger.debug(f"Trigger Callback: {dataset=} json data ({len(json_data)}B) {ctx.triggered_id=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} json data ({len(json_data)}B) {ctx.triggered_id=}")
 
     data = pd.read_json(StringIO(json_data), orient='table')
 
@@ -282,7 +287,7 @@ def update_sample_slider(dataset, dates, locations, sample):
     '''
     Handle any dataset changes
     '''
-    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {sample=}")
 
     idx_data = get_idx_data(dataset, dates, locations)
 
@@ -302,6 +307,8 @@ def update_sample_slider(dataset, dates, locations, sample):
     Output('plot-data-umap', component_property='data'),
 
     Output(f'{PAGENAME}-graph', component_property='figure', allow_duplicate=True),
+    Output(f'{PAGENAME}-hash', component_property='data', allow_duplicate=True),
+
     Output(colour_select, component_property='data'),
     Output(symbol_select, component_property='data'),
     Output(row_facet_select, component_property='data'),
@@ -329,7 +336,11 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
     '''
     Dataset changes will change sample_slider, which will trigger this function. Has to be seperated to allow trigger by initial call.
     '''
-    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
+    
+    # Calculate hash
+    hash = get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity)
+    
     idx_data = get_idx_data(dataset, dates, locations)
     graph_data, sel_data = get_graph_data(idx_data, sample)
 
@@ -351,16 +362,24 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
 
     return  sel_data.to_json(date_format='iso', orient='table'), \
             graph_data.to_json(date_format='iso', orient='split'), \
-            fig, all_options, cat_options, cat_options, cat_options,  \
+            fig, hash, \
+            all_options, cat_options, cat_options, cat_options,  \
             colour_by, symbol_by, row_facet, col_facet
 
 
 
 @callback(
     Output(f'{PAGENAME}-graph', component_property='figure', allow_duplicate=True),
+    Output(f'{PAGENAME}-hash', component_property='data', allow_duplicate=True),
 
     State('plot-data-umap', component_property='data'),
     State(colour_select, component_property='data'),
+    State(f'{PAGENAME}-hash', component_property='data'),
+
+    State('dataset-select', component_property='value'),
+    State('date-picker', component_property='value'),
+    State({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value'), 
+    State(sample_slider, component_property='value'),
 
     Input(colour_select, component_property='value'),
     Input(symbol_select, component_property='value'),
@@ -370,8 +389,14 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
 
     prevent_initial_call=True
 )
-def update_graph_visuals(json_data, options, colour_by, symbol_by, row_facet, col_facet, opacity):
-    logger.debug(f"Trigger Callback: json data ({len(json_data)}B) {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
+def update_graph_visuals(json_data, options, hash, dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: json data ({len(json_data)}B) {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
+
+    new_hash = get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity)
+    if hash == new_hash:
+        logger.debug("No new hash value, return.")
+        return no_update, no_update
+
     graph_data = pd.read_json(StringIO(json_data), orient='split')
 
     # Revert automatic formatting
@@ -379,7 +404,7 @@ def update_graph_visuals(json_data, options, colour_by, symbol_by, row_facet, co
 
     fig = get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet, opacity)
 
-    return fig
+    return fig, new_hash
 
 @callback(
     Output(f'modal_sound_sample_{PAGENAME}', 'is_open'),
@@ -397,7 +422,7 @@ def update_graph_visuals(json_data, options, colour_by, symbol_by, row_facet, co
     prevent_initial_call=True,
 )
 def display_sound_modal(selectedData, dataset):
-    logger.debug(f"Trigger Callback: {selectedData=} {dataset=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {selectedData=} {dataset=}")
     selected, return_values = get_modal_state(selectedData,dataset)
     if not selected:
         return return_values

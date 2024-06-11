@@ -14,8 +14,6 @@ from utils.data import load_dataset, load_and_filter_sites, load_config
 df = load_dataset(ds)
 tree = load_and_filter_sites(ds)
 
-print(df.feature.unique())
-
 date_input = dmc.DateRangePicker(
         id="date-picker",
         label="Date Range",
