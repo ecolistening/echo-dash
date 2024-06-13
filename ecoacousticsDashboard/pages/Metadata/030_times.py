@@ -14,13 +14,6 @@ from utils.save_plot_fig import get_save_plot
 PAGENAME = 'Times'
 dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
 
-# df = pd.read_parquet(filepath).drop_duplicates()
-# df = df.assign(date=pd.to_datetime(df.timestamp.dt.date), hour=df.timestamp.dt.hour + df.timestamp.dt.minute / 60.0)
-
-# fig = px.scatter(df, x='date', y='hour', symbol='recorder', hover_name='file', opacity=0.5)
-# fig.update_xaxes(type='category')
-# fig.update_layout(scattermode="group", scattergap=0.75)
-
 appendix = dmc.Grid(
     children=[
         dmc.Col(html.Div(), span=8),
@@ -51,8 +44,6 @@ layout = html.Div([
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-    # Input('checklist-locations-hierarchy', component_property='value'),
-    # Input('checklist-locations', component_property='value'),
 
     # Feature is not required, but helps with caching the dataset
     State('feature-dropdown', component_property='value'),
@@ -60,11 +51,11 @@ layout = html.Div([
 def update_graph(dataset, dates, locations, feature):
     logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
-    data = data.assign(date=pd.to_datetime(data.timestamp.dt.date),
+    data = data.assign(date=data.timestamp.dt.date,
                        hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0)
 
     fig = px.scatter(data, x='date', y='hour', color='location', hover_name='file', opacity=0.25)
-    fig.update_xaxes(type='category')
+    fig.update_xaxes(type='category', categoryorder='category ascending')
     fig.update_layout(scattermode="group", scattergap=0.75)
 
     # Add centered title
@@ -77,9 +68,8 @@ def update_graph(dataset, dates, locations, feature):
     # Select sample for audio modal
     fig.update_layout(clickmode='event+select')
 
-
-
     return fig
+
 
 @callback(
     Output(f'modal_sound_sample_{PAGENAME}', 'is_open'),
