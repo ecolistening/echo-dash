@@ -36,7 +36,7 @@ server = app.server
 
 header = dmc.Header(
     height=60,
-    children=dmc.Center(dmc.Title("Eyeballing Ecoacoustics", order=1))
+    children=dmc.Center(dmc.Title("EchoDash", order=1))
 )
 
 
@@ -56,7 +56,14 @@ def menu_from_page_registry():
             children[pages[p][0]].children.append(
                 dmc.NavLink(label=page['name'], href=page["relative_path"])
             )
-    return list(children.values())
+
+    return_list = []
+
+    # Put groups in desired order. Adjust file name to sort individual pages within groups alphabetically
+    for group in ('home','Metadata','Overview','Diel','Seasonal'):
+        return_list.append(children[group])
+
+    return return_list
 
 
 navbar = dmc.Navbar(
@@ -64,7 +71,7 @@ navbar = dmc.Navbar(
     width={"base": 300},
     children=dmc.ScrollArea(
         dmc.Stack(children=[
-                               dmc.Title("Eyeballing Soundscapes", order=3),
+                               dmc.Title("EchoDash", order=3),
                            ] + menu_from_page_registry() + [
                                dmc.Divider(),
                                dmc.Title("Data", order=3),

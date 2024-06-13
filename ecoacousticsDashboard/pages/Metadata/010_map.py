@@ -11,7 +11,8 @@ from loguru import logger
 
 from utils.data import read_sites
 
-dash.register_page(__name__)
+PAGENAME = 'Map'
+dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
 
 layout = html.Div([
     html.Div(
