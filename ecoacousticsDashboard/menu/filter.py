@@ -5,7 +5,9 @@ import bigtree as bt
 import dash
 import dash_mantine_components as dmc
 import pandas as pd
-from dash import html, callback, Output, Input, ALL
+
+from dash import html, callback, Output, Input, State, ALL, ctx, no_update
+from loguru import logger
 
 from menu.dataset import ds, dataset_input
 from utils.data import load_dataset, load_and_filter_sites, load_config
@@ -144,9 +146,11 @@ def update_locations(dataset, children=None, values=None):
     Output(location_hierarchy, component_property='children'),
     Input(dataset_input, component_property='value'),
     Input(date_input, component_property='value'),
-    Input(feature_input, component_property='value'),
+    State(feature_input, component_property='value'),
 )
 def update_menu(dataset, date_value, feature_value):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} {date_value=} {feature_value=}")
+
     date_value = [date.fromisoformat(v) for v in date_value]
 
     data = load_dataset(dataset)
@@ -155,18 +159,27 @@ def update_menu(dataset, date_value, feature_value):
 
     if feature_value not in feature_data:
         feature_value = feature_data[0]
+    else:
+        feature_value = no_update
 
     data = data.assign(date=data.timestamp.dt.date)
     min_date = data.timestamp.dt.date.min()
     max_date = data.timestamp.dt.date.max()
 
-    if date_value[0] < min_date or date_value[0] > max_date:
+    # Reset date selection for new datasets
+    if ctx.triggered_id is None or ctx.triggered_id == 'dataset-select':
         date_value[0] = min_date
-
-    if date_value[1] < min_date or date_value[1] > max_date:
         date_value[1] = max_date
+        locations = html.Div(dmc.Accordion(children=update_locations(dataset)), id="checklist-locations-div")
 
-    locations = html.Div(dmc.Accordion(children=update_locations(dataset)), id="checklist-locations-div")
+    elif ctx.triggered_id == 'date-picker':
+        if date_value[0] < min_date or date_value[0] > max_date:
+            date_value[0] = min_date
+
+        if date_value[1] < min_date or date_value[1] > max_date:
+            date_value[1] = max_date
+        
+        locations = no_update
 
     return  min_date, max_date, date_value, \
             feature_data, feature_value, \
