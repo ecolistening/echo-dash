@@ -13,11 +13,13 @@ documentation: https://dash.plot.ly/urls
 
 # Setup Logging
 import os
+import sys
 from loguru import logger
 os.makedirs('log',exist_ok=True)
 logger.add("log/{time}.log", rotation="00:00", retention="90 days")
 
 logger.info("Setup server..")
+logger.debug(f"Python Version: {sys.version}")
 
 import dash
 import dash_bootstrap_components as dbc
