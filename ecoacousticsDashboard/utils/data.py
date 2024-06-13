@@ -91,7 +91,7 @@ def load_dataset_lru(dataset: str):
 
     return data
 
-@lru_cache(maxsize=10)
+@lru_cache(maxsize=5)
 def load_and_filter_dataset_lru(dataset: str, dates: tuple=None, feature: str=None, locations: tuple=None):
      
     data = load_dataset(dataset)
@@ -120,7 +120,7 @@ def load_and_filter_sites_lru(dataset: str):
 
     return tree
 
-@lru_cache(maxsize=10)
+@lru_cache(maxsize=3)
 def load_config_lru(dataset: str):
     '''
         Storing result in cache brings the risk that changes in the config will not be effective until reset or cache is filled.
@@ -129,7 +129,7 @@ def load_config_lru(dataset: str):
     
     return config
 
-@lru_cache(maxsize=10)
+@lru_cache(maxsize=3)
 def get_path_from_config_lru(dataset: str, section: str, option:str):
     '''
         Gets a path stored as 'option' in the 'section' of the config of a given 'dataset'.
@@ -149,6 +149,38 @@ def get_path_from_config_lru(dataset: str, section: str, option:str):
         logger.debug(f"Could not find path.")
     return extract_path
 
+@lru_cache(maxsize=10)
+def get_options_for_dataset_lru(dataset: str):
+    data = load_dataset(dataset)
+    config = load_config(dataset)
+    options = []
+
+    # Add site hierarchies
+    sitelevel_cols = list(filter(lambda a: a.startswith('sitelevel_'), data.columns))
+    options += [{'value': feat, 'label': config.get( 'Site Hierarchy', feat, fallback=feat), 'group': 'Site Level', 'type': 'categorical'} for feat in sitelevel_cols]
+
+    # Add time of the day
+    options += [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'group': 'Time of Day', 'type': 'categorical'}]
+    options += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
+
+    # Add temporal columns with facet order
+    temporal_cols = (   
+                        ('hour', list(range(24))),
+                        ('weekday', ('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')),
+                        ('date', sorted(data['date'].unique())),
+                        ('month', ('January','February','March','April','May','June','July','August','September','October','November','December')),
+                        ('year', sorted(data['year'].unique())),
+                    )
+    options += [{'value': feat, 'label': feat.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for feat,order in temporal_cols]
+
+    # deprecated since they are already covered or offer no visualisation value
+    # index = ['file', 'site', 'timestamp', 'location']
+    # [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata'} for i in index]
+
+    # Filter options to ensure they are present in the dataset
+    options = [opt for opt in options if opt['value'] in data.columns]
+
+    return options
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
 #          API          #
@@ -195,3 +227,7 @@ def load_config(dataset: str):
 def get_path_from_config(dataset: str, section: str, option:str):
     logger.debug(f"Get path for {dataset=} {section=} {option=}")
     return get_path_from_config_lru(str(dataset), str(section), str(option))
+
+def get_options_for_dataset(dataset: str):
+    logger.debug(f"Get options for {dataset=}")
+    return get_options_for_dataset_lru(str(dataset))

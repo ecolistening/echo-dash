@@ -5,13 +5,15 @@ import bigtree as bt
 import dash
 import dash_mantine_components as dmc
 import pandas as pd
-from dash import html, callback, Output, Input, ALL
+
+from dash import html, callback, Output, Input, State, ALL, ctx, no_update
+from loguru import logger
 
 from menu.dataset import ds, dataset_input
-from utils.data import load_and_filter_dataset, load_and_filter_sites, load_config #, read_dataset
+from utils.data import load_dataset, load_and_filter_sites, load_config
 
 # Initial load of dataset and tree
-df = load_and_filter_dataset(ds)
+df = load_dataset(ds)
 tree = load_and_filter_sites(ds)
 
 date_input = dmc.DateRangePicker(
@@ -47,22 +49,21 @@ location_hierarchy = html.Div([
     ),
 ], id="checklist-locations-div")
 
-feature_input = html.Div([
-    dmc.Select(
+feature_input = dmc.Select(
         label="Acoustic Index",
         description='Select an acoustic index',
         id='feature-dropdown',
-        data=sorted(df.feature.unique()), value=df.feature.unique()[0],
+        data=sorted(df.feature.unique()), 
+        value=df.feature.unique()[0],
         searchable=True,
         dropdownPosition='bottom',
         # style={'min-width': '200px'},
         clearable=False,
-        persistence=True),
-])
+        persistence=True)
 
 filters = dmc.Stack([
-    date_input,
     feature_input,
+    date_input,
     location_hierarchy,
 ])
 
@@ -140,29 +141,49 @@ def update_locations(dataset, children=None, values=None):
     Output(date_input, component_property='minDate'),
     Output(date_input, component_property='maxDate'),
     Output(date_input, component_property='value'),
+    Output(feature_input, component_property='data'),
+    Output(feature_input, component_property='value'),
     Output(location_hierarchy, component_property='children'),
     Input(dataset_input, component_property='value'),
     Input(date_input, component_property='value'),
+    State(feature_input, component_property='value'),
 )
-def update_menu(dataset, value):
-    value = [date.fromisoformat(v) for v in value]
+def update_menu(dataset, date_value, feature_value):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} {date_value=} {feature_value=}")
 
-    #data = read_dataset(dataset, columns=['timestamp', 'location', 'recorder'])
-    data = load_and_filter_dataset(dataset)
+    date_value = [date.fromisoformat(v) for v in date_value]
+
+    data = load_dataset(dataset)
+
+    feature_data=sorted(data.feature.unique())
+
+    if feature_value not in feature_data:
+        feature_value = feature_data[0]
+    else:
+        feature_value = no_update
 
     data = data.assign(date=data.timestamp.dt.date)
     min_date = data.timestamp.dt.date.min()
     max_date = data.timestamp.dt.date.max()
 
-    if value[0] < min_date or value[0] > max_date:
-        value[0] = min_date
+    # Reset date selection for new datasets
+    if ctx.triggered_id is None or ctx.triggered_id == 'dataset-select':
+        date_value[0] = min_date
+        date_value[1] = max_date
+        locations = html.Div(dmc.Accordion(children=update_locations(dataset)), id="checklist-locations-div")
 
-    if value[1] < min_date or value[1] > max_date:
-        value[1] = max_date
+    elif ctx.triggered_id == 'date-picker':
+        if date_value[0] < min_date or date_value[0] > max_date:
+            date_value[0] = min_date
 
-    locations = html.Div(dmc.Accordion(children=update_locations(dataset)), id="checklist-locations-div")
+        if date_value[1] < min_date or date_value[1] > max_date:
+            date_value[1] = max_date
+        
+        locations = no_update
 
-    return min_date, max_date, value, locations
+    return  min_date, max_date, date_value, \
+            feature_data, feature_value, \
+            locations
 
 
 @callback(

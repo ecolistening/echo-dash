@@ -12,6 +12,7 @@ def inspect_dataset(dataset):
     data = load_and_filter_dataset(dataset)
     logger.info(f"Dataset {dataset}: {data.shape}")
     logger.info(f"Columns: {list(data.columns)}")
+    logger.info(f"Features: {list(data.feature.unique())}")
 
 if __name__ == '__main__':
     import argparse
