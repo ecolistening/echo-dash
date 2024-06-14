@@ -63,3 +63,20 @@ There are a number of different plots (pages) in various states of development. 
 There is a "common" menu on the lefthand side that is used for all (most) pages, and then page-specific options (with the general layout of the menu on the UMAP page) should go up top.
 
 I have been tracking issues and to do's in Github Issues (https://github.com/ecolistening/ecoacoustics-dashboard/issues) and have marked some of the issues as good first issues (https://github.com/ecolistening/ecoacoustics-dashboard/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22), so feel free to start there.
+
+# Hosting
+This dashboard is hosted at https://echodash.co.uk . Pushes to the `develop` branch will automatically be deployed to this host using a gitlab CI workflow and docker. Pushes to the `staging` branch will automatically be deployed to `staging`. The idea being that `develop` has the latest stable code and `staging` provides a test-bed for new features.
+
+## CI workflow
+
+The CI workflow uses `ssh` to log into the echodash.co.uk server and run a script that pulls the latest updates to the active branch. Using `docker` the script then shuts down the old dashboard and restarts it with the new changes.
+
+The `ssh` part of the CI workflow is handled using a ready-made github workflow called `ssh-action`, documenttaion for it can be found [here](https://github.com/appleboy/ssh-action). The ssh process pulls the server hostname, ssh key and and the username of the deployment user from github's secrets area, documented in the `ssh-action` site and [here](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions). If details of the server or user change, this is where you need to update them.
+
+## Nginx reverse proxy
+
+The dashboard also sits behind an nginx reverse proxy. This simplifies the process of enabling encrypted HTTPS connections to the server, which are sometimes required to be able to access sites from public/institutional internet connections. More details about how to set up and adjust the reverse proxy, check out [this](https://www.digitalocean.com/community/tutorials/how-to-secure-nginx-with-let-s-encrypt-on-ubuntu-20-04) tutorial.
+
+## Netdata
+
+The echodash.co.uk also hosts a netdata dashboard that allows us to monitor and record long term resource usage. This is also served behind the nginx reverse proxy, and can be accessed at https://echodash.co.uk/netdata
