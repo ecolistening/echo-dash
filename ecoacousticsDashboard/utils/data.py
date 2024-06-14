@@ -76,19 +76,31 @@ def load_dataset_lru(dataset: str):
     if sample_no>data.shape[0]:
         logger.debug(f"Removed {sample_no-data.shape[0]} duplicate samples: {data.shape=}")
 
-    # Compute Site Hierarchy levels
-    data = data.assign(**{f'sitelevel_{k}': v for k,v in data.site.str.split('/', expand=True).iloc[:,1:].to_dict(orient='list').items()})
-    logger.debug(f"Computed site hierarchy levels")
+    # Adjust file path
+    striptext = None
+    if dataset == "cairngorms":
+        striptext = "/mnt/lustre/projects/mfm/ecolistening/dashboard/audio/cairngorms/"
+    elif dataset == "sounding out":
+        striptext = "/mnt/lustre/projects/mfm/ecolistening/dac_audio/diurnal/dc_corrected/"
 
+    if striptext is not None:
+        logger.debug(f"Strip '{striptext}' from column path..")
+        data['path'] = data['path'].map(lambda x: x.lstrip(striptext))
+
+    # Compute Site Hierarchy levels
+    logger.debug(f"Compute site hierarchy levels..")
+    data = data.assign(**{f'sitelevel_{k}': v for k,v in data.site.str.split('/', expand=True).iloc[:,1:].to_dict(orient='list').items()})
+    
     # Compute Temporal Splits
+    logger.debug(f"Compute temporal splits..")
     data['hour'] = data.timestamp.dt.hour
     data['weekday'] = data.timestamp.dt.day_name()
     #data['date'] = data.timestamp.dt.date
     data['date'] = data.timestamp.dt.strftime('%Y-%m-%d')
     data['month'] = data.timestamp.dt.month_name()
     data['year'] = data.timestamp.dt.year
-    logger.debug(f"Computed temporal splits")
-
+    
+    logger.debug(f"Finished loading dataset {dataset}")
     return data
 
 @lru_cache(maxsize=5)
@@ -137,6 +149,8 @@ def get_path_from_config_lru(dataset: str, section: str, option:str):
         Storing result in cache brings the risk that changes in the config will not be effective until reset or cache is filled.
     '''
     logger.debug(f"Extract path \'{option}\' from config section \'{section}\' for dataset \'{dataset}\'..")
+    
+    extract_path = None
     config = load_config(dataset)
     if config.has_option(section, option):
         extract_path = config.get(section, option)
@@ -145,8 +159,13 @@ def get_path_from_config_lru(dataset: str, section: str, option:str):
             extract_path = os.path.join(root_dir,dataset,extract_path)
             logger.debug(f"Transformed path: \'{extract_path}\'")
     else:
-        extract_path = None
-        logger.debug(f"Could not find path.")
+        logger.debug(f"Could not find path in config.")
+        if option=='sound_file_path':
+            path_ = os.path.join(root_dir,dataset,'soundfiles')
+            if os.path.isdir(path_):
+                extract_path = path_
+                logger.debug(f"Found default path \'{extract_path}\'")
+
     return extract_path
 
 @lru_cache(maxsize=10)

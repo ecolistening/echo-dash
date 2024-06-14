@@ -7,7 +7,7 @@ from dash import html, dcc, callback, Output, Input, State, ALL, clientside_call
 from loguru import logger
 
 from utils.data import load_and_filter_dataset, get_options_for_dataset
-from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
+from utils.modal_sound_sample import get_modal_sound_sample
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'tod-features'
@@ -151,7 +151,7 @@ def load_fig(options, colour_by, symbol_by, row_facet, col_facet, dot_size, date
     
     category_orders = {opt['value']: opt.get('order') for opt in options if opt.get('order',None) is not None}
 
-    fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['file', 'timestamp', 'timestamp'],
+    fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['timestamp', 'path'], # Path last for sound sample modal
                      opacity=0.5, 
                      color=colour_by,
                      symbol=symbol_by,
@@ -173,30 +173,3 @@ def load_fig(options, colour_by, symbol_by, row_facet, col_facet, dot_size, date
     fig.update_traces(marker=dict(size=dot_size))
     
     return fig
-
-@callback(
-    Output(f'modal_sound_sample_{PAGENAME}', 'is_open'),
-    Output(f'modal_sound_header_{PAGENAME}', 'children'),
-    Output(f'modal_sound_file_{PAGENAME}', 'children'),
-    Output(f'modal_sound_audio_{PAGENAME}', 'src'),
-    Output(f'modal_sound_audio_{PAGENAME}', 'controls'),
-    Output(f'modal_sound_details_{PAGENAME}', 'children'),
-    
-    Input(f'{PAGENAME}-graph', component_property='selectedData'),
-
-    State('dataset-select', component_property='value'),
-
-    suppress_callback_exceptions=True,
-    prevent_initial_call=True,
-)
-def display_sound_modal(selectedData,dataset):
-    logger.debug(f"Trigger Callback: {selectedData=} {dataset=}")
-    selected, return_values = get_modal_state(selectedData,dataset)
-    if not selected:
-        return return_values
-
-    pt = selectedData['points'][0]
-
-    details = [pt['customdata'][1]]
-
-    return *return_values, details

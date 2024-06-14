@@ -16,7 +16,7 @@ from umap import UMAP
 
 from utils import list2tuple
 from utils.data import load_and_filter_dataset, get_options_for_dataset
-from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
+from utils.modal_sound_sample import get_modal_sound_sample
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'UMAP'
@@ -219,7 +219,7 @@ def get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet
         facet_col=col_facet,
         category_orders=category_orders,
         hover_name='file',
-        hover_data=['site', 'dddn', 'timestamp'],
+        hover_data=['site', 'dddn', 'timestamp', 'path'],   # Path last for sound sample modal
         # labels={'color': 'Site'},
         height=800
     )
@@ -405,28 +405,3 @@ def update_graph_visuals(json_data, options, hash, dataset, dates, locations, sa
     fig = get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet, opacity)
 
     return fig, new_hash
-
-@callback(
-    Output(f'modal_sound_sample_{PAGENAME}', 'is_open'),
-    Output(f'modal_sound_header_{PAGENAME}', 'children'),
-    Output(f'modal_sound_file_{PAGENAME}', 'children'),
-    Output(f'modal_sound_audio_{PAGENAME}', 'src'),
-    Output(f'modal_sound_audio_{PAGENAME}', 'controls'),
-    Output(f'modal_sound_details_{PAGENAME}', 'children'),
-    
-    Input(f'{PAGENAME}-graph', component_property='selectedData'),
-
-    State('dataset-select', component_property='value'),
-
-    suppress_callback_exceptions=True,
-    prevent_initial_call=True,
-)
-def display_sound_modal(selectedData, dataset):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {selectedData=} {dataset=}")
-    selected, return_values = get_modal_state(selectedData,dataset)
-    if not selected:
-        return return_values
-
-    pt = selectedData['points'][0]
-
-    return *return_values, [' | '.join(pt['customdata'])]
