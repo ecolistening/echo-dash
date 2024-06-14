@@ -20,7 +20,8 @@ from utils.modal_sound_sample import get_modal_sound_sample
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'UMAP'
-dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
+PAGETITLE = "UMAP of Soundscape Descriptors"
+dash.register_page(__name__, title=PAGETITLE, name=PAGENAME)
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
@@ -112,7 +113,7 @@ appendix = dmc.Grid(
 )
 
 layout = html.Div([
-    dmc.Title(PAGENAME, order=1),
+    dmc.Title(PAGETITLE, order=1),
     dmc.Divider(variant='dotted'),
     dmc.Group(children=[
         colour_select,
@@ -228,7 +229,7 @@ def get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet
     fig.update_layout(clickmode='event+select')
 
     # Add centered title
-    fig.update_layout(title={'text':f"UMAP",
+    fig.update_layout(title={'text':PAGETITLE,
                              'x':0.5,
                              'y':0.97,
                              'font':{'size':24}

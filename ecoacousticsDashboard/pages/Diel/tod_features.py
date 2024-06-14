@@ -11,7 +11,8 @@ from utils.modal_sound_sample import get_modal_sound_sample
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'tod-features'
-dash.register_page(__name__, title='Acoustic Indices', name='Acoustic Indices')
+PAGETITLE = 'Scatter Plot of Descriptor by Time of Day'
+dash.register_page(__name__, title=PAGETITLE, name='Scatter Plot')
 
 colour_select = dmc.Select(
     id=f'{PAGENAME}-plot-options-color-by',
@@ -66,7 +67,7 @@ appendix = dmc.Grid(
 # app.\
 layout = html.Div([
     html.Div(
-        [html.H1('Features by Time of Day')],
+        [html.H1(PAGETITLE)],
     ),
     html.Hr(),
     dmc.Group(children=[
@@ -152,6 +153,7 @@ def load_fig(options, colour_by, symbol_by, row_facet, col_facet, dot_size, date
     category_orders = {opt['value']: opt.get('order') for opt in options if opt.get('order',None) is not None}
 
     fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['timestamp', 'path'], # Path last for sound sample modal
+                     height=550,
                      opacity=0.5, 
                      color=colour_by,
                      symbol=symbol_by,
@@ -163,7 +165,7 @@ def load_fig(options, colour_by, symbol_by, row_facet, col_facet, dot_size, date
     fig.update_layout(clickmode='event+select')
 
     # Add centered title
-    fig.update_layout(title={'text':f"Features by Time of Day ({feature})",
+    fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",
                              'x':0.5,
                              'y':0.95,
                              'font':{'size':24}
