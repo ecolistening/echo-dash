@@ -11,7 +11,8 @@ from utils.modal_sound_sample import get_modal_sound_sample
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'tod-summaries'
-dash.register_page(__name__, title='Summaries', name='Summaries')
+PAGETITLE = 'Bar Plot of Descriptor by Time of Day'
+dash.register_page(__name__, title=PAGETITLE, name='Bar Plot')
 
 colours = {
     'main': 'blue',
@@ -37,9 +38,9 @@ time_aggregation = dmc.SegmentedControl(
 appendix = dmc.Grid(
     children=[
         dmc.Col(html.Div([
-            dmc.Title('Acoustic Evenness Index', order=3),
-            dmc.Text(
-                'The Acoustic Evenness Index (AEI), from Villanueva-Rivera et al. 2011 (band evenness using the Gini index), is calculated by dividing the spectrogram into bins (default 10, each one of 1000 Hz) and taking the proportion of the signals in each bin above a threshold (default -50 dBFS). The AEI is the result of the Gini index applied to these bins.')
+            dmc.Title("Feature Name", order=3),
+            dmc.Text('Feature Description')
+                #'The Acoustic Evenness Index (AEI), from Villanueva-Rivera et al. 2011 (band evenness using the Gini index), is calculated by dividing the spectrogram into bins (default 10, each one of 1000 Hz) and taking the proportion of the signals in each bin above a threshold (default -50 dBFS). The AEI is the result of the Gini index applied to these bins.')
         ]), span=8),
         dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
     ],
@@ -48,7 +49,7 @@ appendix = dmc.Grid(
 
 layout = html.Div([
     html.Div(
-        [html.H1('Feature Summaries by Time of Day')],
+        [html.H1(PAGETITLE)],
     ),
     html.Hr(),
     dmc.Group(children=[
@@ -91,6 +92,7 @@ def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_
 
     fig = px.box(data, x=time_agg, y='value',
                  hover_name='file', hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
+                 height=550,
                  facet_col='recorder' if separate_plots else None,
                  facet_col_wrap=4,
                  points='outliers' if outliers else False,
@@ -101,7 +103,7 @@ def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_
     fig.update_layout(clickmode='event+select')
 
     # Add centered title
-    fig.update_layout(title={'text':f"Feature Summaries by Time of Day ({feature})",
+    fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",
                              'x':0.5,
                              'y':0.93,
                              'font':{'size':24}

@@ -10,7 +10,8 @@ from utils.data import load_and_filter_dataset
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'indices'
-dash.register_page(__name__, title='Index Distributions', name='Index Distributions')
+PAGETITLE = 'Soundscape Descriptor Distributions'
+dash.register_page(__name__, title=PAGETITLE, name='Distributions')
 
 # colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
 normalised_tickbox = dmc.Chip('Normalised', value='normalised', checked=False, persistence=True,
@@ -39,7 +40,7 @@ appendix = dmc.Grid(
 )
 
 layout = html.Div([
-    dmc.Title('Acoustic Index Distributions', order=1),
+    dmc.Title(PAGETITLE, order=1),
     dmc.Divider(variant='dotted'),
     dmc.Group(children=[
         # time_aggregation,
@@ -76,7 +77,7 @@ def update_graph(dataset, dates, locations, feature, normalised, diel_plots,
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.sort_values(by='recorder')
 
-    fig = px.histogram( data, x='value', color='location', marginal='rug',
+    fig = px.histogram( data, x='value', color='location', marginal='rug', height=600,
                         # category_orders={'habitat code': ['EC1','EC2','EC3','UK1','UK2','UK3']},
                         facet_col='dddn' if diel_plots else None,
                         facet_row='location' if separate_plots else None,
@@ -86,7 +87,7 @@ def update_graph(dataset, dates, locations, feature, normalised, diel_plots,
     fig.update_traces(opacity=0.75)
 
     # Add centered title
-    fig.update_layout(title={'text':f"Acoustic Index Distributions ({feature})",
+    fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",
                              'x':0.5,
                              'y':0.97,
                              'font':{'size':24}
