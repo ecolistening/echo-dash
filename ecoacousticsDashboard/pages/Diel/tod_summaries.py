@@ -7,20 +7,17 @@ from dash import html, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 
 from utils.data import load_and_filter_dataset
-from utils.modal_sound_sample import get_modal_sound_sample, get_modal_state
+from utils.modal_sound_sample import get_modal_sound_sample
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'tod-summaries'
-dash.register_page(__name__, title='Summaries', name='Summaries')
+PAGETITLE = 'Bar Plot of Descriptor by Time of Day'
+dash.register_page(__name__, title=PAGETITLE, name='Bar Plot')
 
 colours = {
     'main': 'blue',
     'accent1': 'red'
 }
-
-# df = pd.read_parquet(f, columns=['file','timestamp','recorder','feature','value']).drop_duplicates()
-# df = pd.read_parquet(filepath).drop_duplicates()
-# df = df.assign(time=df.timestamp.dt.hour + df.timestamp.dt.minute / 60.0, hour=df.timestamp.dt.hour, minute=df.timestamp.dt.minute)#.astype('datetime64[ns]')
 
 colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
 outliers_tickbox = dmc.Chip('Outliers', value='outlier', checked=True, persistence=True, id='outliers-tickbox')
@@ -41,9 +38,9 @@ time_aggregation = dmc.SegmentedControl(
 appendix = dmc.Grid(
     children=[
         dmc.Col(html.Div([
-            dmc.Title('Acoustic Evenness Index', order=3),
-            dmc.Text(
-                'The Acoustic Evenness Index (AEI), from Villanueva-Rivera et al. 2011 (band evenness using the Gini index), is calculated by dividing the spectrogram into bins (default 10, each one of 1000 Hz) and taking the proportion of the signals in each bin above a threshold (default -50 dBFS). The AEI is the result of the Gini index applied to these bins.')
+            dmc.Title("Feature Name", order=3),
+            dmc.Text('Feature Description')
+                #'The Acoustic Evenness Index (AEI), from Villanueva-Rivera et al. 2011 (band evenness using the Gini index), is calculated by dividing the spectrogram into bins (default 10, each one of 1000 Hz) and taking the proportion of the signals in each bin above a threshold (default -50 dBFS). The AEI is the result of the Gini index applied to these bins.')
         ]), span=8),
         dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
     ],
@@ -52,7 +49,7 @@ appendix = dmc.Grid(
 
 layout = html.Div([
     html.Div(
-        [html.H1('Feature Summaries by Time of Day')],
+        [html.H1(PAGETITLE)],
     ),
     html.Hr(),
     dmc.Group(children=[
@@ -74,8 +71,6 @@ layout = html.Div([
     Input('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-    # Input('checklist-locations-hierarchy', component_property='value'),
-    # Input('checklist-locations', component_property='value'),
     Input('feature-dropdown', component_property='value'),
     Input(time_aggregation, component_property='value'),
     Input(outliers_tickbox, component_property='checked'),
@@ -96,7 +91,8 @@ def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_
     }
 
     fig = px.box(data, x=time_agg, y='value',
-                 hover_name='file', hover_data=['file', 'timestamp', 'timestamp'],
+                 hover_name='file', hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
+                 height=550,
                  facet_col='recorder' if separate_plots else None,
                  facet_col_wrap=4,
                  points='outliers' if outliers else False,
@@ -107,51 +103,10 @@ def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_
     fig.update_layout(clickmode='event+select')
 
     # Add centered title
-    fig.update_layout(title={'text':f"Feature Summaries by Time of Day ({feature})",
+    fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",
                              'x':0.5,
                              'y':0.93,
                              'font':{'size':24}
                              })
 
     return fig
-
-# @callback(
-#     Output(drilldown_file_div, 'children'),
-#     Input(main_plot, 'clickData'),
-#     Input('feature-dropdown', 'value'))
-# def display_click_data(clickData, value):
-#     print(clickData)
-#     if clickData is None:
-#         return None
-#     filename, ts, file_ts = clickData['points'][0]['customdata']
-#
-#     fig = px.line(data_frame=df[(df.timestamp == file_ts) & (df.feature == value)].sort_values(by='timestamp'), x='timestamp', y='value', color='recorder')
-#     fig.update_xaxes(type='date')#, tickformat='%H:%M')
-#
-#     # Plot the feature curves
-#     feature_plot = dcc.Graph(figure=fig)
-#     return feature_plot
-
-@callback(
-    Output(f'modal_sound_sample_{PAGENAME}', 'is_open'),
-    Output(f'modal_sound_header_{PAGENAME}', 'children'),
-    Output(f'modal_sound_file_{PAGENAME}', 'children'),
-    Output(f'modal_sound_audio_{PAGENAME}', 'src'),
-    Output(f'modal_sound_audio_{PAGENAME}', 'controls'),
-    Output(f'modal_sound_details_{PAGENAME}', 'children'),
-    
-    Input(f'{PAGENAME}-graph', component_property='selectedData'),
-
-    State('dataset-select', component_property='value'),
-
-    suppress_callback_exceptions=True,
-    prevent_initial_call=True,
-)
-def display_sound_modal(selectedData,dataset):
-    logger.debug(f"Trigger Callback: {selectedData=} {dataset=}")
-    selected, return_values = get_modal_state(selectedData,dataset)
-    if not selected:
-        return return_values
-
-    # Custom Data missing
-    return *return_values, ['']

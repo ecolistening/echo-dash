@@ -13,7 +13,8 @@ from utils.data import load_and_filter_dataset
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'idx-averages'
-dash.register_page(__name__, title='Index Averages', name='Index Averages')
+PAGETITLE = 'Seasonal Descriptor Averages'
+dash.register_page(__name__, title=PAGETITLE, name='Averages')
 
 colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
 outliers_tickbox = dmc.Chip('Outliers', value='outlier', checked=True, persistence=True, id='outliers-tickbox')
@@ -41,7 +42,7 @@ appendix = dmc.Grid(
 
 layout = html.Div([
     html.Div(
-        [html.H1('Seasonal Index Averages')],
+        [html.H1(PAGETITLE)],
     ),
     html.Hr(),
     # dmc.Group(children=[
@@ -105,18 +106,10 @@ def update_graph(dataset, dates, locations, feature):  # , time_agg, outliers, c
     fig = px.line(data, x='timestamp', y='mean', color='location', facet_row='dddn', markers=True)
     fig.update_traces(marker={'size': 4})
 
-    # fig.add_trace(
-    #     go.Scatter(
-    #         x = data.timestamp,
-    #         y = data['mean'] + data['std'],
-    #         mode='lines'
-    #     )
-    # )
-
-    fig.update_layout(height=800)
+    fig.update_layout(height=700)
 
     # Add centered title
-    fig.update_layout(title={'text':f"Seasonal Index Averages ({feature})",
+    fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",
                              'x':0.5,
                              'y':0.98,
                              'font':{'size':24}

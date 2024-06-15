@@ -50,7 +50,7 @@ location_hierarchy = html.Div([
 ], id="checklist-locations-div")
 
 feature_input = dmc.Select(
-        label="Acoustic Index",
+        label="Acoustic Descriptor",
         description='Select an acoustic index',
         id='feature-dropdown',
         data=sorted(df.feature.unique()), 
