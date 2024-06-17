@@ -99,6 +99,7 @@ def load_dataset_lru(dataset: str):
         #     print(data.loc[data['location'] == location].iloc[0])
 
         data['location'] = data['habitat code']
+        logger.debug("Updated location with habitat code")
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
@@ -197,15 +198,19 @@ def get_options_for_dataset_lru(dataset: str):
         values = data[feat].unique()
 
         try:
-            values_int = map(int,data[feat].unique())
+            values_int = map(int,values)
             order = tuple(str(i) for i in sorted(values_int))
         except:
             order = tuple(sorted(values))
+        else:
+            logger.debug(f"Convert sitelevel {feat} to string.")
+            data[feat] = data[feat].astype(str)
+
 
         options += [{'value': feat, 'label': config.get( 'Site Hierarchy', feat, fallback=feat), 'group': 'Site Level', 'type': 'categorical', 'order': order}]
 
     # Add time of the day
-    options += [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'group': 'Time of Day', 'type': 'categorical'}]
+    options += [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'group': 'Time of Day', 'type': 'categorical', 'order': ('dawn','day','dusk','night')}]
     options += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
 
     # Add temporal columns with facet order
@@ -227,6 +232,25 @@ def get_options_for_dataset_lru(dataset: str):
     options = [opt for opt in options if opt['value'] in data.columns]
 
     return options
+
+
+@lru_cache(maxsize=10)
+def get_categorical_orders_for_dataset_lru(dataset: str):
+    #{opt['value']: opt.get('order') for opt in options if opt.get('order',None) is not None}
+
+    options = get_options_for_dataset(dataset)
+    categorical_orders = {}
+    for opt in options:
+        name = opt['value']
+        order = opt.get('order',None)
+        if order is None:
+            logger.debug(f"Option {name}: No order provided")
+        else:
+            logger.debug(f"Option {name}: {order}")
+            categorical_orders[name] = order
+
+    return categorical_orders
+
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
 #          API          #
@@ -251,7 +275,7 @@ def load_and_filter_dataset(dataset: str, dates: list=None, feature: str=None, l
         if feature is not None: feature = str(feature)
         if locations is not None: locations = list2tuple(locations)
 
-        logger.debug(f"Load {dataset=} and filter {dates=} {feature=} {locations=}")
+        logger.debug(f"Load {dataset=} and filter dates:{len(dates)} locations:{len(locations)} {feature=}")
         data = load_and_filter_dataset_lru(dataset, dates, feature, locations)
 
     # Randomly sample
@@ -277,3 +301,7 @@ def get_path_from_config(dataset: str, section: str, option:str):
 def get_options_for_dataset(dataset: str):
     logger.debug(f"Get options for {dataset=}")
     return get_options_for_dataset_lru(str(dataset))
+
+def get_categorical_orders_for_dataset(dataset: str):
+    logger.debug(f"Get categorical_orders for {dataset=}")
+    return get_categorical_orders_for_dataset_lru(str(dataset))

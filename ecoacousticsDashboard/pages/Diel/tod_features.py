@@ -6,7 +6,7 @@ import plotly.express as px
 from dash import html, dcc, callback, Output, Input, State, ALL, clientside_callback
 from loguru import logger
 
-from utils.data import load_and_filter_dataset, get_options_for_dataset
+from utils.data import load_and_filter_dataset, get_options_for_dataset, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.save_plot_fig import get_save_plot
 
@@ -130,7 +130,6 @@ def update_options(dataset, colour_by, symbol_by, row_facet, col_facet,):
 
 @callback(
     Output(f'{PAGENAME}-graph', component_property='figure'),
-    Input(colour_select, component_property='data'),
 
     Input(colour_select, component_property='value'),
     Input(symbol_select, component_property='value'),
@@ -145,12 +144,12 @@ def update_options(dataset, colour_by, symbol_by, row_facet, col_facet,):
     State('dataset-select', component_property='value'),
     prevent_initial_call=True,
 )
-def load_fig(options, colour_by, symbol_by, row_facet, col_facet, dot_size, dates, locations, feature, dataset):
+def load_fig(colour_by, symbol_by, row_facet, col_facet, dot_size, dates, locations, feature, dataset):
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.assign(month=data.timestamp.dt.month, hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
                        minute=data.timestamp.dt.minute)
     
-    category_orders = {opt['value']: opt.get('order') for opt in options if opt.get('order',None) is not None}
+    category_orders = get_categorical_orders_for_dataset(dataset)
 
     fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['timestamp', 'path'], # Path last for sound sample modal
                      height=550,
@@ -167,7 +166,7 @@ def load_fig(options, colour_by, symbol_by, row_facet, col_facet, dot_size, date
     # Add centered title
     fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",
                              'x':0.5,
-                             'y':0.95,
+                             'y':0.97,
                              'font':{'size':24}
                              })
     
