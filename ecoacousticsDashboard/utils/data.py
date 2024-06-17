@@ -94,7 +94,7 @@ def load_dataset_lru(dataset: str):
 
 
     # Adjust location names
-    if dataset == "sounding_out":
+    if dataset == "sounding out":
         # for location in data['location'].unique():
         #     print(data.loc[data['location'] == location].iloc[0])
 
@@ -193,7 +193,16 @@ def get_options_for_dataset_lru(dataset: str):
 
     # Add site hierarchies
     sitelevel_cols = list(filter(lambda a: a.startswith('sitelevel_'), data.columns))
-    options += [{'value': feat, 'label': config.get( 'Site Hierarchy', feat, fallback=feat), 'group': 'Site Level', 'type': 'categorical'} for feat in sitelevel_cols]
+    for feat in sitelevel_cols:
+        values = data[feat].unique()
+
+        try:
+            values_int = map(int,data[feat].unique())
+            order = tuple(str(i) for i in sorted(values_int))
+        except:
+            order = tuple(sorted(values))
+
+        options += [{'value': feat, 'label': config.get( 'Site Hierarchy', feat, fallback=feat), 'group': 'Site Level', 'type': 'categorical', 'order': order}]
 
     # Add time of the day
     options += [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'group': 'Time of Day', 'type': 'categorical'}]
@@ -210,8 +219,9 @@ def get_options_for_dataset_lru(dataset: str):
     options += [{'value': feat, 'label': feat.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for feat,order in temporal_cols]
 
     # deprecated since they are already covered or offer no visualisation value
-    # index = ['file', 'site', 'timestamp', 'location']
-    # [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata'} for i in index]
+    #index = ['file', 'site', 'timestamp', 'location']
+    index = ['location']
+    options += [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata', 'type': 'categorical', 'order': tuple(sorted(data[i].unique()))} for i in index]
 
     # Filter options to ensure they are present in the dataset
     options = [opt for opt in options if opt['value'] in data.columns]
