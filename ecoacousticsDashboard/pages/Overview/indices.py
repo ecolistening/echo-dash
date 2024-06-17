@@ -3,10 +3,10 @@
 import dash
 import dash_mantine_components as dmc
 import plotly.express as px
-from dash import html, dcc, callback, Output, Input, ALL
+from dash import html, ctx, dcc, callback, Output, Input, ALL
 from loguru import logger
 
-from utils.data import load_and_filter_dataset
+from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'indices'
@@ -73,16 +73,17 @@ layout = html.Div([
 )
 def update_graph(dataset, dates, locations, feature, normalised, diel_plots,
                  separate_plots):  # , time_agg, outliers, colour_locations, ):
-    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=} {normalised=} {diel_plots=} {separate_plots=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=} {normalised=} {diel_plots=} {separate_plots=}")
+
     data = load_and_filter_dataset(dataset, dates, feature, locations)
-    data = data.sort_values(by='recorder')
+    
+    category_orders = get_categorical_orders_for_dataset(dataset)
 
     fig = px.histogram( data, x='value', color='location', marginal='rug', height=600,
-                        # category_orders={'habitat code': ['EC1','EC2','EC3','UK1','UK2','UK3']},
                         facet_col='dddn' if diel_plots else None,
                         facet_row='location' if separate_plots else None,
                         histnorm='percent' if normalised else None,
-                        category_orders={'dddn': ['dawn', 'day', 'dusk', 'night']}
+                        category_orders=category_orders,
                        )
     fig.update_traces(opacity=0.75)
 

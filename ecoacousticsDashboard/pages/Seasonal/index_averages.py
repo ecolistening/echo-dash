@@ -6,10 +6,10 @@ import dash_mantine_components as dmc
 import pandas as pd
 import plotly.express as px
 import warnings
-from dash import html, dcc, callback, Output, Input, ALL
+from dash import html, ctx, dcc, callback, Output, Input, ALL
 from loguru import logger
 
-from utils.data import load_and_filter_dataset
+from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'idx-averages'
@@ -72,17 +72,14 @@ layout = html.Div([
     # Input(separate_plots_tickbox, component_property='checked'),
 )
 def update_graph(dataset, dates, locations, feature):  # , time_agg, outliers, colour_locations, separate_plots):
-    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=}")
+
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.sort_values(by='recorder')
     data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
                        minute=data.timestamp.dt.minute)
 
-    category_orders = {
-        'time': None,
-        'hour': None,
-        'dddn': {'dddn': ['dawn', 'day', 'dusk', 'night']}
-    }
+    category_orders = get_categorical_orders_for_dataset(dataset)
 
     # data = data.sort_values('timestamp'). \
     #     groupby(by=['location', 'recorder', 'feature', 'dddn']). \
@@ -103,7 +100,7 @@ def update_graph(dataset, dates, locations, feature):  # , time_agg, outliers, c
 
     data.columns = [list(filter(lambda x: x != '' and x != 'value', col))[0] for col in data.columns.values]
 
-    fig = px.line(data, x='timestamp', y='mean', color='location', facet_row='dddn', markers=True)
+    fig = px.line(data, x='timestamp', y='mean', color='location', facet_row='dddn', markers=True, category_orders=category_orders)
     fig.update_traces(marker={'size': 4})
 
     fig.update_layout(height=700)

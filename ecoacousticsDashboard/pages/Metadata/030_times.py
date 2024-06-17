@@ -4,10 +4,10 @@ import dash
 import dash_mantine_components as dmc
 import pandas as pd
 import plotly.express as px
-from dash import html, dcc, callback, Output, Input, State, ALL
+from dash import html, ctx, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 
-from utils.data import load_and_filter_dataset
+from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.save_plot_fig import get_save_plot
 
@@ -49,13 +49,15 @@ layout = html.Div([
     State('feature-dropdown', component_property='value'),
 )
 def update_graph(dataset, dates, locations, feature):
-    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=}")
+
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.assign(date=data.timestamp.dt.date,
                        hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0)
 
-    fig = px.scatter(data, x='date', y='hour', color='location', opacity=0.25, hover_name='file', hover_data=['path']) # Path last for sound sample modal
-    fig.update_xaxes(type='category', categoryorder='category ascending')
+    category_orders = get_categorical_orders_for_dataset(dataset)
+
+    fig = px.scatter(data, x='date', y='hour', color='location', opacity=0.25, category_orders=category_orders, hover_name='file', hover_data=['path']) # Path last for sound sample modal
     fig.update_layout(scattermode="group", scattergap=0.75)
 
     # Add centered title

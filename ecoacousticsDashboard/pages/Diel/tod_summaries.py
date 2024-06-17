@@ -3,16 +3,16 @@
 import dash
 import dash_mantine_components as dmc
 import plotly.express as px
-from dash import html, dcc, callback, Output, Input, State, ALL
+from dash import html, ctx, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 
-from utils.data import load_and_filter_dataset
+from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'tod-summaries'
-PAGETITLE = 'Bar Plot of Descriptor by Time of Day'
-dash.register_page(__name__, title=PAGETITLE, name='Bar Plot')
+PAGETITLE = 'Box Plot of Descriptor by Time of Day'
+dash.register_page(__name__, title=PAGETITLE, name='Box Plot')
 
 colours = {
     'main': 'blue',
@@ -78,26 +78,31 @@ layout = html.Div([
     Input(separate_plots_tickbox, component_property='checked'),
 )
 def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_locations, separate_plots):
-    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=} {time_agg=} {outliers=} {colour_locations=} {separate_plots=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=} {time_agg=} {outliers=} {colour_locations=} {separate_plots=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.sort_values(by='recorder')
     data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
                        minute=data.timestamp.dt.minute)
 
-    category_orders = {
-        'time': None,
-        'hour': None,
-        'dddn': {'dddn': ['dawn', 'day', 'dusk', 'night']}
-    }
+    category_orders = get_categorical_orders_for_dataset(dataset)
 
     fig = px.box(data, x=time_agg, y='value',
-                 hover_name='file', hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
-                 height=550,
-                 facet_col='recorder' if separate_plots else None,
-                 facet_col_wrap=4,
-                 points='outliers' if outliers else False,
-                 color='recorder' if colour_locations else None,
-                 category_orders=category_orders[time_agg])
+                hover_name='file', hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
+                height=550,
+                facet_col='recorder' if separate_plots else None,
+                facet_col_wrap=4,
+                points='outliers' if outliers else False,
+                color='recorder' if colour_locations else None,
+                category_orders=category_orders)
+
+    # fig = px.bar(data, x=time_agg, y='value',
+    #             hover_name='file', hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
+    #             height=550,
+    #             facet_col='recorder' if separate_plots else None,
+    #             facet_col_wrap=4,
+    #             #points='outliers' if outliers else False,
+    #             color='recorder' if colour_locations else None,
+    #             category_orders=category_orders)
 
     # Select sample for audio modal
     fig.update_layout(clickmode='event+select')
@@ -105,7 +110,7 @@ def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_
     # Add centered title
     fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",
                              'x':0.5,
-                             'y':0.93,
+                             'y':0.97,
                              'font':{'size':24}
                              })
 

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import html, dcc, callback, Output, Input, ALL
+from dash import html, ctx, dcc, callback, Output, Input, ALL
 from loguru import logger
 
 from utils.data import read_sites
@@ -34,7 +34,7 @@ layout = html.Div([
     Input('feature-dropdown', component_property='value'),
 )
 def update_graph(dataset, dates, locations, feature):
-    logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=}")
 
     data = read_sites(dataset)
     if data is None:

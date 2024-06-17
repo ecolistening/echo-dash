@@ -15,7 +15,7 @@ from sklearn.preprocessing import RobustScaler
 from umap import UMAP
 
 from utils import list2tuple
-from utils.data import load_and_filter_dataset, get_options_for_dataset
+from utils.data import load_and_filter_dataset, get_options_for_dataset, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.save_plot_fig import get_save_plot
 
@@ -205,11 +205,11 @@ def get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_f
     string = "-".join(str(v) for v in (dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity))
     return str(hash(string))
 
-def get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet, opacity):
+def get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, opacity):
 
     logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")    
 
-    category_orders = {opt['value']: opt.get('order') for opt in options if opt.get('order',None) is not None}
+    category_orders = get_categorical_orders_for_dataset(dataset)
 
     fig = px.scatter(
         graph_data, x=0, y=1,
@@ -359,7 +359,7 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
     if row_facet not in val_cat_options: row_facet = None
     if col_facet not in val_cat_options: col_facet = None
 
-    fig = get_UMAP_fig(graph_data, all_options, colour_by, symbol_by, row_facet, col_facet, opacity)
+    fig = get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, opacity)
 
     return  sel_data.to_json(date_format='iso', orient='table'), \
             graph_data.to_json(date_format='iso', orient='split'), \
@@ -374,7 +374,6 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
     Output(f'{PAGENAME}-hash', component_property='data', allow_duplicate=True),
 
     State('plot-data-umap', component_property='data'),
-    State(colour_select, component_property='data'),
     State(f'{PAGENAME}-hash', component_property='data'),
 
     State('dataset-select', component_property='value'),
@@ -390,7 +389,7 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
 
     prevent_initial_call=True
 )
-def update_graph_visuals(json_data, options, hash, dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity):
+def update_graph_visuals(json_data, hash, dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity):
     logger.debug(f"Trigger ID={ctx.triggered_id}: json data ({len(json_data)}B) {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
 
     new_hash = get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity)
@@ -403,6 +402,12 @@ def update_graph_visuals(json_data, options, hash, dataset, dates, locations, sa
     # Revert automatic formatting
     graph_data['date'] = graph_data['date'].astype(str)
 
-    fig = get_UMAP_fig(graph_data, options, colour_by, symbol_by, row_facet, col_facet, opacity)
+    options = get_options_for_dataset(dataset)
+    for opt in options:
+        if opt['group'] == 'Site Level':
+            feat_name = opt['value']
+            graph_data[feat_name] = graph_data[feat_name].astype(str)
+
+    fig = get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, opacity)
 
     return fig, new_hash

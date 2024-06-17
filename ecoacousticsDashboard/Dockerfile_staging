@@ -14,6 +14,7 @@ COPY config.py /code/config.py
 COPY pages/ /code/pages/
 COPY utils/ /code/utils/
 COPY menu/ /code/menu/
+COPY content/ /code/content/
 
 EXPOSE 8051
 CMD ["gunicorn", "-b", "0.0.0.0:8051", "--timeout=600", "app:server"]

@@ -1,4 +1,4 @@
-from base64 import b64encode
+#from base64 import b64encode
 from dash import dcc
 from loguru import logger
 
@@ -31,7 +31,7 @@ def render_fig_as_image_file(fig,format_str:str,name:str):
         return None
     
     img_bytes = fig.to_image(format=format)
-    encoding = b64encode(img_bytes).decode()
-    img_b64 = f"data:image/{format};base64," + encoding
+    # encoding = b64encode(img_bytes).decode()
+    # img_b64 = f"data:image/{format};base64," + encoding
 
     return dcc.send_bytes(img_bytes, f"{name}.{format}")
