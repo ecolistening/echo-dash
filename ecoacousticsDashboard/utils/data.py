@@ -76,6 +76,11 @@ def load_dataset_lru(dataset: str):
     if sample_no>data.shape[0]:
         logger.debug(f"Removed {sample_no-data.shape[0]} duplicate samples: {data.shape=}")
 
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+    # Dirty fixes that need to be sorted in the Dataset! #
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
     # Adjust file path
     striptext = None
     if dataset == "cairngorms":
@@ -86,6 +91,18 @@ def load_dataset_lru(dataset: str):
     if striptext is not None:
         logger.debug(f"Strip '{striptext}' from column path..")
         data['path'] = data['path'].map(lambda x: x.lstrip(striptext))
+
+
+    # Adjust location names
+    if dataset == "sounding_out":
+        # for location in data['location'].unique():
+        #     print(data.loc[data['location'] == location].iloc[0])
+
+        data['location'] = data['habitat code']
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
 
     # Compute Site Hierarchy levels
     logger.debug(f"Compute site hierarchy levels..")

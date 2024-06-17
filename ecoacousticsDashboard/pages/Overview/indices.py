@@ -75,14 +75,14 @@ def update_graph(dataset, dates, locations, feature, normalised, diel_plots,
                  separate_plots):  # , time_agg, outliers, colour_locations, ):
     logger.debug(f"Trigger Callback: {dataset=} {dates=} {locations=} {feature=} {normalised=} {diel_plots=} {separate_plots=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
-    data = data.sort_values(by='recorder')
+    #data = data.sort_values(by='location')
 
     fig = px.histogram( data, x='value', color='location', marginal='rug', height=600,
                         # category_orders={'habitat code': ['EC1','EC2','EC3','UK1','UK2','UK3']},
                         facet_col='dddn' if diel_plots else None,
                         facet_row='location' if separate_plots else None,
                         histnorm='percent' if normalised else None,
-                        category_orders={'dddn': ['dawn', 'day', 'dusk', 'night']}
+                        category_orders={'dddn': ('dawn', 'day', 'dusk', 'night'), 'location': tuple(sorted(data['location'].unique()))}
                        )
     fig.update_traces(opacity=0.75)
 
