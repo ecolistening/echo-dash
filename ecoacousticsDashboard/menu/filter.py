@@ -51,7 +51,7 @@ location_hierarchy = html.Div([
 
 feature_input = dmc.Select(
         label="Acoustic Descriptor",
-        description='Select an acoustic index',
+        description='Select an acoustic desscriptor',
         id='feature-dropdown',
         data=sorted(df.feature.unique()), 
         value=df.feature.unique()[0],
