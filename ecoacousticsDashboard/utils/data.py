@@ -150,7 +150,7 @@ def load_and_filter_sites_lru(dataset: str):
 
     return tree
 
-@lru_cache(maxsize=3)
+#@lru_cache(maxsize=3)
 def load_config_lru(dataset: str):
     '''
         Storing result in cache brings the risk that changes in the config will not be effective until reset or cache is filled.
