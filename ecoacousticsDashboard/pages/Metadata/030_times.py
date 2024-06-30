@@ -13,6 +13,7 @@ from utils.plot_filter_menu import get_filter_drop_down, get_size_slider
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'Times'
+PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
 
 colour_select, symbol_select, row_facet_select, col_facet_select = get_filter_drop_down(PAGENAME, colour_default='location')
@@ -74,7 +75,7 @@ def update_graph(dataset, dates, locations, feature, colour_by, symbol_by, row_f
     category_orders = get_categorical_orders_for_dataset(dataset)
 
     fig = px.scatter(data, x='date', y='hour', opacity=0.25,
-                     height=600,
+                     height=PLOTHEIGHT,
                      hover_name='file', hover_data=['path'], # Path last for sound sample modal
                      color=colour_by,
                      symbol=symbol_by,
@@ -86,7 +87,7 @@ def update_graph(dataset, dates, locations, feature, colour_by, symbol_by, row_f
     # Add centered title
     fig.update_layout(title={'text':'Recording Times',
                              'x':0.5,
-                             'y':0.95,
+                             'y':0.97,
                              'font':{'size':24}
                              })
 

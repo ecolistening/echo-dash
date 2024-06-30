@@ -13,6 +13,7 @@ from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'scatter-plot'
 PAGETITLE = 'Scatter Plot of Descriptor by Time of Day'
+PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGETITLE, name='Scatter Plot')
 
 colour_select, symbol_select, row_facet_select, col_facet_select = get_filter_drop_down(PAGENAME, colour_default='month', row_facet_default="sitelevel_1")
@@ -72,7 +73,7 @@ def load_fig(dataset, dates, locations, feature, colour_by, symbol_by, row_facet
     category_orders = get_categorical_orders_for_dataset(dataset)
 
     fig = px.scatter(data, x='hour', y='value', hover_name='file', hover_data=['timestamp', 'path'], # Path last for sound sample modal
-                     height=600,
+                     height=PLOTHEIGHT,
                      opacity=0.5, 
                      color=colour_by,
                      symbol=symbol_by,

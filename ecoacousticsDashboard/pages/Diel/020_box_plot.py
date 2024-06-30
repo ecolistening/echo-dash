@@ -13,6 +13,7 @@ from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'box-plot'
 PAGETITLE = 'Box Plot of Descriptor by Time of Day'
+PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGETITLE, name='Box Plot')
 
 colour_select, row_facet_select, col_facet_select = \
@@ -78,7 +79,7 @@ def update_graph(dataset, dates, locations, feature, colour_by, row_facet, col_f
 
     fig = px.box(data, x=time_agg, y='value',
                 hover_name='file', hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
-                height=600,
+                height=PLOTHEIGHT,
                 color=colour_by,
                 facet_row=row_facet,
                 facet_col=col_facet,

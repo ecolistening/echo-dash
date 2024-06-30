@@ -12,6 +12,7 @@ from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'distributions'
 PAGETITLE = 'Soundscape Descriptor Distributions'
+PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGETITLE, name='Distributions')
 
 colour_select, row_facet_select, col_facet_select = \
@@ -65,7 +66,7 @@ def update_graph(dataset, dates, locations, feature, colour_by, row_facet, col_f
     
     category_orders = get_categorical_orders_for_dataset(dataset)
 
-    fig = px.histogram( data, x='value', marginal='rug', opacity=0.75, height=600,
+    fig = px.histogram( data, x='value', marginal='rug', opacity=0.75, height=PLOTHEIGHT,
                         color=colour_by,
                         facet_row=row_facet,
                         facet_col=col_facet,

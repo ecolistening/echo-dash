@@ -22,6 +22,7 @@ from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'UMAP'
 PAGETITLE = "UMAP of Soundscape Descriptors"
+PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGETITLE, name=PAGENAME)
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
@@ -183,7 +184,7 @@ def get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet
         hover_name='file',
         hover_data=['site', 'dddn', 'timestamp', 'path'],   # Path last for sound sample modal
         # labels={'color': 'Site'},
-        height=800
+        height=PLOTHEIGHT
     )
 
     # Add centered title
