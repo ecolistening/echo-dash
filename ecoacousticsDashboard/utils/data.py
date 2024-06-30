@@ -88,7 +88,7 @@ def load_dataset_lru(dataset: str):
     elif dataset == "sounding out":
         striptext = "/mnt/lustre/projects/mfm/ecolistening/dac_audio/diurnal/dc_corrected/"
 
-    if striptext is not None:
+    if striptext is not None and 'path' in data.columns:
         logger.debug(f"Strip '{striptext}' from column path..")
         data['path'] = data['path'].map(lambda x: x.lstrip(striptext))
 
@@ -223,16 +223,22 @@ def get_options_for_dataset_lru(dataset: str):
                     )
     options += [{'value': feat, 'label': feat.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for feat,order in temporal_cols]
 
+    spatial_cols = ['location', 'site', 'recorder']
+    options += [{'value': i, 'label': i.capitalize(), 'group': 'Spatial', 'type': 'categorical', 'order': tuple(sorted(data[i].unique()))} for i in spatial_cols]
+
     # deprecated since they are already covered or offer no visualisation value
-    #index = ['file', 'site', 'timestamp', 'location']
-    index = ['location']
-    options += [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata', 'type': 'categorical', 'order': tuple(sorted(data[i].unique()))} for i in index]
+    #index = ['file', 'timestamp']
+    #options += [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata', 'type': 'categorical', 'order': tuple(sorted(data[i].unique()))} for i in index]
 
     # Filter options to ensure they are present in the dataset
     options = [opt for opt in options if opt['value'] in data.columns]
 
-    return options
+    return tuple(options)
 
+@lru_cache(maxsize=10)
+def get_cat_options_for_dataset_lru(dataset: str):
+    options = get_options_for_dataset(dataset)
+    return [opt for opt in options if opt['type'] in ('categorical')]
 
 @lru_cache(maxsize=10)
 def get_categorical_orders_for_dataset_lru(dataset: str):
@@ -301,6 +307,10 @@ def get_path_from_config(dataset: str, section: str, option:str):
 def get_options_for_dataset(dataset: str):
     logger.debug(f"Get options for {dataset=}")
     return get_options_for_dataset_lru(str(dataset))
+
+def get_cat_options_for_dataset(dataset: str):
+    logger.debug(f"Get categorical options for {dataset=}")
+    return get_cat_options_for_dataset_lru(str(dataset))
 
 def get_categorical_orders_for_dataset(dataset: str):
     logger.debug(f"Get categorical_orders for {dataset=}")

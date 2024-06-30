@@ -12,6 +12,7 @@ from loguru import logger
 from utils.data import read_sites
 
 PAGENAME = 'Map'
+PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
 
 layout = html.Div([
@@ -61,7 +62,7 @@ def update_graph(dataset, dates, locations, feature):
     fig = px.scatter_mapbox(data, lat="latitude", lon="longitude", hover_name="site",
                             hover_data=['timezone'],
                             # color_discrete_sequence=["fuchsia"],
-                            zoom=zoom, height=500)
+                            zoom=zoom, height=PLOTHEIGHT)
     fig.update_layout(mapbox_style="open-street-map")
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
 

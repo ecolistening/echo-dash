@@ -11,6 +11,7 @@ from utils.data import load_and_filter_dataset
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'Dates'
+PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
 #
 # df = pd.read_parquet(filepath)
@@ -57,7 +58,9 @@ def update_graph(dataset, dates, locations, feature):
     fig = calplot(data, x='date', y='file')
 
     # Add centered title
-    fig.update_layout(title={'text':'Recording Dates',
+    fig.update_layout(
+        height=PLOTHEIGHT,
+        title={'text':'Recording Dates',
                              'x':0.5,
                              'y':1.0,
                              'font':{'size':24}

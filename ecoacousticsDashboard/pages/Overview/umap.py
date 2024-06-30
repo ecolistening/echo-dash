@@ -17,10 +17,12 @@ from umap import UMAP
 from utils import list2tuple
 from utils.data import load_and_filter_dataset, get_options_for_dataset, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
+from utils.plot_filter_menu import get_filter_drop_down, get_size_slider
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'UMAP'
 PAGETITLE = "UMAP of Soundscape Descriptors"
+PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGETITLE, name=PAGENAME)
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
@@ -29,45 +31,10 @@ dash.register_page(__name__, title=PAGETITLE, name=PAGENAME)
 #                       #
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
-# colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
-normalised_tickbox = dmc.Chip('Normalised', value='normalised', checked=False, persistence=True,
-                              id='normalised-tickbox')
-diel_tickbox = dmc.Chip('Plot per Time of Day', value='diel', checked=False, persistence=True, id='separate-tod')
-separate_plots_tickbox = dmc.Chip('Plot per Location', value='location', checked=False, persistence=True,
-                                  id='separate-plots')
+colour_select, symbol_select, row_facet_select, col_facet_select = get_filter_drop_down(PAGENAME, set_callback=False)
+size_slider_text, size_slider = get_size_slider(PAGENAME)
 
-colour_select = dmc.Select(
-    id=f'{PAGENAME}-plot-options-color-by',
-    label="Colour by",
-    searchable=True,
-    clearable=True,
-    style={"width": 200},
-    persistence=True
-)
-symbol_select = dmc.Select(
-    id=f'{PAGENAME}-plot-options-symbol-by',
-    label="Symbolise by",
-    searchable=True,
-    clearable=True,
-    style={"width": 200},
-    persistence=True
-)
-row_facet_select = dmc.Select(
-    id=f'{PAGENAME}-plot-options-rowfacet-by',
-    label="Facet Rows by",
-    searchable=True,
-    clearable=True,
-    style={"width": 200},
-    persistence=True
-)
-col_facet_select = dmc.Select(
-    id=f'{PAGENAME}-plot-options-colfacet-by',
-    label="Facet Columns by",
-    searchable=True,
-    clearable=True,
-    style={"width": 200},
-    persistence=True
-)
+filter_group = dmc.Group(children=[colour_select,symbol_select,row_facet_select,col_facet_select,size_slider_text,size_slider,dmc.Text()],grow=True)
 
 opacity_slider = dmc.Slider(
     id=f'{PAGENAME}-plot-options-opacity',
@@ -115,12 +82,7 @@ appendix = dmc.Grid(
 layout = html.Div([
     dmc.Title(PAGETITLE, order=1),
     dmc.Divider(variant='dotted'),
-    dmc.Group(children=[
-        colour_select,
-        symbol_select,
-        row_facet_select,
-        col_facet_select
-    ]),
+    filter_group,
     dmc.Divider(variant='dotted',style={"margin-top": "10px"}),
     dmc.Grid([
         dmc.Col(html.Div(), span=1),
@@ -201,13 +163,13 @@ def get_graph_data(idx_data, sample):
     logger.debug(f"Return graph data and selected samples.")
     return graph_data, sel_data
 
-def get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity):
-    string = "-".join(str(v) for v in (dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity))
+def get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
+    string = "-".join(str(v) for v in (dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity))
     return str(hash(string))
 
-def get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, opacity):
+def get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
 
-    logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")    
+    logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=} {opacity=}")    
 
     category_orders = get_categorical_orders_for_dataset(dataset)
 
@@ -222,11 +184,8 @@ def get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet
         hover_name='file',
         hover_data=['site', 'dddn', 'timestamp', 'path'],   # Path last for sound sample modal
         # labels={'color': 'Site'},
-        height=800
+        height=PLOTHEIGHT
     )
-
-    # Select sample for audio modal
-    fig.update_layout(clickmode='event+select')
 
     # Add centered title
     fig.update_layout(title={'text':PAGETITLE,
@@ -234,6 +193,12 @@ def get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet
                              'y':0.97,
                              'font':{'size':24}
                              })
+    
+    # Select sample for audio modal
+    fig.update_layout(clickmode='event+select')
+
+    # Adjust size of scatter dots
+    fig.update_traces(marker=dict(size=dot_size))
 
     return fig
 
@@ -255,7 +220,7 @@ def get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet
     prevent_initial_call=True,
 )
 def download_data(dataset, json_data, *args, **kwargs):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} json data ({len(json_data)}B) {ctx.triggered_id=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} json data ({len(json_data)}B)")
 
     data = pd.read_json(StringIO(json_data), orient='table')
 
@@ -329,18 +294,19 @@ def update_sample_slider(dataset, dates, locations, sample):
     State(symbol_select, component_property='value'),
     State(row_facet_select, component_property='value'),
     State(col_facet_select, component_property='value'),
+    State(size_slider, component_property='value'),
     State(opacity_slider, component_property='value'),
 
     prevent_initial_call=True
 )
-def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity):
+def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
     '''
     Dataset changes will change sample_slider, which will trigger this function. Has to be seperated to allow trigger by initial call.
     '''
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=} {opacity=}")
     
     # Calculate hash
-    hash = get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity)
+    hash = get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
     
     idx_data = get_idx_data(dataset, dates, locations)
     graph_data, sel_data = get_graph_data(idx_data, sample)
@@ -359,7 +325,7 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
     if row_facet not in val_cat_options: row_facet = None
     if col_facet not in val_cat_options: col_facet = None
 
-    fig = get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, opacity)
+    fig = get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
 
     return  sel_data.to_json(date_format='iso', orient='table'), \
             graph_data.to_json(date_format='iso', orient='split'), \
@@ -385,14 +351,15 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
     Input(symbol_select, component_property='value'),
     Input(row_facet_select, component_property='value'),
     Input(col_facet_select, component_property='value'),
+    Input(size_slider, component_property='value'),
     Input(opacity_slider, component_property='value'),
 
     prevent_initial_call=True
 )
-def update_graph_visuals(json_data, hash, dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: json data ({len(json_data)}B) {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=}")
+def update_graph_visuals(json_data, hash, dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: json data ({len(json_data)}B) {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=} {opacity=}")
 
-    new_hash = get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, opacity)
+    new_hash = get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
     if hash == new_hash:
         logger.debug("No new hash value, return.")
         return no_update, no_update
@@ -408,6 +375,6 @@ def update_graph_visuals(json_data, hash, dataset, dates, locations, sample, col
             feat_name = opt['value']
             graph_data[feat_name] = graph_data[feat_name].astype(str)
 
-    fig = get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, opacity)
+    fig = get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
 
     return fig, new_hash

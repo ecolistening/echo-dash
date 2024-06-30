@@ -8,32 +8,22 @@ from loguru import logger
 
 from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
+from utils.plot_filter_menu import get_filter_drop_down, get_time_aggregation
 from utils.save_plot_fig import get_save_plot
 
-PAGENAME = 'tod-summaries'
+PAGENAME = 'box-plot'
 PAGETITLE = 'Box Plot of Descriptor by Time of Day'
+PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGETITLE, name='Box Plot')
 
-colours = {
-    'main': 'blue',
-    'accent1': 'red'
-}
+colour_select, row_facet_select, col_facet_select = \
+    get_filter_drop_down(PAGENAME, colour_by_cat=True, include_symbol= False,
+    colour_default='recorder', col_facet_default='recorder')
 
-colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
+time_aggregation = get_time_aggregation(PAGENAME)
 outliers_tickbox = dmc.Chip('Outliers', value='outlier', checked=True, persistence=True, id='outliers-tickbox')
-separate_plots_tickbox = dmc.Chip('Plot per Recorder', value='subplots', checked=False, persistence=True,
-                                  id='separate-plots')
 
-time_aggregation = dmc.SegmentedControl(
-    id='time-aggregation',
-    data=[
-        {'value': 'time', 'label': '15 minutes'},
-        {'value': 'hour', 'label': '1 hour'},
-        {'value': 'dddn', 'label': 'Dawn-Day-Dusk-Night'}
-    ],
-    value='time',
-    persistence=True
-)
+filter_group = dmc.Group(children=[colour_select,row_facet_select,col_facet_select,time_aggregation,outliers_tickbox])
 
 appendix = dmc.Grid(
     children=[
@@ -52,12 +42,7 @@ layout = html.Div([
         [html.H1(PAGETITLE)],
     ),
     html.Hr(),
-    dmc.Group(children=[
-        time_aggregation,
-        colours_tickbox,
-        outliers_tickbox,
-        separate_plots_tickbox
-    ]),
+    filter_group,
     dcc.Graph(id=f'{PAGENAME}-graph'),
     appendix,
     get_modal_sound_sample(PAGENAME),
@@ -68,17 +53,23 @@ layout = html.Div([
 # Add controls to build the interaction
 @callback(
     Output(f'{PAGENAME}-graph', component_property='figure'),
-    Input('dataset-select', component_property='value'),
+
+    # Covered by menu filter
+    State('dataset-select', component_property='value'),
     Input('date-picker', component_property='value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
     Input('feature-dropdown', component_property='value'),
+
+    Input(colour_select, component_property='value'),
+    Input(row_facet_select, component_property='value'),
+    Input(col_facet_select, component_property='value'),
     Input(time_aggregation, component_property='value'),
     Input(outliers_tickbox, component_property='checked'),
-    Input(colours_tickbox, component_property='checked'),
-    Input(separate_plots_tickbox, component_property='checked'),
+
+    prevent_initial_call=True,
 )
-def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_locations, separate_plots):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=} {time_agg=} {outliers=} {colour_locations=} {separate_plots=}")
+def update_graph(dataset, dates, locations, feature, colour_by, row_facet, col_facet, time_agg, outliers):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {row_facet=} {col_facet=} {time_agg=} {outliers=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.sort_values(by='recorder')
     data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
@@ -88,21 +79,13 @@ def update_graph(dataset, dates, locations, feature, time_agg, outliers, colour_
 
     fig = px.box(data, x=time_agg, y='value',
                 hover_name='file', hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
-                height=550,
-                facet_col='recorder' if separate_plots else None,
+                height=PLOTHEIGHT,
+                color=colour_by,
+                facet_row=row_facet,
+                facet_col=col_facet,
                 facet_col_wrap=4,
                 points='outliers' if outliers else False,
-                color='recorder' if colour_locations else None,
                 category_orders=category_orders)
-
-    # fig = px.bar(data, x=time_agg, y='value',
-    #             hover_name='file', hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
-    #             height=550,
-    #             facet_col='recorder' if separate_plots else None,
-    #             facet_col_wrap=4,
-    #             #points='outliers' if outliers else False,
-    #             color='recorder' if colour_locations else None,
-    #             category_orders=category_orders)
 
     # Select sample for audio modal
     fig.update_layout(clickmode='event+select')

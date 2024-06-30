@@ -14,23 +14,24 @@ from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'idx-averages'
 PAGETITLE = 'Seasonal Descriptor Averages'
+PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGETITLE, name='Averages')
 
-colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
-outliers_tickbox = dmc.Chip('Outliers', value='outlier', checked=True, persistence=True, id='outliers-tickbox')
-separate_plots_tickbox = dmc.Chip('Plot per Recorder', value='subplots', checked=False, persistence=True,
-                                  id='separate-plots')
+# colours_tickbox = dmc.Chip('Colour by Recorder', value='colour', checked=True, persistence=True, id='colour-locations')
+# outliers_tickbox = dmc.Chip('Outliers', value='outlier', checked=True, persistence=True, id='outliers-tickbox')
+# separate_plots_tickbox = dmc.Chip('Plot per Recorder', value='subplots', checked=False, persistence=True,
+#                                   id='separate-plots')
 
-time_aggregation = dmc.SegmentedControl(
-    id='time-aggregation',
-    data=[
-        {'value': 'time', 'label': '15 minutes'},
-        {'value': 'hour', 'label': '1 hour'},
-        {'value': 'dddn', 'label': 'Dawn-Day-Dusk-Night'}
-    ],
-    value='time',
-    persistence=True
-)
+# time_aggregation = dmc.SegmentedControl(
+#     id='time-aggregation',
+#     data=[
+#         {'value': 'time', 'label': '15 minutes'},
+#         {'value': 'hour', 'label': '1 hour'},
+#         {'value': 'dddn', 'label': 'Dawn-Day-Dusk-Night'}
+#     ],
+#     value='time',
+#     persistence=True
+# )
 
 appendix = dmc.Grid(
     children=[
@@ -103,10 +104,9 @@ def update_graph(dataset, dates, locations, feature):  # , time_agg, outliers, c
     fig = px.line(data, x='timestamp', y='mean', color='location', facet_row='dddn', markers=True, category_orders=category_orders)
     fig.update_traces(marker={'size': 4})
 
-    fig.update_layout(height=700)
-
     # Add centered title
-    fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",
+    fig.update_layout(height=PLOTHEIGHT,
+                      title={'text':f"{PAGETITLE} ({feature})",
                              'x':0.5,
                              'y':0.98,
                              'font':{'size':24}
