@@ -57,7 +57,9 @@ def update_graph(dataset, dates, locations, feature):
     fig = calplot(data, x='date', y='file')
 
     # Add centered title
-    fig.update_layout(title={'text':'Recording Dates',
+    fig.update_layout(
+        height=700,
+        title={'text':'Recording Dates',
                              'x':0.5,
                              'y':1.0,
                              'font':{'size':24}

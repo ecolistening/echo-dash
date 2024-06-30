@@ -61,7 +61,7 @@ def update_graph(dataset, dates, locations, feature):
     fig = px.scatter_mapbox(data, lat="latitude", lon="longitude", hover_name="site",
                             hover_data=['timezone'],
                             # color_discrete_sequence=["fuchsia"],
-                            zoom=zoom, height=500)
+                            zoom=zoom, height=700)
     fig.update_layout(mapbox_style="open-street-map")
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
 
