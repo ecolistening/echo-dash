@@ -12,24 +12,60 @@ from loguru import logger
 from menu.dataset import ds, dataset_input
 from utils.data import load_dataset, load_and_filter_sites, load_config
 
+def path_name(node):
+    return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
+
 # Initial load of dataset and tree
 df = load_dataset(ds)
 tree = load_and_filter_sites(ds)
+
+if df is None or 'feature' not in df.columns:
+    logger.warning("Features not found.")
+
+    feature_list = ["no_feature"]
+else:
+    feature_list = df.feature.unique()
+
+if df is None or 'timestamp' not in df.columns:
+    logger.warning("Timestamps not found.")
+
+    date_min = date(1970,1,1)
+    date_max = date.today()
+else:
+    date_min = df.timestamp.dt.date.min()
+    date_max = df.timestamp.dt.date.max()
+
+feature_input = dmc.Select(
+        label="Acoustic Descriptor",
+        description='Select an acoustic desscriptor',
+        id='feature-dropdown',
+        data=sorted(feature_list), 
+        value=feature_list[0],
+        searchable=True,
+        dropdownPosition='bottom',
+        # style={'min-width': '200px'},
+        clearable=False,
+        persistence=True)
 
 date_input = dmc.DateRangePicker(
         id="date-picker",
         label="Date Range",
         description="To include in plots",
-        minDate=df.timestamp.dt.date.min(),
-        maxDate=df.timestamp.dt.date.max(),
-        value=[df.timestamp.dt.date.min(), df.timestamp.dt.date.max()],
+        minDate=date_min,
+        maxDate=date_max,
+        value=[date_min, date_max],
         clearable=True,
         # style={"width": 330},
         persistence=True,
     )
 
-def path_name(node):
-    return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
+if tree is None:
+    logger.warning("Tree not found.")
+    loc_group = [dmc.Chip("no_name", value="no_path", variant='filled', size='xs')]
+    loc_value = ["no_path"]
+else:
+    loc_group = [dmc.Chip(r.name, value=path_name(r), variant='filled', size='xs') for r in tree.children]
+    loc_value = [path_name(r) for r in tree.children]
 
 location_hierarchy = html.Div([
     dmc.Group([
@@ -40,26 +76,13 @@ location_hierarchy = html.Div([
         ])
     ]),
     dmc.ChipGroup(
-        [
-            dmc.Chip(r.name, value=path_name(r), variant='filled', size='xs') for r in tree.children
-        ] + [],
-        value=[path_name(r) for r in tree.children],
+        loc_group + [],
+        value=loc_value,
         multiple=True,
         persistence=True,
     ),
 ], id="checklist-locations-div")
 
-feature_input = dmc.Select(
-        label="Acoustic Descriptor",
-        description='Select an acoustic desscriptor',
-        id='feature-dropdown',
-        data=sorted(df.feature.unique()), 
-        value=df.feature.unique()[0],
-        searchable=True,
-        dropdownPosition='bottom',
-        # style={'min-width': '200px'},
-        clearable=False,
-        persistence=True)
 
 filters = dmc.Stack([
     feature_input,
@@ -77,6 +100,10 @@ def update_locations(dataset, children=None, values=None):
     wrap_in_accordian = children is None
     children = children if children is not None else []
     tree = load_and_filter_sites(dataset)
+
+    if tree is None:
+        logger.warning("Tree not found.")
+        return children
 
     try:
         flatvalues = list(itertools.chain(*values))
@@ -155,16 +182,23 @@ def update_menu(dataset, date_value, feature_value):
 
     data = load_dataset(dataset)
 
-    feature_data=sorted(data.feature.unique())
+    if data is None:
+        logger.warning("data not found.")
+        feature_value = "no_feature"
+        feature_data = ["no_feature"]
 
-    if feature_value not in feature_data:
-        feature_value = feature_data[0]
+        min_date = date(1970,1,1)
+        max_date = date.today()
     else:
-        feature_value = no_update
+        feature_data = sorted(data.feature.unique())
+        if feature_value not in feature_data:
+            feature_value = feature_data[0]
+        else:
+            feature_value = no_update
 
-    data = data.assign(date=data.timestamp.dt.date)
-    min_date = data.timestamp.dt.date.min()
-    max_date = data.timestamp.dt.date.max()
+        data = data.assign(date=data.timestamp.dt.date)
+        min_date = data.timestamp.dt.date.min()
+        max_date = data.timestamp.dt.date.max()
 
     # Reset date selection for new datasets
     if ctx.triggered_id is None or ctx.triggered_id == 'dataset-select':

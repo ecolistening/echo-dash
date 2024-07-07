@@ -7,19 +7,21 @@ from dash import html, ctx, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 from plotly_calplot import calplot
 
+from utils.content import get_tabs
 from utils.data import load_and_filter_dataset
 from utils.save_plot_fig import get_save_plot
 
-PAGENAME = 'Dates'
+PAGENAME = 'dates'
+PAGETITLE = 'Recording Dates'
 PLOTHEIGHT = 800
-dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
+dash.register_page(__name__, title=PAGETITLE, name='Dates')
 #
 # df = pd.read_parquet(filepath)
 # df = df.assign(date=pd.to_datetime(df.timestamp.dt.date))
 
 appendix = dmc.Grid(
     children=[
-        dmc.Col(html.Div(), span=8),
+        dmc.Col(get_tabs(PAGENAME,feature=False), span=8),
         dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
     ],
     gutter="xl",
@@ -27,7 +29,7 @@ appendix = dmc.Grid(
 
 layout = html.Div([
     html.Div(
-        [dmc.Title('Recording Dates', order=1)],
+        [dmc.Title(PAGETITLE, order=1)],
     ),
     dmc.Divider(variant='dotted'),
     dcc.Graph(id=f'{PAGENAME}-graph'),

@@ -6,6 +6,7 @@ import plotly.express as px
 from dash import html, ctx, dcc, callback, Output, State, Input, ALL
 from loguru import logger
 
+from utils.content import get_tabs
 from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
 from utils.plot_filter_menu import get_filter_drop_down
 from utils.save_plot_fig import get_save_plot
@@ -26,7 +27,7 @@ filter_group = dmc.Group(children=[colour_select,row_facet_select,col_facet_sele
 
 appendix = dmc.Grid(
     children=[
-        dmc.Col(html.Div(), span=8),
+        dmc.Col(get_tabs(PAGENAME), span=8),
         dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
     ],
     gutter="xl",

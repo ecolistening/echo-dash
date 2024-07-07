@@ -9,6 +9,7 @@ import warnings
 from dash import html, ctx, dcc, callback, Output, Input, ALL
 from loguru import logger
 
+from utils.content import get_tabs
 from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
 from utils.save_plot_fig import get_save_plot
 
@@ -35,7 +36,7 @@ dash.register_page(__name__, title=PAGETITLE, name='Averages')
 
 appendix = dmc.Grid(
     children=[
-        dmc.Col(html.Div(), span=8),
+        dmc.Col(get_tabs(PAGENAME), span=8),
         dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
     ],
     gutter="xl",

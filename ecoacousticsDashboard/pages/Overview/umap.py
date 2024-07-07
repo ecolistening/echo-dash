@@ -15,6 +15,7 @@ from sklearn.preprocessing import RobustScaler
 from umap import UMAP
 
 from utils import list2tuple
+from utils.content import get_tabs # Not used because no URL support yet
 from utils.data import load_and_filter_dataset, get_options_for_dataset, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.plot_filter_menu import get_filter_drop_down, get_size_slider
