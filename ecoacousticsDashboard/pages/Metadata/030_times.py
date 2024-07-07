@@ -7,24 +7,25 @@ import plotly.express as px
 from dash import html, ctx, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 
+from utils.content import get_tabs
 from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.plot_filter_menu import get_filter_drop_down, get_size_slider
 from utils.save_plot_fig import get_save_plot
 
-PAGENAME = 'Times'
+PAGENAME = 'times'
+PAGETITLE = 'Recording Times'
 PLOTHEIGHT = 800
-dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
+dash.register_page(__name__, title=PAGETITLE, name='Times')
 
 colour_select, symbol_select, row_facet_select, col_facet_select = get_filter_drop_down(PAGENAME, colour_default='location')
 size_slider_text, size_slider = get_size_slider(PAGENAME)
 
 filter_group = dmc.Group(children=[colour_select,symbol_select,row_facet_select,col_facet_select,size_slider_text,size_slider,dmc.Text()],grow=True)
 
-
 appendix = dmc.Grid(
     children=[
-        dmc.Col(html.Div(), span=8),
+        dmc.Col(get_tabs(PAGENAME,feature=False), span=8),
         dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
     ],
     gutter="xl",
@@ -34,7 +35,7 @@ appendix = dmc.Grid(
 # app.\
 layout = html.Div([
     html.Div(
-        [html.H1('Recording Times')],
+        [html.H1(PAGETITLE)],
     ),
     html.Hr(),
     filter_group,

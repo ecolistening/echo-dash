@@ -9,18 +9,30 @@ import plotly.graph_objects as go
 from dash import html, ctx, dcc, callback, Output, Input, ALL
 from loguru import logger
 
+from utils.content import get_tabs
 from utils.data import read_sites
+from utils.save_plot_fig import get_save_plot
 
-PAGENAME = 'Map'
+PAGENAME = 'map'
+PAGETITLE = 'Location Map'
 PLOTHEIGHT = 800
-dash.register_page(__name__, title=PAGENAME, name=PAGENAME)
+dash.register_page(__name__, title=PAGETITLE, name='Map')
+
+appendix = dmc.Grid(
+    children=[
+        dmc.Col(get_tabs(PAGENAME,feature=False), span=8),
+        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
+    ],
+    gutter="xl",
+)
 
 layout = html.Div([
     html.Div(
-        [dmc.Title('Location Map', order=1)],
+        [dmc.Title(PAGETITLE, order=1)],
     ),
     dmc.Divider(variant='dotted'),
-    main_plot := dcc.Graph(id='map-overview-graph')
+    main_plot := dcc.Graph(id=f'{PAGENAME}-graph'),
+    appendix,
 ])
 
 

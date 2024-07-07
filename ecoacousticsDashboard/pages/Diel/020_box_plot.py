@@ -6,6 +6,7 @@ import plotly.express as px
 from dash import html, ctx, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 
+from utils.content import get_tabs
 from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.plot_filter_menu import get_filter_drop_down, get_time_aggregation
@@ -27,11 +28,7 @@ filter_group = dmc.Group(children=[colour_select,row_facet_select,col_facet_sele
 
 appendix = dmc.Grid(
     children=[
-        dmc.Col(html.Div([
-            dmc.Title("Feature Name", order=3),
-            dmc.Text('Feature Description')
-                #'The Acoustic Evenness Index (AEI), from Villanueva-Rivera et al. 2011 (band evenness using the Gini index), is calculated by dividing the spectrogram into bins (default 10, each one of 1000 Hz) and taking the proportion of the signals in each bin above a threshold (default -50 dBFS). The AEI is the result of the Gini index applied to these bins.')
-        ]), span=8),
+        dmc.Col(get_tabs(PAGENAME), span=8),
         dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
     ],
     gutter="xl",
