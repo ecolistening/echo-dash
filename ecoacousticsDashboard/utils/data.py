@@ -70,6 +70,7 @@ def get_dataset_names():
 @lru_cache(maxsize=10)
 def load_dataset_lru(dataset: str):
     data = read_dataset(dataset)
+    if data is None: return None
 
     sample_no = data.shape[0]
     data = data.drop_duplicates()
@@ -125,6 +126,7 @@ def load_dataset_lru(dataset: str):
 def load_and_filter_dataset_lru(dataset: str, dates: tuple=None, feature: str=None, locations: tuple=None):
      
     data = load_dataset(dataset)
+    if data is None:return None
 
     if dates is not None:
         dates = [date.fromisoformat(d) for d in dates]
@@ -145,6 +147,10 @@ def load_and_filter_dataset_lru(dataset: str, dates: tuple=None, feature: str=No
 @lru_cache(maxsize=10)
 def load_and_filter_sites_lru(dataset: str):
     data = read_sites(dataset)
+
+    if data is None:
+        logger.warning(f"Can't filter tree for dataset {dataset}")
+        return None
 
     tree = bt.dataframe_to_tree(data.reset_index(drop=True), path_col='site')
 

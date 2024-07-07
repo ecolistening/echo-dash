@@ -39,12 +39,14 @@ dataset_settings_button = dmc.Button(
             mb=10,
         )
 
-sites_form = dmc.Stack([
-    dmc.TextInput(label = f'Level {i}', value=config.get('Site Hierarchy', f'sitelevel_{i}', fallback=''),  id={
+tree_label = []
+if tree is not None:
+    for i in range(1, tree.max_depth):
+        tree_label.append(dmc.TextInput(label = f'Level {i}', value=config.get('Site Hierarchy', f'sitelevel_{i}', fallback=''),  id={
                             'type': 'sitelevel_label',
                             'index': i-1
-                        }) for i in range(1, tree.max_depth)
-], id='dataset-settings-sites-form')
+                        }))
+sites_form = dmc.Stack(tree_label, id='dataset-settings-sites-form')
 
 settings_drawer = dmc.Drawer(
     title="Settings",
