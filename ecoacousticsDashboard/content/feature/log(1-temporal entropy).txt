@@ -1,4 +1,2 @@
-#Title
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse vitae massa lectus. Nunc at turpis nec lectus finibus varius eget vehicula quam. Nulla elementum nunc in nulla ultricies auctor. Nullam quis lorem et lorem lacinia iaculis id id nisi. Integer nec justo ultricies urna viverra luctus eget eget libero. Duis non turpis quis est tempus vulputate ut at nisl. Nullam eget feugiat risus, eget viverra augue. Donec ac iaculis massa, ac tempor dui. Duis rhoncus dapibus imperdiet. Pellentesque sit amet neque eu sem iaculis accumsan et nec lorem. Integer sit amet mauris metus.
-
-Cras malesuada sodales sodales. Nunc in imperdiet enim, eu porta tellus. Mauris dictum est tellus, sed elementum justo molestie at. Nullam rhoncus id diam sed rhoncus. Sed eleifend odio arcu, nec vestibulum purus porta vitae. Donec porta massa sit amet ligula bibendum, eget commodo mi porttitor. Fusce id turpis condimentum, congue sem id, interdum velit. Sed fermentum ante id pulvinar molestie. Praesent risus arcu, blandit et nunc nec, dignissim semper ipsum. Proin efficitur pellentesque ultricies. Vivamus nec lacus mauris. 
+#Log(1-temporal entropy)
+The temporal entropy of a noisy signal with many amplitude modulations will tend towards 1 whereas the temporal entropy of quiet signal will tend towards 0.
