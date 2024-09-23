@@ -1,2 +1,2 @@
-#Root Mean Square
+# Log Root Mean Square
 The root mean square (RMS or rms) is defined as the square root of the mean square, i.e. the arithmetic mean of the squares of a given set of numbers. It is also known as standard deviation.

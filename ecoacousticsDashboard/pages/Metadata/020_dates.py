@@ -13,7 +13,7 @@ from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'dates'
 PAGETITLE = 'Recording Dates'
-PLOTHEIGHT = 800
+PLOTHEIGHT = 400
 dash.register_page(__name__, title=PAGETITLE, name='Dates')
 #
 # df = pd.read_parquet(filepath)

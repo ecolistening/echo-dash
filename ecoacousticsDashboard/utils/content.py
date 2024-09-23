@@ -5,6 +5,7 @@ from dash import html, dcc, callback, Input, State, Output
 from loguru import logger
 
 CONTENT_PATH = Path(Path.cwd(), 'content')
+
 def get_content_file(name):
     file_path = Path(CONTENT_PATH, name)
     if not os.path.isfile(file_path):
@@ -12,14 +13,57 @@ def get_content_file(name):
         return None
     return file_path
 
-def get_content_text(name):
+def get_content(name):
     if not '.' in name:
-        name = name+'.txt'
-    file_path = get_content_file(name)
+        name_ = name+'.md'
+        file_path = get_content_file(name_)
+        if file_path is None:
+            name_ = name+'.txt'
+        file_path = get_content_file(name_)
+    else:
+        file_path = get_content_file(name)
 
     if file_path is None:
-        logger.warning(f"File \'{name}\' not found.")
+        logger.error(f"File \'{name}\' not found.")
         return ["No text found."]
+    
+    logger.debug(f"Content filepath: {file_path}")
+
+    file_path_str = str(file_path)
+    if file_path_str.endswith('.md'):
+        content = get_content_md(file_path)
+    elif file_path_str.endswith('.txt'):
+        content = get_content_text(file_path)
+    else:
+        logger.error(f"Unknown file type: \'{file_path}\'")
+        return None
+    
+    return content
+
+def get_content_md(file_path):
+    with open(file_path) as this_file:
+        #data = this_file.read()
+        lines = [line.rstrip() for line in this_file]
+
+    '''
+    font: Aptos (Body);
+    font-family: "Inter", sans-serif;
+    color: rgb(0, 0, 0);
+    line-height: 1.55;
+    font-size: 16px;
+    '''
+
+    content = [dcc.Markdown(line,dangerously_allow_html=True) for line in lines]
+    
+    # div =  html.Div(content, 
+    #     style={'marginLeft': 10, 'marginRight': 10, 'marginTop': 10, 'marginBottom': 10, 
+    #            'backgroundColor':'#F7FBFE',
+    #            'border': 'thin lightgrey dashed', 'padding': '6px 0px 0px 8px',
+    #            'font-family': 'sans-serif', 'font-size': '32px'}),
+
+    return content
+
+def get_content_text(file_path):
 
     content = []
     text = ""
@@ -66,8 +110,8 @@ def get_content_text(name):
         else:
             content.append(text)
 
-    logger.debug(f"Return content for {name}: {len(content)} elements.")
-    return content
+    logger.debug(f"Return txt content for {file_path}: {len(content)} elements.")
+    return html.Div(content)
 
 def get_tabs(pagename,about=True,feature=True,dataset=True):
     tabs = []
@@ -91,9 +135,9 @@ def get_tabs(pagename,about=True,feature=True,dataset=True):
     )
     def render_content(tab,dataset,feature):
         if tab == 'about':
-            return html.Div(get_content_text(f"page/{pagename}"))
+            return get_content(f"page/{pagename}")
         elif tab == 'feature':
-            return html.Div(get_content_text(f"feature/{feature}"))
+            return get_content(f"feature/{feature}")
         elif tab == 'dataset':
-            return html.Div(get_content_text(f"dataset/{dataset}"))
+            return get_content(f"dataset/{dataset}")
     return tab_div

@@ -1,8 +1,8 @@
 import dash
 from dash import html
 
-from utils.content import get_content_text
+from utils.content import get_content
 
 dash.register_page(__name__, title="Ecoacoustic Dashboard", name="Home", path='/')
 
-layout = html.Div(get_content_text('home.txt'))
+layout = html.Div(get_content('page/home'),style={'margin-left': '3em', 'width': '1000px'})

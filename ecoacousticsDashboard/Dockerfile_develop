@@ -15,6 +15,7 @@ COPY pages/ /code/pages/
 COPY utils/ /code/utils/
 COPY menu/ /code/menu/
 COPY content/ /code/content/
+COPY assets/ /code/assets/
 
 EXPOSE 8050
 CMD ["gunicorn", "-b", "0.0.0.0:8050", "--timeout=600", "app:server"]

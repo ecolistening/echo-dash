@@ -1,4 +1,0 @@
-#Acoustic Complexity Index
-The ACI is based on the “observation that many biotic sounds, such as bird songs, are characterized by an intrinsic variability of intensities, while some types of human generated noise (such as car passing or airplane transit) present very constant intensity values” (Pieretti, et al. 2011).
-
-Pieretti, N., Farina, A., & Morri, D. (2011). A new methodology to infer the singing activity of an avian community: The Acoustic Complexity Index (ACI). In Ecological Indicators (Vol. 11, Issue 3, pp. 868–873). Elsevier BV. https://doi.org/10.1016/j.ecolind.2010.11.005
