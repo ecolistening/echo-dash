@@ -189,6 +189,8 @@ def get_path_from_config_lru(dataset: str, section: str, option:str):
             if os.path.isdir(path_):
                 extract_path = path_
                 logger.debug(f"Found default path \'{extract_path}\'")
+        if option=='gdrive_sound_file_path':
+            extract_path = os.path.join("DASHBOARD_MP3",dataset,'soundfiles')
 
     return extract_path
 
