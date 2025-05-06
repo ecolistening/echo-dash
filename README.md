@@ -55,9 +55,11 @@ On first run navigate to the requirements.txt file and use:
 pip install -r requirements.txt
 ```
 
-Run the dashboard with the command `python ecoacousticsDashboard/app.py`. Flask should now start on `http://localhost:8050/` and you should be able to load the app.
+To run the dashboard, change into the application directory `ecoacousticsDashboard`, and execute the command `python app.py`.
 
-Alternatively you can manually run the app using gunicorn using `gunicron app:server` run from the `ecoacousticsDashboard` folder.
+Alternatively you can manually run the app using gunicorn using `python -m gunicorn app:server` run from the `ecoacousticsDashboard` folder.
+
+Flask should now start on `http://localhost:8050/` and you should be able to load the app.
 
 # State of Development (August 2023)
 There are a number of different plots (pages) in various states of development. The most advanced and recent is `overview > UMAP` and the structure of that page (the options menu at the top and the 'About' and 'Download' sections at the bottom) should be used as a basis for redeveloping the other pages.
