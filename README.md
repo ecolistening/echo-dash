@@ -33,29 +33,30 @@ For ease-of-deployment, the dashboard can be run in Docker. Docker uses gunicorn
 ### Docker
 Install the latest version of docker, at minimum version 3+
 
-Navigate to `ecoacoustics-dashboard/ecoacousticsDashboard/` where `compose.yaml` is located and run using:
+Navigate to `ecoacoustics-dashboard/ecoacousticsDashboard/` where `docker-compose.yaml` is located and run using:
 
 ```
-docker compose up --build -d
+# run in development
+docker compose --env-file .env.develop up --build
+
+# deployment to staging
+docker compose --env-file .env.staging up --build -d
 ```
 
-After an initial build (if you don't have an image already built) the app should be available at `http://localhost:8050/`.
+After an initial build (if you don't have an image already built) the app will be available at `http://localhost:8050/` or the port specified in `.env.develop`
 
-### Using virtual environments
-Create a virtual environment using your tool of choice (`virtualenv`, `venv`, `conda` etc.) and activate that virtual environment. Using `virtualenv`:
+### Using Poetry
+Install the python version detailed in `ecoacousticsDashboard/.python-version`.
 
-```
-pip install virtualenv
-virtualenv ecoacousticsDashboard_env
-source ./ecoacousticsDashboard_env/bin/activate
-```
-On first run navigate to the requirements.txt file and use:
+Install poetry and install locked project dependencies
 
 ```
-pip install -r requirements.txt
+pip install --upgrade pip
+pip install poetry
+poetry install --no-root
 ```
 
-To run the dashboard, change into the application directory `ecoacousticsDashboard`, and execute the command `python app.py`.
+To start the application, run the dashboard with the command `python ecoacousticsDashboard/app.py`.
 
 Alternatively you can manually run the app using gunicorn using `python -m gunicorn app:server` run from the `ecoacousticsDashboard` folder.
 

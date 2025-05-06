@@ -5,9 +5,12 @@ ENV DASH_DEBUG_MODE True
 
 WORKDIR /code
 
-COPY requirements.txt /code/requirements.txt
+COPY pyproject.toml /code/pyproject.toml
+COPY poetry.lock /code/poetry.lock
 
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+RUN pip install poetry poetry-plugin-export
+RUN poetry export --only main --without-hashes --output /code/requirements.txt
+RUN pip install --no-deps --no-cache-dir -r requirements.txt
 
 COPY app.py /code/app.py
 COPY config.py /code/config.py
