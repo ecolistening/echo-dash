@@ -68,8 +68,12 @@ layout = html.Div([
 def load_fig(dataset, dates, locations, feature, colour_by, symbol_by, row_facet, col_facet, dot_size):
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
-    data = data.assign(month=data.timestamp.dt.month, hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
-                       minute=data.timestamp.dt.minute)
+    data = data.assign(
+        year_month=data.timestamp.dt.month_name() + " " + data.timestamp.dt.year.map(str),
+        month=data.timestamp.dt.month_name(),
+        hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
+        minute=data.timestamp.dt.minute
+    )
     
     category_orders = get_categorical_orders_for_dataset(dataset)
 

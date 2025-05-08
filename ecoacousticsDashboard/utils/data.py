@@ -222,14 +222,18 @@ def get_options_for_dataset_lru(dataset: str):
     options += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
 
     # Add temporal columns with facet order
-    temporal_cols = (   
-                        ('hour', list(range(24))),
-                        ('weekday', ('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')),
-                        ('date', sorted(data['date'].unique())),
-                        ('month', ('January','February','March','April','May','June','July','August','September','October','November','December')),
-                        ('year', sorted(data['year'].unique())),
-                    )
-    options += [{'value': feat, 'label': feat.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for feat,order in temporal_cols]
+    WEEK_DAYS = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+    MONTHS = ('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December')
+
+    temporal_cols = (
+        ('hour', list(range(24))),
+        ('weekday', WEEK_DAYS),
+        ('date', sorted(data['date'].unique())),
+        ('month', MONTHS),
+        ('year', sorted(data['year'].unique())),
+        ('year_month', [f"{MONTHS[month - 1]} {year}" for year in sorted(data.timestamp.dt.year.unique()) for month in sorted(data.timestamp.dt.month.unique())]),
+    )
+    options += [{'value': feat, 'label': " ".join(map(str.capitalize, feat.split("_"))), 'group': 'Temporal', 'type': 'categorical', 'order': order} for feat,order in temporal_cols]
 
     spatial_cols = ['location', 'site', 'recorder']
     options += [{'value': i, 'label': i.capitalize(), 'group': 'Spatial', 'type': 'categorical', 'order': tuple(sorted(data[i].unique()))} for i in spatial_cols]

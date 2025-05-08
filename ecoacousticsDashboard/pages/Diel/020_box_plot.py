@@ -69,8 +69,13 @@ def update_graph(dataset, dates, locations, feature, colour_by, row_facet, col_f
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {row_facet=} {col_facet=} {time_agg=} {outliers=}")
     data = load_and_filter_dataset(dataset, dates, feature, locations)
     data = data.sort_values(by='recorder')
-    data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
-                       minute=data.timestamp.dt.minute)
+    data = data.assign(
+        time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
+        year_month=data.timestamp.dt.month_name() + " " + data.timestamp.dt.year.map(str),
+        month=data.timestamp.dt.month_name(),
+        hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
+        minute=data.timestamp.dt.minute
+    )
 
     category_orders = get_categorical_orders_for_dataset(dataset)
 
