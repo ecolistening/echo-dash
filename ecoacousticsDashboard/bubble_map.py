@@ -45,11 +45,12 @@ fig = px.scatter_mapbox(
     hover_name='recorder',
     color_continuous_scale='Viridis',
     zoom=3,
-    height=600,
 )
 
 # Set the layout for the map
 fig.update_layout(
+    height=1200,
+    width=1600,
     mapbox=dict(
         style='open-street-map',  # You can use 'mapbox://styles/...' if you have a Mapbox token
         center=dict(lat=df_interp.latitude.mean(), lon=df_interp.longitude.mean()),
