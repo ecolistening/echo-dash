@@ -10,13 +10,13 @@ from dash import html, callback, Output, Input, State, ALL, ctx, no_update
 from loguru import logger
 
 from menu.dataset import ds, dataset_input
-from utils.data import load_dataset, load_and_filter_sites, load_config
+from utils.data import dataset_loader, load_and_filter_sites, load_config
 
 def path_name(node):
     return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
 
 # Initial load of dataset and tree
-df = load_dataset(ds)
+df = dataset_loader.get_acoustic_features(ds)
 tree = load_and_filter_sites(ds)
 
 if df is None or 'feature' not in df.columns:
@@ -180,7 +180,7 @@ def update_menu(dataset, date_value, feature_value):
 
     date_value = [date.fromisoformat(v) for v in date_value]
 
-    data = load_dataset(dataset)
+    data = dataset_loader.get_acoustic_features(dataset)
 
     if data is None:
         logger.warning("data not found.")

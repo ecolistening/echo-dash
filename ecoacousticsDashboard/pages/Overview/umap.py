@@ -16,7 +16,7 @@ from umap import UMAP
 
 from utils import list2tuple
 from utils.content import get_tabs # Not used because no URL support yet
-from utils.data import load_and_filter_dataset, get_options_for_dataset, get_categorical_orders_for_dataset
+from utils.data import dataset_loader, filter_data, get_options_for_dataset, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.plot_filter_menu import get_filter_drop_down, get_size_slider
 from utils.save_plot_fig import get_save_plot
@@ -110,7 +110,8 @@ layout = html.Div([
 
 @lru_cache(maxsize=2) #Just keep one per dataset
 def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
-    data = load_and_filter_dataset(dataset, dates=dates, locations=locations)
+    data = data_loader.get_acoustic_features(dataset)
+    data = filter_data(data, dates=dates, locations=locations)
 
     sample_no = data.shape[0]
     logger.debug(f"Dataset {dataset} shape: {data.shape}.")

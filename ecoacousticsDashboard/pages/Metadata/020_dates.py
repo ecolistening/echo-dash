@@ -8,7 +8,7 @@ from loguru import logger
 from plotly_calplot import calplot
 
 from utils.content import get_tabs
-from utils.data import load_and_filter_dataset
+from utils.data import dataset_loader, filter_data
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'dates'
@@ -52,7 +52,10 @@ layout = html.Div([
 def update_graph(dataset, dates, locations, feature):
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=}")
 
-    data = load_and_filter_dataset(dataset, dates, feature, locations)
+    data = data_loader.get_acoustic_features(dataset)
+    data = filter_data(data, dates=dates, locations=locations, feature=feature)
+
+    # FIXME
     data = data.assign(date=pd.to_datetime(data.timestamp.dt.date))
 
     data = data.groupby('date').agg('count').reset_index()

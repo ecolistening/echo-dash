@@ -10,7 +10,7 @@ from dash import html, ctx, dcc, callback, Output, Input, ALL
 from loguru import logger
 
 from utils.content import get_tabs
-from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
+from utils.data import dataset_loader, filter_data, get_categorical_orders_for_dataset
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'idx-averages'
@@ -76,7 +76,9 @@ layout = html.Div([
 def update_graph(dataset, dates, locations, feature):  # , time_agg, outliers, colour_locations, separate_plots):
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=}")
 
-    data = load_and_filter_dataset(dataset, dates, feature, locations)
+    data = data_loader.get_acoustic_features(dataset)
+    data = filter_data(data, dates=dates, locations=locations, feature=feature)
+
     data = data.sort_values(by='recorder')
     data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
                        minute=data.timestamp.dt.minute)

@@ -1,7 +1,8 @@
-import configparser
+from dataclasses import dataclass
 from datetime import date
+import pathlib
 import itertools
-from functools import lru_cache
+from functools import lru_cache, cached_property
 import os
 from typing import List
 
@@ -9,8 +10,11 @@ import bigtree as bt
 from loguru import logger
 import pandas as pd
 
+from configparser import ConfigParser
 from config import root_dir
 from utils import list2tuple
+
+from typing import Dict, List, Tuple
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
@@ -18,116 +22,202 @@ from utils import list2tuple
 #                       #
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
-def read_dataset(dataset: str, columns: list = None):
-    datapath = os.path.join(root_dir,dataset,'indices.parquet')
-    logger.debug(f"Read dataset from \"{datapath}\"..")
-    try:
-        data = pd.read_parquet(datapath, columns=columns).drop_duplicates()
-    except Exception as e:
-        data = None
-        logger.error(e)
-    else:
-        logger.debug(f"{data.shape=}")
-    return data
+@dataclass
+class Dataset:
+    dataset_id: str
+    dataset_name: str
+    dataset_path: str
+    audio_path: str
 
-def read_sites(dataset: str):
-    datapath = os.path.join(root_dir,dataset,'locations.parquet')
-    logger.debug(f"Read site data from \"{datapath}\"..")
-    try:
-        data = pd.read_parquet(datapath)
-    except Exception as e:
-        data = None
-        logger.error(e)
-    else:
-        logger.debug(f"{data.shape=}")
-    return data
+    def __post_init__(self) -> None:
+        # cache files and site data
+        self.files
+        self.locations
+        # cache acoustic features
+        self.acoustic_features
+        # cache species and birdet predictions
+        self.species
+        self.birdnet_species_probs
 
-def read_config(dataset: str):
-    # Initialise config parser
-    config = configparser.ConfigParser()
-    configpath = os.path.join(root_dir,dataset,'config.ini')
-    logger.debug(f"Load config from \"{configpath}\"..")
-    try:
-        config.read(configpath)
-    except (IOError, TypeError) as e:
-        logger.error(e)
-    else:
-        if not config.has_section('Site Hierarchy'):
-            config.add_section('Site Hierarchy')
+    @property
+    def path(self):
+        return pathlib.Path.cwd().parent / "data" / self.dataset_path
 
-    return config
+    @cached_property
+    def config(self) -> ConfigParser:
+        config_path = self.path / "config.ini"
+        logger.debug(f"Load config from \"{config_path}\"..")
+        return self._read_or_build_config(config_path)
+
+    @cached_property
+    def acoustic_features(self) -> pd.DataFrame:
+        features_path = self.path / "indices.parquet"
+        logger.debug(f"Loading & caching \"{features_path}\"..")
+        return pd.read_parquet(self.path / "indices.parquet")
+
+    @cached_property
+    def birdnet_species_probs(self) -> pd.DataFrame:
+        birdnet_species_probs_path = self.path / "birdnet_species_probs_table.parquet"
+        logger.debug(f"Loading & caching \"{birdnet_species_probs_path}\"..")
+        return pd.read_parquet(birdnet_species_probs_path)
+
+    @cached_property
+    def species(self) -> pd.DataFrame:
+        species_path = self.path / "species_table.parquet"
+        logger.debug(f"Loading & caching \"{species_path}\"..")
+        return pd.read_parquet(species_path)
+
+    @cached_property
+    def locations(self) -> pd.DataFrame:
+        locations_path = self.path / "locations_table.parquet"
+        logger.debug(f"Loading & caching \"{locations_path}\"..")
+        locations = pd.read_parquet(locations_path)
+        # TODO: hack to get working
+        locations["site"] = locations["site_name"]
+        # TODO: potential hack left by lucas, should be preserved?
+        # Compute Site Hierarchy levels
+        logger.debug(f"Compute site hierarchy levels..")
+        locations = locations.assign(**{
+            f'sitelevel_{k}': v
+            for k,v in locations.site.str.split('/', expand=True).iloc[:,1:].to_dict(orient='list').items()
+        })
+        return locations
+
+    @cached_property
+    def files(self) -> pd.DataFrame:
+        files_path = self.path / "files_table.parquet"
+        logger.debug(f"Loading & caching \"{files_path}\"..")
+        data = pd.read_parquet(files_path)
+        logger.debug(f"Compute temporal splits..")
+        data['hour'] = data.timestamp.dt.hour
+        data['weekday'] = data.timestamp.dt.day_name()
+        data['date'] = data.timestamp.dt.strftime('%Y-%m-%d')
+        data['month'] = data.timestamp.dt.month_name()
+        data['year'] = data.timestamp.dt.year
+        return data
+
+    @staticmethod
+    def _read_or_build_config(config_path) -> ConfigParser:
+        config = ConfigParser()
+        try:
+            config.read(config_path)
+        except (IOError, TypeError) as e:
+            logger.error(e)
+        else:
+            if not config.has_section('Site Hierarchy'):
+                config.add_section('Site Hierarchy')
+        return config
+
+class DatasetLoader:
+    def __init__(
+        self,
+        root_dir: pathlib.Path,
+    ) -> None:
+        self.datasets_table = pd.read_parquet(root_dir / "datasets_table.parquet")
+        self.datasets = self._init_datasets(self.datasets_table)
+
+    def get_dataset(self, dataset_name):
+        return self.datasets[dataset_name]
+
+    def get_dataset_names(self):
+        return list(self.datasets.keys())
+
+    @lru_cache(maxsize=10)
+    def get_acoustic_features(self, dataset_name: str, columns: List = None):
+        dataset = self.datasets[dataset_name]
+        logger.debug(f"Loading dataset from \"{dataset.path}\"..")
+        data = dataset.acoustic_features
+        # TODO: Several hacks left by Lucas, persist to get this view working, can be removed when switching to better structured data
+        # 1. remove duplicates
+        num_samples = data.shape[0]
+        data = data.drop_duplicates()
+        if num_samples > data.shape[0]:
+            logger.debug(f"Removed {num_samples - data.shape[0]} duplicate samples: {data.shape=}")
+        # 2. strip
+        striptext = None
+        if dataset_name == "cairngorms":
+            striptext = "/mnt/lustre/projects/mfm/ecolistening/dashboard/audio/cairngorms/"
+        elif dataset_name == "sounding out":
+            striptext = "/mnt/lustre/projects/mfm/ecolistening/dac_audio/diurnal/dc_corrected/"
+        if striptext is not None and 'path' in data.columns:
+            logger.debug(f"Strip '{striptext}' from column path..")
+            data['path'] = data['path'].map(lambda x: x.lstrip(striptext))
+        # 3. adjust location names
+        if dataset_name == "Sounding Out":
+            data['location'] = data['habitat code']
+            logger.debug("Updated location with habitat code")
+        return data
+
+    @lru_cache(maxsize=10)
+    def get_sites(self, dataset_name: str):
+        dataset = self.datasets[dataset_name]
+        return dataset.locations
+
+    @lru_cache(maxsize=10)
+    def get_config(self, dataset_name: str):
+        dataset = self.datasets[dataset_name]
+        return dataset.config
+
+    @lru_cache(maxsize=10)
+    def get_birdnet_species(self, dataset_name: str):
+        dataset = self.datasets[dataset_name]
+        return (
+            dataset.birdnet_species_probs
+            .join(dataset.species, on="species_id")
+            .join(dataset.files, on="file_id")
+            .join(dataset.locations, on="site_id")
+        )
+
+    @staticmethod
+    def _init_datasets(datasets_table: pd.DataFrame) -> Dict[str, Dataset]:
+        datasets = {}
+        for dataset in datasets_table.reset_index().to_dict(orient="records"):
+            try:
+                logger.debug(f"Loading and caching {dataset["dataset_name"]}")
+                ds = Dataset(**dataset)
+                datasets[ds.dataset_name] = ds
+            except Exception as e:
+                logger.error(f"Unable to load dataset {dataset["dataset_name"]}")
+                logger.error(e)
+        return datasets
 
 
-def get_dataset_names():
-    return [d.name for d in root_dir.glob("*") if d.is_dir()]
+dataset_loader = DatasetLoader(root_dir)
 
-# ~~~~~~~~~~~~~~~~~~~~~ #
-#                       #
-#         Cache         #
-#                       #
-# ~~~~~~~~~~~~~~~~~~~~~ #
+def filter_data(
+    data: str,
+    dates: List[str] | None = None,
+    feature: str | None = None,
+    locations: List[str] | None = None,
+    sample: int | None = None
+):
+    # TODO double check this
+    # Prevent double caching of unfiltered datasets
+    # if not any((dates,feature,locations)):
+    #     logger.debug(f"No filters selected, redirect")
+    #     data = load_dataset(dataset)
 
-@lru_cache(maxsize=10)
-def load_dataset_lru(dataset: str):
-    data = read_dataset(dataset)
-    if data is None: return None
+    # else:
+    if dates is not None: dates = list2tuple(dates)
+    if feature is not None: feature = str(feature)
+    if locations is not None: locations = list2tuple(locations)
 
-    sample_no = data.shape[0]
-    data = data.drop_duplicates()
-    if sample_no>data.shape[0]:
-        logger.debug(f"Removed {sample_no-data.shape[0]} duplicate samples: {data.shape=}")
+    logger.debug(f"Load {dataset=} and filter "
+                 f"dates:{len(dates) if dates is not None else None} "
+                 f"locations:{len(locations) if locations is not None else None} "
+                 f"{feature=}")
+    data = filter_data_lru(data, dates, feature, locations)
 
+    # Randomly sample
+    if sample is not None:
+        sample = int(sample)
+        data = data.sample(n=sample, random_state=42)
+        logger.debug(f"Selected {sample} random samples: {data.shape=}")
 
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-    # Dirty fixes that need to be sorted in the Dataset! #
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-
-    # Adjust file path
-    striptext = None
-    if dataset == "cairngorms":
-        striptext = "/mnt/lustre/projects/mfm/ecolistening/dashboard/audio/cairngorms/"
-    elif dataset == "sounding out":
-        striptext = "/mnt/lustre/projects/mfm/ecolistening/dac_audio/diurnal/dc_corrected/"
-
-    if striptext is not None and 'path' in data.columns:
-        logger.debug(f"Strip '{striptext}' from column path..")
-        data['path'] = data['path'].map(lambda x: x.lstrip(striptext))
-
-
-    # Adjust location names
-    if dataset == "sounding out":
-        # for location in data['location'].unique():
-        #     print(data.loc[data['location'] == location].iloc[0])
-
-        data['location'] = data['habitat code']
-        logger.debug("Updated location with habitat code")
-
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-
-
-
-    # Compute Site Hierarchy levels
-    logger.debug(f"Compute site hierarchy levels..")
-    data = data.assign(**{f'sitelevel_{k}': v for k,v in data.site.str.split('/', expand=True).iloc[:,1:].to_dict(orient='list').items()})
-    
-    # Compute Temporal Splits
-    logger.debug(f"Compute temporal splits..")
-    data['hour'] = data.timestamp.dt.hour
-    data['weekday'] = data.timestamp.dt.day_name()
-    #data['date'] = data.timestamp.dt.date
-    data['date'] = data.timestamp.dt.strftime('%Y-%m-%d')
-    data['month'] = data.timestamp.dt.month_name()
-    data['year'] = data.timestamp.dt.year
-    
-    logger.debug(f"Finished loading dataset {dataset}")
     return data
 
 @lru_cache(maxsize=5)
-def load_and_filter_dataset_lru(dataset: str, dates: tuple=None, feature: str=None, locations: tuple=None):
-     
-    data = load_dataset(dataset)
-    if data is None:return None
-
+def filter_data_lru(dataset: str, dates: Tuple | None = None, feature: str | None = None, locations: Tuple | None = None):
     if dates is not None:
         dates = [date.fromisoformat(d) for d in dates]
         data = data[data.timestamp.dt.date.between(*dates)]
@@ -146,7 +236,7 @@ def load_and_filter_dataset_lru(dataset: str, dates: tuple=None, feature: str=No
 
 @lru_cache(maxsize=10)
 def load_and_filter_sites_lru(dataset: str):
-    data = read_sites(dataset)
+    data = dataset_loader.get_sites(dataset)
 
     if data is None:
         logger.warning(f"Can't filter tree for dataset {dataset}")
@@ -157,11 +247,11 @@ def load_and_filter_sites_lru(dataset: str):
     return tree
 
 #@lru_cache(maxsize=3)
-def load_config_lru(dataset: str):
+def load_config_lru(dataset_name: str):
     '''
         Storing result in cache brings the risk that changes in the config will not be effective until reset or cache is filled.
     '''
-    config = read_config(dataset)
+    config = dataset_loader.get_config(dataset_name)
     
     return config
 
@@ -194,6 +284,7 @@ def get_path_from_config_lru(dataset: str, section: str, option:str):
 
     return extract_path
 
+# TODO: move to dataset class?
 @lru_cache(maxsize=10)
 def get_options_for_dataset_lru(dataset: str):
     data = load_dataset(dataset)
@@ -270,35 +361,6 @@ def get_categorical_orders_for_dataset_lru(dataset: str):
 #          API          #
 #                       #
 # ~~~~~~~~~~~~~~~~~~~~~ #
-
-def load_dataset(dataset: str):
-    logger.debug(f"Load {dataset=}")
-    return load_dataset_lru(str(dataset))
-
-## In order to cache the data, input types need to be hashable - all lists need to be converted to tuples
-def load_and_filter_dataset(dataset: str, dates: list=None, feature: str=None, locations: list=None, sample: int=None):
-
-    # Prevent double caching of unfiltered datasets
-    if not any((dates,feature,locations)):
-        logger.debug(f"No filters selected, redirect")
-        data = load_dataset(dataset)
-
-    else:
-        dataset = str(dataset)
-        if dates is not None: dates = list2tuple(dates)
-        if feature is not None: feature = str(feature)
-        if locations is not None: locations = list2tuple(locations)
-
-        logger.debug(f"Load {dataset=} and filter dates:{len(dates)} locations:{len(locations)} {feature=}")
-        data = load_and_filter_dataset_lru(dataset, dates, feature, locations)
-
-    # Randomly sample
-    if sample is not None:
-        sample = int(sample)
-        data = data.sample(n=sample, random_state=42)
-        logger.debug(f"Selected {sample} random samples: {data.shape=}")
-
-    return data
 
 def load_and_filter_sites(dataset: str):
     logger.debug(f"Load site data for {dataset=}")

@@ -7,7 +7,7 @@ from dash import html, ctx, dcc, callback, Output, Input, State, ALL, clientside
 from loguru import logger
 
 from utils.content import get_tabs
-from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
+from utils.data import dataset_loader, filter_data, get_categorical_orders_for_dataset
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.plot_filter_menu import get_filter_drop_down, get_size_slider
 from utils.save_plot_fig import get_save_plot
@@ -67,7 +67,10 @@ layout = html.Div([
 )
 def load_fig(dataset, dates, locations, feature, colour_by, symbol_by, row_facet, col_facet, dot_size):
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}")
-    data = load_and_filter_dataset(dataset, dates, feature, locations)
+
+    data = data_loader.get_acoustic_features(dataset)
+    data = filter_data(data, dates=dates, locations=locations, feature=feature)
+
     data = data.assign(month=data.timestamp.dt.month, hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
                        minute=data.timestamp.dt.minute)
     

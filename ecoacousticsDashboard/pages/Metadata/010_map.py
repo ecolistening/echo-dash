@@ -10,7 +10,7 @@ from dash import html, ctx, dcc, callback, Output, Input, ALL
 from loguru import logger
 
 from utils.content import get_tabs
-from utils.data import read_sites
+from utils.data import dataset_loader
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'map'
@@ -49,7 +49,7 @@ layout = html.Div([
 def update_graph(dataset, dates, locations, feature):
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=}")
 
-    data = read_sites(dataset)
+    data = dataset_loader.get_sites(dataset)
     if data is None:
         return go.Figure(go.Scattergeo())
 
