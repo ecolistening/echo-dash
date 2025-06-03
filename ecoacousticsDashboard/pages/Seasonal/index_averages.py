@@ -76,7 +76,7 @@ layout = html.Div([
 def update_graph(dataset_name, dates, locations, feature):  # , time_agg, outliers, colour_locations, separate_plots):
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=}")
 
-    dataset = data_loader.get_dataset(dataset_name)
+    dataset = dataset_loader.get_dataset(dataset_name)
     data = filter_data(dataset.acoustic_features, dates=dates, locations=locations, feature=feature)
 
     data = data.sort_values(by='recorder')

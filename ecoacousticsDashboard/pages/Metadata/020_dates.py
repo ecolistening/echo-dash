@@ -49,11 +49,11 @@ layout = html.Div([
     # Feature is not required, but helps with caching the dataset
     State('feature-dropdown', component_property='value'),
 )
-def update_graph(dataset, dates, locations, feature):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=}")
+def update_graph(dataset_name, dates, locations, feature):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=}")
 
-    data = data_loader.get_acoustic_features(dataset)
-    data = filter_data(data, dates=dates, locations=locations, feature=feature)
+    dataset = dataset_loader.get_dataset(dataset_name)
+    data = filter_data(dataset.acoustic_features, dates=dates, locations=locations, feature=feature)
 
     # FIXME
     data = data.assign(date=pd.to_datetime(data.timestamp.dt.date))

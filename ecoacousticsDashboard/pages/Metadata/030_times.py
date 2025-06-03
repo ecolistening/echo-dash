@@ -69,7 +69,7 @@ layout = html.Div([
 def update_graph(dataset_name, dates, locations, feature, colour_by, symbol_by, row_facet, col_facet, dot_size):
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}")
 
-    dataset = data_loader.get_dataset(dataset_name)
+    dataset = dataset_loader.get_dataset(dataset_name)
     data = filter_data(dataset.acoustic_features, dates=dates, locations=locations, feature=feature)
 
     data = data.assign(date=data.timestamp.dt.date,

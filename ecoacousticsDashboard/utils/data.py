@@ -27,6 +27,8 @@ class Dataset:
         # cache files and site data
         self.files
         self.locations
+        # cache solar data
+        self.dates
         # cache acoustic features
         self.acoustic_features
         # cache species and birdet predictions
@@ -119,6 +121,15 @@ class Dataset:
         data['year'] = data.timestamp.dt.year
         return data
 
+    @cached_property
+    def dates(self) -> pd.DataFrame:
+        try:
+            dates_path = self.path / "dates_table.parquet"
+            logger.debug(f"Loading & caching \"{dates_path}\"..")
+            return pd.read_parquet(dates_path)
+        except Exception as e:
+            return pd.DataFrame()
+
     def drop_down_select_options(self) -> Tuple[Dict[str, Any]]:
         logger.debug(f"Get options for dataset_name={self.dataset_name}")
         options = []
@@ -128,7 +139,9 @@ class Dataset:
             options += [{'value': level, 'label': self.config.get('Site Hierarchy', level, fallback=level), 'group': 'Site Level', 'type': 'categorical', 'order': tuple(sorted(values))}]
         # Add time of the day
         options += [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'group': 'Time of Day', 'type': 'categorical', 'order': ('dawn','day','dusk','night')}]
-        options += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
+        # HACK
+        if len(self.dates):
+            options += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
         # Add temporal columns with facet order
         options += [{'value': col, 'label': col.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for col, order in self.temporal_columns]
         # Add spatial columns with facet order

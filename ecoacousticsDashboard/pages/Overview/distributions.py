@@ -63,8 +63,8 @@ layout = html.Div([
 def update_graph(dataset_name, dates, locations, feature, colour_by, row_facet, col_facet, normalised):  # , time_agg, outliers, colour_locations, ):
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {row_facet=} {col_facet=} {normalised=}")
 
-    dataset = data_loader.get_dataset(dataset_name)
-    data = filter_data(data.acoustic_features, dates=dates, features=feature, locations=locations)
+    dataset = dataset_loader.get_dataset(dataset_name)
+    data = filter_data(dataset.acoustic_features, dates=dates, feature=feature, locations=locations)
 
     fig = px.histogram(
         data, x='value', marginal='rug', opacity=0.75, height=PLOTHEIGHT,
