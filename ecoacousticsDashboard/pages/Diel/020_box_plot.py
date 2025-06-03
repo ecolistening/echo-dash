@@ -7,7 +7,7 @@ from dash import html, ctx, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 
 from utils.content import get_tabs
-from utils.data import dataset_loader, filter_data
+from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.plot_filter_menu import get_filter_drop_down, get_time_aggregation
 from utils.save_plot_fig import get_save_plot
@@ -83,7 +83,7 @@ def update_graph(dataset_name, dates, locations, feature, colour_by, row_facet, 
                 facet_col=col_facet,
                 facet_col_wrap=4,
                 points='outliers' if outliers else False,
-                category_orders=dataset.category_orders())
+                category_orders=DatasetDecorator(dataset).category_orders())
 
     # Select sample for audio modal
     fig.update_layout(clickmode='event+select')

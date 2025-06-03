@@ -7,7 +7,7 @@ from dash import html, ctx, dcc, callback, Output, State, Input, ALL
 from loguru import logger
 
 from utils.content import get_tabs
-from utils.data import dataset_loader, filter_data
+from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils.plot_filter_menu import get_filter_drop_down
 from utils.save_plot_fig import get_save_plot
 
@@ -72,7 +72,7 @@ def update_graph(dataset_name, dates, locations, feature, colour_by, row_facet, 
         facet_row=row_facet,
         facet_col=col_facet,
         histnorm='percent' if normalised else None,
-        category_orders=dataset.category_orders(),
+        category_orders=DatasetDecorator(dataset).category_orders(),
     )
 
     # Add centered title

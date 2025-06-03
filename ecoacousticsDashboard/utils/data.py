@@ -1,3 +1,4 @@
+import attrs
 from dataclasses import dataclass
 from datetime import date
 import pathlib
@@ -16,14 +17,14 @@ from utils import list2tuple
 
 from typing import Any, Dict, List, Tuple
 
-@dataclass
+@attrs.define
 class Dataset:
     dataset_id: str
     dataset_name: str
     dataset_path: str
     audio_path: str
 
-    def __post_init__(self) -> None:
+    def __attrs_post_init__(self) -> None:
         # cache files and site data
         self.files
         self.locations
@@ -92,6 +93,15 @@ class Dataset:
         logger.debug(f"Loading & caching \"{species_path}\"..")
         return pd.read_parquet(species_path)
 
+    @property
+    def species_predictions(self) -> pd.DataFrame:
+        return (
+            self.birdnet_species_probs
+            .join(self.species, on="species_id")
+            .join(self.files, on="file_id")
+            .join(self.locations, on="site_id")
+        )
+
     @cached_property
     def locations(self) -> pd.DataFrame:
         locations_path = self.path / "locations_table.parquet"
@@ -130,22 +140,39 @@ class Dataset:
         except Exception as e:
             return pd.DataFrame()
 
+    @staticmethod
+    def _read_or_build_config(config_path) -> ConfigParser:
+        config = ConfigParser()
+        try:
+            config.read(config_path)
+        except (IOError, TypeError) as e:
+            logger.error(e)
+        else:
+            if not config.has_section('Site Hierarchy'):
+                config.add_section('Site Hierarchy')
+        return config
+
+
+@attrs.define
+class DatasetDecorator:
+    dataset: Dataset
+
     def drop_down_select_options(self) -> Tuple[Dict[str, Any]]:
-        logger.debug(f"Get options for dataset_name={self.dataset_name}")
+        logger.debug(f"Get options for dataset_name={self.dataset.dataset_name}")
         options = []
         # Add site hierarchies
         for level in self.site_level_columns:
-            values = self.locations[level].unique()
-            options += [{'value': level, 'label': self.config.get('Site Hierarchy', level, fallback=level), 'group': 'Site Level', 'type': 'categorical', 'order': tuple(sorted(values))}]
+            values = self.dataset.locations[level].unique()
+            options += [{'value': level, 'label': self.dataset.config.get('Site Hierarchy', level, fallback=level), 'group': 'Site Level', 'type': 'categorical', 'order': tuple(sorted(values))}]
         # Add time of the day
         options += [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'group': 'Time of Day', 'type': 'categorical', 'order': ('dawn','day','dusk','night')}]
-        # HACK
-        if len(self.dates):
+        # HACK -> will be fixed when solar data is present
+        if len(self.dataset.dates):
             options += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
         # Add temporal columns with facet order
         options += [{'value': col, 'label': col.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for col, order in self.temporal_columns]
         # Add spatial columns with facet order
-        options += [{'value': col, 'label': col.capitalize(), 'group': 'Spatial', 'type': 'categorical', 'order': tuple(sorted(self.locations[col].unique()))} for col in self.spatial_columns]
+        options += [{'value': col, 'label': col.capitalize(), 'group': 'Spatial', 'type': 'categorical', 'order': tuple(sorted(self.dataset.locations[col].unique()))} for col in self.spatial_columns]
         # deprecated since they are already covered or offer no visualisation value
         #index = ['file', 'timestamp']
         #options += [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata', 'type': 'categorical', 'order': tuple(sorted(data[i].unique()))} for i in index]
@@ -156,16 +183,16 @@ class Dataset:
 
     @property
     def site_level_columns(self) -> List[str]:
-        return list(filter(lambda a: a.startswith('sitelevel_'), self.locations.columns))
+        return list(filter(lambda a: a.startswith('sitelevel_'), self.dataset.locations.columns))
 
     @property
     def temporal_columns(self) -> List[Tuple[str, List[Any]]]:
         return (
             ('hour', list(range(24))),
             ('weekday', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']),
-            ('date', sorted(self.files['date'].unique())),
+            ('date', sorted(self.dataset.files['date'].unique())),
             ('month', ['January','February','March','April','May','June','July','August','September','October','November','December']),
-            ('year', sorted(self.files['year'].unique())),
+            ('year', sorted(self.dataset.files['year'].unique())),
         )
 
     @property
@@ -184,59 +211,25 @@ class Dataset:
                 categorical_orders[name] = order
         return categorical_orders
 
-    @staticmethod
-    def _read_or_build_config(config_path) -> ConfigParser:
-        config = ConfigParser()
-        try:
-            config.read(config_path)
-        except (IOError, TypeError) as e:
-            logger.error(e)
-        else:
-            if not config.has_section('Site Hierarchy'):
-                config.add_section('Site Hierarchy')
-        return config
 
 # a simple collection of datasets
+@attrs.define
 class DatasetLoader:
-    def __init__(
-        self,
-        root_dir: pathlib.Path,
-    ) -> None:
-        self.datasets_table = pd.read_parquet(root_dir / "datasets_table.parquet")
-        self.datasets = self._init_datasets(self.datasets_table)
+    root_dir: pathlib.Path
+
+    @cached_property
+    def datasets(self) -> Dict[str, Dataset]:
+        return self._init_datasets(self.datasets_table)
+
+    @cached_property
+    def datasets_table(self):
+        return pd.read_parquet(self.root_dir / "datasets_table.parquet")
 
     def get_dataset(self, dataset_name):
         return self.datasets[dataset_name]
 
     def get_dataset_names(self):
         return list(self.datasets.keys())
-
-    # TODO these might be unnecessary
-    @lru_cache(maxsize=10)
-    def get_acoustic_features(self, dataset_name: str, columns: List = None):
-        dataset = self.datasets[dataset_name]
-        logger.debug(f"Loading dataset from \"{dataset.path}\"..")
-        return dataset.acoustic_features
-
-    @lru_cache(maxsize=10)
-    def get_sites(self, dataset_name: str):
-        dataset = self.datasets[dataset_name]
-        return dataset.locations
-
-    @lru_cache(maxsize=10)
-    def get_config(self, dataset_name: str):
-        dataset = self.datasets[dataset_name]
-        return dataset.config
-
-    @lru_cache(maxsize=10)
-    def get_birdnet_species(self, dataset_name: str):
-        dataset = self.datasets[dataset_name]
-        return (
-            dataset.birdnet_species_probs
-            .join(dataset.species, on="species_id")
-            .join(dataset.files, on="file_id")
-            .join(dataset.locations, on="site_id")
-        )
 
     @staticmethod
     def _init_datasets(datasets_table: pd.DataFrame) -> Dict[str, Dataset]:
@@ -320,7 +313,8 @@ def filter_data_lru(dataset, dates: Tuple | None = None, feature: str | None = N
 
 @lru_cache(maxsize=10)
 def load_and_filter_sites_lru(dataset: str):
-    data = dataset_loader.get_sites(dataset)
+    dataset = dataset_loader.get_dataset(dataset)
+    data = dataset.locations
 
     if data is None:
         logger.warning(f"Can't filter tree for dataset {dataset}")
@@ -335,9 +329,7 @@ def load_config_lru(dataset_name: str):
     '''
         Storing result in cache brings the risk that changes in the config will not be effective until reset or cache is filled.
     '''
-    config = dataset_loader.get_config(dataset_name)
-    
-    return config
+    return dataset_loader.get_dataset(dataset_name).config
 
 @lru_cache(maxsize=3)
 def get_path_from_config_lru(dataset: str, section: str, option:str):

@@ -16,7 +16,7 @@ from umap import UMAP
 
 from utils import list2tuple
 from utils.content import get_tabs # Not used because no URL support yet
-from utils.data import dataset_loader, filter_data
+from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.plot_filter_menu import get_filter_drop_down, get_size_slider
 from utils.save_plot_fig import get_save_plot
@@ -182,7 +182,7 @@ def get_UMAP_fig(graph_data, dataset_name, colour_by, symbol_by, row_facet, col_
         symbol=symbol_by,
         facet_row=row_facet,
         facet_col=col_facet,
-        category_orders=dataset.category_orders(),
+        category_orders=DatasetDecorator(dataset).category_orders(),
         hover_name='file',
         hover_data=['site', 'dddn', 'timestamp', 'path'],   # Path last for sound sample modal
         # labels={'color': 'Site'},

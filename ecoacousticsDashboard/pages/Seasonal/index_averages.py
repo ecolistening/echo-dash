@@ -10,7 +10,7 @@ from dash import html, ctx, dcc, callback, Output, Input, ALL
 from loguru import logger
 
 from utils.content import get_tabs
-from utils.data import dataset_loader, filter_data
+from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'idx-averages'
@@ -102,7 +102,7 @@ def update_graph(dataset_name, dates, locations, feature):  # , time_agg, outlie
 
     data.columns = [list(filter(lambda x: x != '' and x != 'value', col))[0] for col in data.columns.values]
 
-    fig = px.line(data, x='timestamp', y='mean', color='location', facet_row='dddn', markers=True, category_orders=dataset.category_orders())
+    fig = px.line(data, x='timestamp', y='mean', color='location', facet_row='dddn', markers=True, category_orders=DatasetDecorator(dataset).category_orders())
     fig.update_traces(marker={'size': 4})
 
     # Add centered title
