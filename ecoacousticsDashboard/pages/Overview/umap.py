@@ -377,6 +377,6 @@ def update_graph_visuals(json_data, hash, dataset_name, dates, locations, sample
             feat_name = opt['value']
             graph_data[feat_name] = graph_data[feat_name].astype(str)
 
-    fig = get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
+    fig = get_UMAP_fig(graph_data, dataset_name, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
 
     return fig, new_hash
