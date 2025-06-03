@@ -13,20 +13,20 @@ from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils.plot_filter_menu import get_filter_drop_down
 
 PAGE_NAME = 'species-polar-plot'
-PAGE_TITLE = 'Polar Plot of Species Occurrence by Time of Day'
+PAGE_TITLE = 'Polar Plot of Species Occurrence Probability by Time of Day'
 PLOT_HEIGHT = 800
 dash.register_page(__name__, title=PAGE_TITLE, name='Species Occurrence Polar Plot')
 
 dataset = dataset_loader.get_dataset(ds)
 # TODO: use species_id
-species_list = dataset.species_predictions.common_name.unique()
+species_list = sorted(dataset.species_predictions.common_name.unique())
 species_default = species_list[0]
 
 colour_select, row_facet_select, col_facet_select = get_filter_drop_down(
     PAGE_NAME,
     colour_by_cat=True,
     include_symbol=False,
-    colour_default='hour',
+    colour_default='weekday',
     row_facet_default='location',
     col_facet_default='weekday',
 )
@@ -118,13 +118,14 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, spec
         fig.add_annotation(
             dict(
                 text=str(row_category),
-                x=0.05,
+                x=1.05,
                 y=1 - (i + 0.5) / num_rows,
                 xref="paper",
                 yref="paper",
                 align="right",
                 xanchor="right",
                 yanchor="middle",
+                textangle=90,
                 showarrow=False,
                 font=dict(size=14),
             )
@@ -154,6 +155,7 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, spec
 
     fig.update_layout(
         height=PLOT_HEIGHT,
+        margin=dict(r=150),
         title=dict(
             text=PAGE_TITLE,
             x=0.5,
