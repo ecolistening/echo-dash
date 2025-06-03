@@ -16,7 +16,7 @@ from umap import UMAP
 
 from utils import list2tuple
 from utils.content import get_tabs # Not used because no URL support yet
-from utils.data import dataset_loader, filter_data, get_options_for_dataset, get_categorical_orders_for_dataset
+from utils.data import dataset_loader, filter_data
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.plot_filter_menu import get_filter_drop_down, get_size_slider
 from utils.save_plot_fig import get_save_plot
@@ -109,9 +109,9 @@ layout = html.Div([
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
 @lru_cache(maxsize=2) #Just keep one per dataset
-def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
-    data = data_loader.get_acoustic_features(dataset)
-    data = filter_data(data, dates=dates, locations=locations)
+def get_idx_data_lru(dataset_name: str, dates:tuple, locations:tuple):
+    dataset = dataset_loader.get_dataset(dataset_name)
+    data = filter_data(dataset.acoustic_features, dates=dates, locations=locations)
 
     sample_no = data.shape[0]
     logger.debug(f"Dataset {dataset} shape: {data.shape}.")
@@ -141,9 +141,9 @@ def get_idx_data_lru(dataset:str, dates:tuple, locations:tuple):
 #                       #
 # ~~~~~~~~~~~~~~~~~~~~~ #
 
-def get_idx_data(dataset, dates, locations):
-    logger.debug(f"Get index data: {dataset=} dates:{len(dates)} locations:{len(locations)}")
-    return get_idx_data_lru(str(dataset), list2tuple(dates), list2tuple(locations))
+def get_idx_data(dataset_name, dates, locations):
+    logger.debug(f"Get index data: dataset={dataset_name} dates:{len(dates)} locations:{len(locations)}")
+    return get_idx_data_lru(str(dataset_name), list2tuple(dates), list2tuple(locations))
 
 def get_graph_data(idx_data, sample):
 
@@ -165,15 +165,15 @@ def get_graph_data(idx_data, sample):
     logger.debug(f"Return graph data and selected samples.")
     return graph_data, sel_data
 
-def get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
-    string = "-".join(str(v) for v in (dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity))
+def get_UMAP_hash(dataset_name, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
+    string = "-".join(str(v) for v in (dataset_name, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity))
     return str(hash(string))
 
-def get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
+def get_UMAP_fig(graph_data, dataset_name, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
 
     logger.debug(f"Generate UMAP plot for graph data {graph_data.shape} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=} {opacity=}")    
 
-    category_orders = get_categorical_orders_for_dataset(dataset)
+    dataset = dataset_loader.get_dataset(dataset_name)
 
     fig = px.scatter(
         graph_data, x=0, y=1,
@@ -182,7 +182,7 @@ def get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet
         symbol=symbol_by,
         facet_row=row_facet,
         facet_col=col_facet,
-        category_orders=category_orders,
+        category_orders=dataset.category_orders(),
         hover_name='file',
         hover_data=['site', 'dddn', 'timestamp', 'path'],   # Path last for sound sample modal
         # labels={'color': 'Site'},
@@ -221,19 +221,19 @@ def get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet
     Input("dl_parquet", "n_clicks"),
     prevent_initial_call=True,
 )
-def download_data(dataset, json_data, *args, **kwargs):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} json data ({len(json_data)}B)")
+def download_data(dataset_name, json_data, *args, **kwargs):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} json data ({len(json_data)}B)")
 
     data = pd.read_json(StringIO(json_data), orient='table')
 
     if ctx.triggered_id == 'dl_csv':
-        return dcc.send_data_frame(data.to_csv, f'{dataset}.csv')
+        return dcc.send_data_frame(data.to_csv, f'{dataset_name}.csv')
     elif ctx.triggered_id == 'dl_xls':
-        return dcc.send_data_frame(data.to_excel, f'{dataset}.xlsx', sheet_name="Sheet_name_1")
+        return dcc.send_data_frame(data.to_excel, f'{dataset_name}.xlsx', sheet_name="Sheet_name_1")
     elif ctx.triggered_id == 'dl_json':
-        return dcc.send_data_frame(data.to_json, f'{dataset}.json')
+        return dcc.send_data_frame(data.to_json, f'{dataset_name}.json')
     elif ctx.triggered_id == 'dl_parquet':
-        return dcc.send_data_frame(data.to_parquet, f'{dataset}.parquet')
+        return dcc.send_data_frame(data.to_parquet, f'{dataset_name}.parquet')
 
 
 #########################################################################################################
@@ -251,13 +251,13 @@ def download_data(dataset, json_data, *args, **kwargs):
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, component_property='value'),
     State(sample_slider, component_property='value'), 
 )
-def update_sample_slider(dataset, dates, locations, sample):
+def update_sample_slider(dataset_name, dates, locations, sample):
     '''
     Handle any dataset changes
     '''
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {sample=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} dates:{len(dates)} locations:{len(locations)} {sample=}")
 
-    idx_data = get_idx_data(dataset, dates, locations)
+    idx_data = get_idx_data(dataset_name, dates, locations)
 
     # Sort out sample slider
     min_sample = 1
@@ -301,20 +301,20 @@ def update_sample_slider(dataset, dates, locations, sample):
 
     prevent_initial_call=True
 )
-def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
+def update_dataset(dataset_name, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
     '''
     Dataset changes will change sample_slider, which will trigger this function. Has to be seperated to allow trigger by initial call.
     '''
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=} {opacity=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} dates:{len(dates)} locations:{len(locations)} {sample=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=} {opacity=}")
     
     # Calculate hash
-    hash = get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
+    hash = get_UMAP_hash(dataset_name, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
     
-    idx_data = get_idx_data(dataset, dates, locations)
+    idx_data = get_idx_data(dataset_name, dates, locations)
     graph_data, sel_data = get_graph_data(idx_data, sample)
 
-    all_options = get_options_for_dataset(dataset)
-
+    dataset = dataset_loader.get_dataset(dataset_name)
+    all_options = dataset.drop_down_select_options()
     # Select only categorical options
     cat_options = [opt for opt in all_options if opt['type'] in ('categorical')]
 
@@ -327,7 +327,7 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
     if row_facet not in val_cat_options: row_facet = None
     if col_facet not in val_cat_options: col_facet = None
 
-    fig = get_UMAP_fig(graph_data, dataset, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
+    fig = get_UMAP_fig(graph_data, dataset_name, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
 
     return  sel_data.to_json(date_format='iso', orient='table'), \
             graph_data.to_json(date_format='iso', orient='split'), \
@@ -358,21 +358,21 @@ def update_dataset(dataset, dates, locations, sample, colour_by, symbol_by, row_
 
     prevent_initial_call=True
 )
-def update_graph_visuals(json_data, hash, dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
+def update_graph_visuals(json_data, hash, dataset_name, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity):
     logger.debug(f"Trigger ID={ctx.triggered_id}: json data ({len(json_data)}B) {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=} {opacity=}")
 
-    new_hash = get_UMAP_hash(dataset, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
+    new_hash = get_UMAP_hash(dataset_name, dates, locations, sample, colour_by, symbol_by, row_facet, col_facet, dot_size, opacity)
     if hash == new_hash:
         logger.debug("No new hash value, return.")
         return no_update, no_update
 
     graph_data = pd.read_json(StringIO(json_data), orient='split')
 
+    dataset = dataset_loader.get_dataset(dataset_name)
     # Revert automatic formatting
     graph_data['date'] = graph_data['date'].astype(str)
 
-    options = get_options_for_dataset(dataset)
-    for opt in options:
+    for opt in dataset.drop_down_select_options():
         if opt['group'] == 'Site Level':
             feat_name = opt['value']
             graph_data[feat_name] = graph_data[feat_name].astype(str)

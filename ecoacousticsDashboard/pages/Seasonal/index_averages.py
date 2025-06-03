@@ -10,7 +10,7 @@ from dash import html, ctx, dcc, callback, Output, Input, ALL
 from loguru import logger
 
 from utils.content import get_tabs
-from utils.data import dataset_loader, filter_data, get_categorical_orders_for_dataset
+from utils.data import dataset_loader, filter_data
 from utils.save_plot_fig import get_save_plot
 
 PAGENAME = 'idx-averages'
@@ -73,17 +73,15 @@ layout = html.Div([
     # Input(colours_tickbox, component_property='checked'),
     # Input(separate_plots_tickbox, component_property='checked'),
 )
-def update_graph(dataset, dates, locations, feature):  # , time_agg, outliers, colour_locations, separate_plots):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=}")
+def update_graph(dataset_name, dates, locations, feature):  # , time_agg, outliers, colour_locations, separate_plots):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=}")
 
-    data = data_loader.get_acoustic_features(dataset)
-    data = filter_data(data, dates=dates, locations=locations, feature=feature)
+    dataset = data_loader.get_dataset(dataset_name)
+    data = filter_data(dataset.acoustic_features, dates=dates, locations=locations, feature=feature)
 
     data = data.sort_values(by='recorder')
     data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
                        minute=data.timestamp.dt.minute)
-
-    category_orders = get_categorical_orders_for_dataset(dataset)
 
     # data = data.sort_values('timestamp'). \
     #     groupby(by=['location', 'recorder', 'feature', 'dddn']). \
@@ -104,7 +102,7 @@ def update_graph(dataset, dates, locations, feature):  # , time_agg, outliers, c
 
     data.columns = [list(filter(lambda x: x != '' and x != 'value', col))[0] for col in data.columns.values]
 
-    fig = px.line(data, x='timestamp', y='mean', color='location', facet_row='dddn', markers=True, category_orders=category_orders)
+    fig = px.line(data, x='timestamp', y='mean', color='location', facet_row='dddn', markers=True, category_orders=dataset.category_orders())
     fig.update_traces(marker={'size': 4})
 
     # Add centered title

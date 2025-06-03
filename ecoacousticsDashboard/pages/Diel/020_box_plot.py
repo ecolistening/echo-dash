@@ -7,7 +7,7 @@ from dash import html, ctx, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 
 from utils.content import get_tabs
-from utils.data import dataset_loader, filter_data, get_categorical_orders_for_dataset
+from utils.data import dataset_loader, filter_data
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.plot_filter_menu import get_filter_drop_down, get_time_aggregation
 from utils.save_plot_fig import get_save_plot
@@ -65,17 +65,15 @@ layout = html.Div([
 
     prevent_initial_call=True,
 )
-def update_graph(dataset, dates, locations, feature, colour_by, row_facet, col_facet, time_agg, outliers):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {row_facet=} {col_facet=} {time_agg=} {outliers=}")
+def update_graph(dataset_name, dates, locations, feature, colour_by, row_facet, col_facet, time_agg, outliers):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {row_facet=} {col_facet=} {time_agg=} {outliers=}")
 
-    data = data_loader.get_acoustic_features(dataset)
-    data = filter_data(data, dates=dates, locations=locations, feature=feature)
+    dataset = dataset_loader.get_dataset(dataset_name)
+    data = filter_data(dataset.acoustic_features, dates=dates, locations=locations, feature=feature)
 
     data = data.sort_values(by='recorder')
     data = data.assign(time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0, hour=data.timestamp.dt.hour,
                        minute=data.timestamp.dt.minute)
-
-    category_orders = get_categorical_orders_for_dataset(dataset)
 
     fig = px.box(data, x=time_agg, y='value',
                 hover_name='file', hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
@@ -85,7 +83,7 @@ def update_graph(dataset, dates, locations, feature, colour_by, row_facet, col_f
                 facet_col=col_facet,
                 facet_col_wrap=4,
                 points='outliers' if outliers else False,
-                category_orders=category_orders)
+                category_orders=dataset.category_orders())
 
     # Select sample for audio modal
     fig.update_layout(clickmode='event+select')

@@ -16,12 +16,6 @@ from utils import list2tuple
 
 from typing import Dict, List, Tuple
 
-# ~~~~~~~~~~~~~~~~~~~~~ #
-#                       #
-#     Data Reading      #
-#                       #
-# ~~~~~~~~~~~~~~~~~~~~~ #
-
 @dataclass
 class Dataset:
     dataset_id: str
@@ -53,7 +47,36 @@ class Dataset:
     def acoustic_features(self) -> pd.DataFrame:
         features_path = self.path / "indices.parquet"
         logger.debug(f"Loading & caching \"{features_path}\"..")
-        return pd.read_parquet(self.path / "indices.parquet")
+        data = pd.read_parquet(self.path / "indices.parquet")
+        # TODO: my own hack to ensure temporal fields are on the acoustic indices (used in options / filters)
+        # we will be able to do a simple table join once finished
+        data = data.merge(
+            self.files.join(self.locations, on="site_id"),
+            left_on=["file", "site"],
+            right_on=["file_name", "site_name"],
+            how="left",
+            suffixes=('', '_y'),
+        )
+        # TODO: Several hacks left by Lucas, persist to get this view working, can be removed when switching to better structured data
+        # 1. remove duplicates
+        num_samples = data.shape[0]
+        data = data.drop_duplicates()
+        if num_samples > data.shape[0]:
+            logger.debug(f"Removed {num_samples - data.shape[0]} duplicate samples: {data.shape=}")
+        # 2. strip
+        striptext = None
+        if self.dataset_name == "Cairngorms":
+            striptext = "/mnt/lustre/projects/mfm/ecolistening/dashboard/audio/cairngorms/"
+        elif self.dataset_name == "Sounding Out":
+            striptext = "/mnt/lustre/projects/mfm/ecolistening/dac_audio/diurnal/dc_corrected/"
+        if striptext is not None and 'path' in data.columns:
+            logger.debug(f"Strip '{striptext}' from column path..")
+            data['path'] = data['path'].map(lambda x: x.lstrip(striptext))
+        # 3. adjust location names
+        if self.dataset_name == "Sounding Out":
+            data['location'] = data['habitat code']
+            logger.debug("Updated location with habitat code")
+        return data
 
     @cached_property
     def birdnet_species_probs(self) -> pd.DataFrame:
@@ -96,6 +119,64 @@ class Dataset:
         data['year'] = data.timestamp.dt.year
         return data
 
+    def drop_down_select_options(self):
+        logger.debug(f"Get options for dataset_name={self.dataset_name}")
+        options = []
+        # Add site hierarchies
+        site_level_cols = list(filter(lambda a: a.startswith('sitelevel_'), self.locations.columns))
+        for level in site_level_cols:
+            values = self.locations[level].unique()
+
+            try:
+                values_int = map(int,values)
+                order = tuple(str(i) for i in sorted(values_int))
+            except:
+                order = tuple(sorted(values))
+            else:
+                logger.debug(f"Convert sitelevel {feat} to string.")
+                data[feat] = self.locations[level].astype(str)
+
+            options += [{'value': level, 'label': self.config.get('Site Hierarchy', level, fallback=level), 'group': 'Site Level', 'type': 'categorical', 'order': order}]
+
+        # Add time of the day
+        options += [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'group': 'Time of Day', 'type': 'categorical', 'order': ('dawn','day','dusk','night')}]
+        options += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
+
+        # Add temporal columns with facet order
+        temporal_cols = (
+            ('hour', list(range(24))),
+            ('weekday', ('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')),
+            ('date', sorted(self.files['date'].unique())),
+            ('month', ('January','February','March','April','May','June','July','August','September','October','November','December')),
+            ('year', sorted(self.files['year'].unique())),
+        )
+        options += [{'value': col, 'label': col.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for col, order in temporal_cols]
+
+        spatial_cols = ['location', 'site', 'recorder']
+        options += [{'value': col, 'label': col.capitalize(), 'group': 'Spatial', 'type': 'categorical', 'order': tuple(sorted(self.locations[col].unique()))} for col in spatial_cols]
+
+        # deprecated since they are already covered or offer no visualisation value
+        #index = ['file', 'timestamp']
+        #options += [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata', 'type': 'categorical', 'order': tuple(sorted(data[i].unique()))} for i in index]
+
+        # Filter options to ensure they are present in the dataset
+        return tuple(options)
+
+    def categorical_drop_down_select_options(self):
+        return [opt for opt in self.drop_down_select_options() if opt['type'] in ('categorical')]
+
+    def category_orders(self):
+        categorical_orders = {}
+        for opt in self.drop_down_select_options():
+            name = opt['value']
+            order = opt.get('order',None)
+            if order is None:
+                logger.debug(f"Option {name}: No order provided")
+            else:
+                logger.debug(f"Option {name}: {order}")
+                categorical_orders[name] = order
+        return categorical_orders
+
     @staticmethod
     def _read_or_build_config(config_path) -> ConfigParser:
         config = ConfigParser()
@@ -108,6 +189,7 @@ class Dataset:
                 config.add_section('Site Hierarchy')
         return config
 
+# a simple collection of datasets
 class DatasetLoader:
     def __init__(
         self,
@@ -122,31 +204,12 @@ class DatasetLoader:
     def get_dataset_names(self):
         return list(self.datasets.keys())
 
+    # TODO these might be unnecessary
     @lru_cache(maxsize=10)
     def get_acoustic_features(self, dataset_name: str, columns: List = None):
         dataset = self.datasets[dataset_name]
         logger.debug(f"Loading dataset from \"{dataset.path}\"..")
-        data = dataset.acoustic_features
-        # TODO: Several hacks left by Lucas, persist to get this view working, can be removed when switching to better structured data
-        # 1. remove duplicates
-        num_samples = data.shape[0]
-        data = data.drop_duplicates()
-        if num_samples > data.shape[0]:
-            logger.debug(f"Removed {num_samples - data.shape[0]} duplicate samples: {data.shape=}")
-        # 2. strip
-        striptext = None
-        if dataset_name == "cairngorms":
-            striptext = "/mnt/lustre/projects/mfm/ecolistening/dashboard/audio/cairngorms/"
-        elif dataset_name == "sounding out":
-            striptext = "/mnt/lustre/projects/mfm/ecolistening/dac_audio/diurnal/dc_corrected/"
-        if striptext is not None and 'path' in data.columns:
-            logger.debug(f"Strip '{striptext}' from column path..")
-            data['path'] = data['path'].map(lambda x: x.lstrip(striptext))
-        # 3. adjust location names
-        if dataset_name == "Sounding Out":
-            data['location'] = data['habitat code']
-            logger.debug("Updated location with habitat code")
-        return data
+        return dataset.acoustic_features
 
     @lru_cache(maxsize=10)
     def get_sites(self, dataset_name: str):
@@ -202,11 +265,25 @@ def filter_data(
     if feature is not None: feature = str(feature)
     if locations is not None: locations = list2tuple(locations)
 
-    logger.debug(f"Load {dataset=} and filter "
+    logger.debug(f"Filter "
                  f"dates:{len(dates) if dates is not None else None} "
                  f"locations:{len(locations) if locations is not None else None} "
                  f"{feature=}")
-    data = filter_data_lru(data, dates, feature, locations)
+    # FIXME remove until filter caching is sorted
+    # data = filter_data_lru(data, dates, feature, locations)
+    if dates is not None:
+        dates = [date.fromisoformat(d) for d in dates]
+        data = data[data.timestamp.dt.date.between(*dates)]
+        logger.debug(f"Selected Dates: {data.shape=}")
+
+    if feature is not None:
+        data = data[data.feature == feature]
+        logger.debug(f"Selected Features: {data.shape=}")
+
+    if locations is not None and len(locations) > 0:
+        # changed it from locations[-1] after unpacking nested list in list2tuple - Potential source for problems
+        data = data[data['site'].isin([l.strip('/') for l in locations])]
+        logger.debug(f"Seleted Locations: {data.shape=}")
 
     # Randomly sample
     if sample is not None:
@@ -217,7 +294,7 @@ def filter_data(
     return data
 
 @lru_cache(maxsize=5)
-def filter_data_lru(dataset: str, dates: Tuple | None = None, feature: str | None = None, locations: Tuple | None = None):
+def filter_data_lru(dataset, dates: Tuple | None = None, feature: str | None = None, locations: Tuple | None = None):
     if dates is not None:
         dates = [date.fromisoformat(d) for d in dates]
         data = data[data.timestamp.dt.date.between(*dates)]
@@ -284,77 +361,6 @@ def get_path_from_config_lru(dataset: str, section: str, option:str):
 
     return extract_path
 
-# TODO: move to dataset class?
-@lru_cache(maxsize=10)
-def get_options_for_dataset_lru(dataset: str):
-    data = load_dataset(dataset)
-    config = load_config(dataset)
-    options = []
-
-    # Add site hierarchies
-    sitelevel_cols = list(filter(lambda a: a.startswith('sitelevel_'), data.columns))
-    for feat in sitelevel_cols:
-        values = data[feat].unique()
-
-        try:
-            values_int = map(int,values)
-            order = tuple(str(i) for i in sorted(values_int))
-        except:
-            order = tuple(sorted(values))
-        else:
-            logger.debug(f"Convert sitelevel {feat} to string.")
-            data[feat] = data[feat].astype(str)
-
-
-        options += [{'value': feat, 'label': config.get( 'Site Hierarchy', feat, fallback=feat), 'group': 'Site Level', 'type': 'categorical', 'order': order}]
-
-    # Add time of the day
-    options += [{'value': 'dddn', 'label': 'Dawn/Day/Dusk/Night', 'group': 'Time of Day', 'type': 'categorical', 'order': ('dawn','day','dusk','night')}]
-    options += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
-
-    # Add temporal columns with facet order
-    temporal_cols = (   
-                        ('hour', list(range(24))),
-                        ('weekday', ('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')),
-                        ('date', sorted(data['date'].unique())),
-                        ('month', ('January','February','March','April','May','June','July','August','September','October','November','December')),
-                        ('year', sorted(data['year'].unique())),
-                    )
-    options += [{'value': feat, 'label': feat.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for feat,order in temporal_cols]
-
-    spatial_cols = ['location', 'site', 'recorder']
-    options += [{'value': i, 'label': i.capitalize(), 'group': 'Spatial', 'type': 'categorical', 'order': tuple(sorted(data[i].unique()))} for i in spatial_cols]
-
-    # deprecated since they are already covered or offer no visualisation value
-    #index = ['file', 'timestamp']
-    #options += [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata', 'type': 'categorical', 'order': tuple(sorted(data[i].unique()))} for i in index]
-
-    # Filter options to ensure they are present in the dataset
-    options = [opt for opt in options if opt['value'] in data.columns]
-
-    return tuple(options)
-
-@lru_cache(maxsize=10)
-def get_cat_options_for_dataset_lru(dataset: str):
-    options = get_options_for_dataset(dataset)
-    return [opt for opt in options if opt['type'] in ('categorical')]
-
-@lru_cache(maxsize=10)
-def get_categorical_orders_for_dataset_lru(dataset: str):
-    #{opt['value']: opt.get('order') for opt in options if opt.get('order',None) is not None}
-
-    options = get_options_for_dataset(dataset)
-    categorical_orders = {}
-    for opt in options:
-        name = opt['value']
-        order = opt.get('order',None)
-        if order is None:
-            logger.debug(f"Option {name}: No order provided")
-        else:
-            logger.debug(f"Option {name}: {order}")
-            categorical_orders[name] = order
-
-    return categorical_orders
 
 # ~~~~~~~~~~~~~~~~~~~~~ #
 #                       #
@@ -372,16 +378,4 @@ def load_config(dataset: str):
 
 def get_path_from_config(dataset: str, section: str, option:str):
     logger.debug(f"Get path for {dataset=} {section=} {option=}")
-    return get_path_from_config_lru(str(dataset), str(section), str(option))
-
-def get_options_for_dataset(dataset: str):
-    logger.debug(f"Get options for {dataset=}")
-    return get_options_for_dataset_lru(str(dataset))
-
-def get_cat_options_for_dataset(dataset: str):
-    logger.debug(f"Get categorical options for {dataset=}")
-    return get_cat_options_for_dataset_lru(str(dataset))
-
-def get_categorical_orders_for_dataset(dataset: str):
-    logger.debug(f"Get categorical_orders for {dataset=}")
-    return get_categorical_orders_for_dataset_lru(str(dataset))
+    # return get_path_from_config_lru(str(dataset), str(section), str(option))
