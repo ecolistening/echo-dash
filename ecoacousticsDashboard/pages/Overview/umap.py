@@ -314,7 +314,7 @@ def update_dataset(dataset_name, dates, locations, sample, colour_by, symbol_by,
     graph_data, sel_data = get_graph_data(idx_data, sample)
 
     dataset = dataset_loader.get_dataset(dataset_name)
-    all_options = dataset.drop_down_select_options()
+    all_options = DatasetDecorator(dataset).drop_down_select_options()
     # Select only categorical options
     cat_options = [opt for opt in all_options if opt['type'] in ('categorical')]
 
@@ -372,7 +372,7 @@ def update_graph_visuals(json_data, hash, dataset_name, dates, locations, sample
     # Revert automatic formatting
     graph_data['date'] = graph_data['date'].astype(str)
 
-    for opt in dataset.drop_down_select_options():
+    for opt in DatasetDecorator(dataset).drop_down_select_options():
         if opt['group'] == 'Site Level':
             feat_name = opt['value']
             graph_data[feat_name] = graph_data[feat_name].astype(str)

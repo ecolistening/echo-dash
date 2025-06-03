@@ -74,8 +74,8 @@ def get_filter_drop_down(pagename, set_callback=True, select_width=200,
             def update_options(dataset_name, colour_by, symbol_by, row_facet, col_facet):
                 logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} {colour_by=} {symbol_by=} {row_facet=} {col_facet=}")
 
-                dataset = dataset_loader.get_dataset(dataset_name)
-                cat_options = dataset.categorical_drop_down_select_options()
+                decorator = DatasetDecorator(dataset_loader.get_dataset(dataset_name))
+                cat_options = decorator.categorical_drop_down_select_options()
 
                 # Ensure option is available for dataset
                 val_cat_options = [opt['value'] for opt in cat_options]
@@ -84,7 +84,7 @@ def get_filter_drop_down(pagename, set_callback=True, select_width=200,
                     colour_options = cat_options
                     val_colour_options = val_cat_options
                 else:
-                    colour_options = dataset.drop_down_select_options()
+                    colour_options = decorator.drop_down_select_options()
                     val_colour_options = [opt['value'] for opt in colour_options]
 
                 if colour_by not in val_colour_options: colour_by = None
