@@ -11,9 +11,9 @@ from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils.plot_filter_menu import get_filter_drop_down
 from utils import sketch
 
-PAGE_NAME = "species-occurrence-probability-polar-plot"
-PAGE_TITLE = "Bar Polar Plot of Species Occurrence Probability by Time of Day"
-MENU_NAME = "Bar Polar Species Probability by Time of Day"
+PAGE_NAME = "species-abundance-polar-plot"
+PAGE_TITLE = "Polar Plot of Species Abundance by Time of Day"
+MENU_NAME = "Polar Species Abundance by Time of Day"
 PLOT_HEIGHT = 800
 
 dash.register_page(__name__, title=PAGE_TITLE, name=MENU_NAME)
@@ -32,21 +32,38 @@ colour_select, row_facet_select, col_facet_select = get_filter_drop_down(
     col_facet_default="weekday",
 )
 
-species_select = dmc.Select(
-    id=f"{PAGE_NAME}-species-select",
-    label="Select species",
-    value=species_default,
+plot_types = {
+    "Scatter Polar": sketch.scatter_polar,
+    "Bar Polar": sketch.bar_polar,
+}
+plot_type_select = dmc.Select(
+    id=f"{PAGE_NAME}-plot-type-select",
+    label="Select polar plot type",
+    value="Scatter Polar",
     searchable=True,
     clearable=False,
     style={"width": 200},
     persistence=True,
     data=[
-        {"value": common_name, "label": common_name }
-        for common_name in species_list
+        {"value": plot_type, "label": plot_type }
+        for plot_type in plot_types.keys()
     ],
 )
 
-filter_group = dmc.Group(children=[colour_select, row_facet_select, col_facet_select, species_select])
+threshold_slider_text = dmc.Text("Detection Threshold", size="sm", align="right")
+threshold_slider = dmc.Slider(
+    id=f"{PAGE_NAME}-plot-size",
+    min=0.1, max=1.0,
+    step=0.1,
+    value=0.5,
+    marks=[
+        { "value": i, "label": str(i) }
+        for i in [0.1, 0.2, 0.4, 0.6, 0.8 , 0.1]
+    ],
+    persistence=True
+)
+
+filter_group = dmc.Group(children=[plot_type_select, colour_select, row_facet_select, col_facet_select, threshold_slider_text, threshold_slider], grow=True)
 
 graph = dcc.Graph(id=f"{PAGE_NAME}-graph")
 
@@ -66,18 +83,27 @@ layout = html.Div([
     Input(colour_select, "value"),
     Input(row_facet_select, "value"),
     Input(col_facet_select, "value"),
-    Input(species_select, "value"),
+    Input(plot_type_select, "value"),
+    Input(threshold_slider, "value"),
 )
-def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, species_name):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {colour_by=} {row_facet=} {col_facet=} {species_name=}")
+def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, plot_type, threshold):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {colour_by=} {row_facet=} {col_facet=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
-    species_data = dataset.species_predictions[dataset.species_predictions.common_name == species_name]
-    data = filter_data(species_data, locations=locations)
+    data = filter_data(dataset.species_predictions, locations=locations)
 
-    fig = sketch.scatter_polar(
+    data = (
+        data[data["confidence"] > threshold]
+        .groupby(["common_name", "hour", row_facet, col_facet])
+        .agg(presence=("confidence", "count"))
+        .reset_index()
+        .sort_values(by=["hour", row_facet, col_facet])
+    )
+
+    plot = plot_types[plot_type]
+    fig = plot(
         data,
-        r="abundance",
+        r="presence",
         theta="hour",
         row_facet=row_facet,
         col_facet=col_facet,
@@ -86,7 +112,7 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, spec
         opacity=0.8,
         showlegend=False,
         radialaxis=dict(
-            range=[0, 1],
+            # range=[0, data["presence"].max()],
             showticklabels=True,
             title="Confidence",
             ticks="",
