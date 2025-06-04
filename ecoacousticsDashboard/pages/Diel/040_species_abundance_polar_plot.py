@@ -117,13 +117,13 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, plot
         category_orders=category_orders,
         radialaxis=dict(
             showticklabels=True,
-            title="Call Count",
+            # title="Call Count",
             ticks="",
         ),
         angularaxis=dict(
             tickmode="array",
-            tickvals=[0, 90, 180, 270],
-            ticktext=["00:00", "06:00", "12:00", "18:00"],
+            tickvals=(angles := list(range(0, 360, 45))),
+            ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
             direction="clockwise",
             # title="Hour of Day",
             rotation=90,
@@ -134,12 +134,6 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, plot
     fig.update_layout(
         height=PLOT_HEIGHT,
         margin=dict(t=150, r=150),
-        title=dict(
-            text=PAGE_TITLE,
-            x=0.5,
-            y=0.97,
-            font=dict(size=24)
-        ),
     )
 
     return fig

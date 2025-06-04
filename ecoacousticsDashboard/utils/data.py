@@ -92,7 +92,6 @@ class Dataset:
             logger.debug("Updated location with habitat code")
         return data
 
-
     @cached_property
     def birdnet_species_probs(self) -> pd.DataFrame:
         birdnet_species_probs_path = self.path / "birdnet_species_probs_table.parquet"
@@ -168,7 +167,7 @@ class Dataset:
 @attrs.define
 class DatasetViews:
     """
-    DatasetViews class
+    DatasetViews class loads persisted views, or creates, caches and persists new views
     """
     dataset: Dataset
 
@@ -220,7 +219,7 @@ class DatasetViews:
             self.cache[lookup_id] = pd.read_parquet(view_path)
 
         elif lookup_id not in self.cache:
-            logger.debug(f"Caching species abundance by hour with parameters {threshold=} {group_1=} {group_2=}")
+            logger.debug(f"Caching and persisting species abundance by hour with parameters {threshold=} {group_1=} {group_2=}")
             view = (
                 self.dataset.species_predictions[self.dataset.species_predictions["confidence"] > threshold]
                 .groupby(["hour", group_1, group_2, "site"])
@@ -233,17 +232,6 @@ class DatasetViews:
             self.cache[lookup_id] = view
 
         return self.cache[lookup_id]
-
-    def _cache_views(self):
-        decorator = DatasetDecorator(self)
-        for group_1, group_2 in itertools.combinations([*decorator.temporal_columns, *decorator.spatial_columns, *decorator.site_levels], 2):
-
-            for species_name in self.species_predictions.common_name.unique():
-                self.species_probability_by_hour_view(species_name, group_1, group_2)
-
-            for thresholds in range(0.1, 1.0, 0.1):
-                self.species_abundance_by_hour_view(threshold, group_1, group_2)
-
 
 
 @attrs.define
@@ -298,7 +286,7 @@ class DatasetDecorator:
         return (
             ('hour', list(range(24))),
             ('weekday', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']),
-            # ('date', sorted(self.dataset.files['date'].unique())),
+            ('date', sorted(self.dataset.files['date'].unique())),
             ('month', ['January','February','March','April','May','June','July','August','September','October','November','December']),
             ('year', sorted(self.dataset.files['year'].unique())),
         )

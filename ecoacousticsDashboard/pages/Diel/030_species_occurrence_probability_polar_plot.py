@@ -129,7 +129,7 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, spec
         radialaxis=dict(
             range=[0, 1],
             showticklabels=True,
-            title="Confidence",
+            # title="Confidence",
             ticks="",
         ),
         angularaxis=dict(
@@ -137,7 +137,7 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, spec
             tickvals=(angles := list(range(0, 360, 45))),
             ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
             direction="clockwise",
-            title="Hour of Day",
+            # title="Hour of Day",
             rotation=90,
             ticks=""
         )
@@ -146,12 +146,6 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, spec
     fig.update_layout(
         height=PLOT_HEIGHT,
         margin=dict(r=150),
-        title=dict(
-            text=PAGE_TITLE,
-            x=0.5,
-            y=0.97,
-            font=dict(size=24)
-        ),
     )
 
     return fig
