@@ -46,7 +46,7 @@ def bar_polar(
         show_colourbar = (row == 1 and col == 1)
         subset = data[(data[row_facet] == row_category) & (data[col_facet] == col_category)].sort_values(by=[theta, row_facet, col_facet])
         trace = go.Barpolar(
-            r=subset.groupby(theta)[r].mean(),
+            r=subset[r],
             theta=subset[theta].unique() * 360 / 24,
             **kwargs
         )
@@ -127,7 +127,7 @@ def scatter_polar(
         show_colourbar = (row == 1 and col == 1)
         subset = data[(data[row_facet] == row_category) & (data[col_facet] == col_category)].sort_values(by=[theta, row_facet, col_facet])
         trace = go.Scatterpolar(
-            r=subset.groupby(theta)[r].mean(),
+            r=subset[r],
             theta=subset[theta].unique() * 360 / 24,
             **kwargs
         )
@@ -171,3 +171,31 @@ def scatter_polar(
         })
 
     return fig
+
+# def box_polar(
+#     data: pd.DataFrame,
+#     r: str,
+#     theta: str,
+#     row_facet: str,
+#     col_facet: str,
+#     color: str | None = None,
+#     width: str | None = None,
+#     radialaxis: Dict[str, Any] = {},
+#     angularaxis: Dict[str, Any] = {},
+#     **kwargs
+# ) -> go.Figure:
+#     row_categories = data[row_facet].unique()
+#     col_categories = data[col_facet].unique()
+#     num_rows = len(row_categories)
+#     num_cols = len(col_categories)
+#     categories = list(itertools.product(row_categories, col_categories))
+#     subplot_titles = [str(col_cat) for col_cat in col_categories] + [""] * ((num_rows - 1) * num_cols)
+
+#     fig = make_subplots(
+#         rows=num_rows, cols=num_cols,
+#         specs=[[dict(type="polar")]*num_cols for _ in range(num_rows)],
+#         subplot_titles=subplot_titles,
+#         horizontal_spacing=0.05,
+#         vertical_spacing=0.05,
+#     )
+#     return fig

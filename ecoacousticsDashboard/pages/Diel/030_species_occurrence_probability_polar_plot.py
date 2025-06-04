@@ -1,5 +1,6 @@
 import dash
 import dash_mantine_components as dmc
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -12,8 +13,8 @@ from utils.plot_filter_menu import get_filter_drop_down
 from utils import sketch
 
 PAGE_NAME = "species-occurrence-probability-polar-plot"
-PAGE_TITLE = "Bar Polar Plot of Species Occurrence Probability by Time of Day"
-MENU_NAME = "Bar Polar Species Probability by Time of Day"
+PAGE_TITLE = "Polar Plot of Species Occurrence Probability by Time of Day"
+MENU_NAME = "Polar Species Probability by Time of Day"
 PLOT_HEIGHT = 800
 
 dash.register_page(__name__, title=PAGE_TITLE, name=MENU_NAME)
@@ -46,7 +47,44 @@ species_select = dmc.Select(
     ],
 )
 
-filter_group = dmc.Group(children=[colour_select, row_facet_select, col_facet_select, species_select])
+plot_types = {
+    "Scatter Polar": sketch.scatter_polar,
+    "Bar Polar": sketch.bar_polar,
+}
+plot_type_kwargs = {
+    "Scatter Polar": dict(
+        mode="markers",
+        marker=dict(size=6, opacity=0.5),
+    ),
+    "Bar Polar": dict(
+        marker_line_width=2,
+    ),
+}
+plot_type_select = dmc.Select(
+    id=f"{PAGE_NAME}-plot-type-select",
+    label="Select polar plot type",
+    value="Bar Polar",
+    searchable=True,
+    clearable=False,
+    style={"width": 200},
+    persistence=True,
+    data=[
+        {"value": plot_type, "label": plot_type }
+        for plot_type in plot_types.keys()
+    ],
+)
+
+opacity_slider_text = dmc.Text("Opacity", size="sm", align="right")
+opacity_slider = dmc.Slider(
+    id=f'{PAGE_NAME}-plot-options-opacity',
+    min=0, max=100, step=5, value=50,
+    marks=[
+        {'value': i, 'label': f'{i}%'} for i in range(0, 101, 20)
+    ],
+    persistence=True
+)
+
+filter_group = dmc.Group(children=[plot_type_select, species_select, colour_select, row_facet_select, col_facet_select, opacity_slider_text, opacity_slider], grow=True)
 
 graph = dcc.Graph(id=f"{PAGE_NAME}-graph")
 
@@ -58,7 +96,6 @@ layout = html.Div([
     graph,
 ])
 
-
 @callback(
     Output(f"{PAGE_NAME}-graph", "figure"),
     Input("dataset-select", "value"),
@@ -67,24 +104,32 @@ layout = html.Div([
     Input(row_facet_select, "value"),
     Input(col_facet_select, "value"),
     Input(species_select, "value"),
+    Input(plot_type_select, "value"),
+    Input(opacity_slider, "value"),
 )
-def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, species_name):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {colour_by=} {row_facet=} {col_facet=} {species_name=}")
+def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, species_name, plot_type, opacity):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {colour_by=} {row_facet=} {col_facet=} {species_name=} {plot_type=} {opacity=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
-    species_data = dataset.species_predictions[dataset.species_predictions.common_name == species_name]
-    data = filter_data(species_data, locations=locations)
+    data = filter_data(dataset.species_predictions, locations=locations)
 
-    fig = sketch.scatter_polar(
+    data = (
+        data[data.common_name == species_name]
+        .reset_index()
+        .rename(columns=dict(confidence="prob"))
+        .sort_values(by=["hour", row_facet, col_facet])
+    )
+
+    plot = plot_types[plot_type]
+    fig = plot(
         data,
-        r="abundance",
+        r="prob",
         theta="hour",
         row_facet=row_facet,
         col_facet=col_facet,
-        marker_line_color="black",
-        marker_line_width=2,
-        opacity=0.8,
         showlegend=False,
+        opacity=opacity / 100.0,
+        **plot_type_kwargs[plot_type],
         radialaxis=dict(
             range=[0, 1],
             showticklabels=True,
@@ -93,8 +138,8 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, spec
         ),
         angularaxis=dict(
             tickmode="array",
-            tickvals=[0, 90, 180, 270],
-            ticktext=["00:00", "06:00", "12:00", "18:00"],
+            tickvals=(angles := list(range(0, 360, 45))),
+            ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
             direction="clockwise",
             title="Hour of Day",
             rotation=90,
