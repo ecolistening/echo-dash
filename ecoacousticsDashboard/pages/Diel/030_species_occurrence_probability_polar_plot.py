@@ -111,14 +111,9 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, spec
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {colour_by=} {row_facet=} {col_facet=} {species_name=} {plot_type=} {opacity=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
-    data = filter_data(dataset.species_predictions, locations=locations)
-
-    data = (
-        data[data.common_name == species_name]
-        .reset_index()
-        .rename(columns=dict(confidence="prob"))
-        .sort_values(by=["hour", row_facet, col_facet])
-    )
+    data = dataset.views.species_probability_by_hour(species_name, row_facet, col_facet)
+    data = filter_data(data, locations=locations)
+    category_orders = DatasetDecorator(dataset).category_orders()
 
     plot = plot_types[plot_type]
     fig = plot(
@@ -130,6 +125,7 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, spec
         showlegend=False,
         opacity=opacity / 100.0,
         **plot_type_kwargs[plot_type],
+        category_orders=category_orders,
         radialaxis=dict(
             range=[0, 1],
             showticklabels=True,

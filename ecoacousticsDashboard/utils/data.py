@@ -1,4 +1,5 @@
 import attrs
+import cachetools
 from dataclasses import dataclass
 from datetime import date
 import pathlib
@@ -19,6 +20,10 @@ from typing import Any, Dict, List, Tuple
 
 @attrs.define
 class Dataset:
+    """
+    Dataset class handles all data loading logic. A dataset, indexed by ID and file name
+    contains many tables. Each is stored in a parquet file in the specified data directory.
+    """
     dataset_id: str
     dataset_name: str
     dataset_path: str
@@ -35,10 +40,16 @@ class Dataset:
         # cache species and birdet predictions
         self.species
         self.birdnet_species_probs
+        # load data views
+        self.views
 
     @property
     def path(self):
         return pathlib.Path.cwd().parent / "data" / self.dataset_path
+
+    @cached_property
+    def views(self):
+        return DatasetViews(self)
 
     @cached_property
     def config(self) -> ConfigParser:
@@ -81,6 +92,7 @@ class Dataset:
             logger.debug("Updated location with habitat code")
         return data
 
+
     @cached_property
     def birdnet_species_probs(self) -> pd.DataFrame:
         birdnet_species_probs_path = self.path / "birdnet_species_probs_table.parquet"
@@ -93,7 +105,7 @@ class Dataset:
         logger.debug(f"Loading & caching \"{species_path}\"..")
         return pd.read_parquet(species_path)
 
-    @property
+    @cached_property
     def species_predictions(self) -> pd.DataFrame:
         return (
             self.birdnet_species_probs
@@ -154,6 +166,87 @@ class Dataset:
 
 
 @attrs.define
+class DatasetViews:
+    """
+    DatasetViews class
+    """
+    dataset: Dataset
+
+    @cached_property
+    def cache(self):
+        return cachetools.LRUCache(maxsize=10)
+
+    @property
+    def path(self):
+        return self.dataset.path / "views"
+
+    @staticmethod
+    def get_lookup_key(*args: Tuple[str]) -> str:
+        return "_".join(args)
+
+    def species_probability_by_hour(
+        self,
+        species_name: str,
+        group_1: str,
+        group_2: str
+    ) -> pd.DataFrame:
+        lookup_id = self.get_lookup_key(species_name, group_1, group_2)
+        view_path =  self.path / f"birdnet_species_probability_by_hour_{lookup_id}.parquet"
+
+        if lookup_id not in self.cache and view_path.exists():
+            logger.debug(f"Loading species species probability by hour with parameters {species_name=} {group_1=} {group_2=} from disk")
+            self.cache[lookup_id] = pd.read_parquet(view_path)
+
+        elif lookup_id not in self.cache:
+            logger.debug(f"Caching species probability by hour with parameters {species_name=} {group_1=} {group_2=}")
+            view = (
+                self.dataset.species_predictions[self.dataset.species_predictions.common_name == species_name]
+                .reset_index()
+                .rename(columns=dict(confidence="prob"))
+                .sort_values(by=["hour", group_1, group_2])
+            )
+            view_path.parent.mkdir(exist_ok=True, parents=True)
+            view.to_parquet(view_path)
+            self.cache[lookup_id] = view
+
+        return self.cache[lookup_id]
+
+    def species_abundance_by_hour(self, threshold: float, group_1: str, group_2: str) -> pd.DataFrame:
+        lookup_id = self.get_lookup_key(str(threshold), group_1, group_2)
+        view_path = self.path / "views" / f"birdnet_species_abundance_by_hour_{lookup_id}.parquet"
+
+        if lookup_id not in self.cache and view_path.exists():
+            logger.debug(f"Loading species species probability by hour with parameters {threshold=} {group_1=} {group_2=} from disk")
+            self.cache[lookup_id] = pd.read_parquet(view_path)
+
+        elif lookup_id not in self.cache:
+            logger.debug(f"Caching species abundance by hour with parameters {threshold=} {group_1=} {group_2=}")
+            view = (
+                self.dataset.species_predictions[self.dataset.species_predictions["confidence"] > threshold]
+                .groupby(["hour", group_1, group_2, "site"])
+                .agg(presence=("confidence", "count"))
+                .reset_index()
+                .sort_values(by=["hour", group_1, group_2])
+            )
+            view_path.parent.mkdir(exist_ok=True, parents=True)
+            view.to_parquet(view_path)
+            self.cache[lookup_id] = view
+
+        return self.cache[lookup_id]
+
+    def _cache_views(self):
+        decorator = DatasetDecorator(self)
+        for group_1, group_2 in itertools.combinations([*decorator.temporal_columns, *decorator.spatial_columns, *decorator.site_levels], 2):
+
+            for species_name in self.species_predictions.common_name.unique():
+                self.species_probability_by_hour_view(species_name, group_1, group_2)
+
+            for thresholds in range(0.1, 1.0, 0.1):
+                self.species_abundance_by_hour_view(threshold, group_1, group_2)
+
+
+
+@attrs.define
 class DatasetDecorator:
     dataset: Dataset
 
@@ -161,7 +254,7 @@ class DatasetDecorator:
         logger.debug(f"Get options for dataset_name={self.dataset.dataset_name}")
         options = []
         # Add site hierarchies
-        for level in self.site_level_columns:
+        for level in self.site_levels:
             values = self.dataset.locations[level].unique()
             options += [{'value': level, 'label': self.dataset.config.get('Site Hierarchy', level, fallback=level), 'group': 'Site Level', 'type': 'categorical', 'order': tuple(sorted(values))}]
         # Add time of the day
@@ -170,7 +263,7 @@ class DatasetDecorator:
         if len(self.dataset.dates):
             options += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
         # Add temporal columns with facet order
-        options += [{'value': col, 'label': col.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for col, order in self.temporal_columns]
+        options += [{'value': col, 'label': col.capitalize(), 'group': 'Temporal', 'type': 'categorical', 'order': order} for col, order in self.temporal_columns_with_order]
         # Add spatial columns with facet order
         options += [{'value': col, 'label': col.capitalize(), 'group': 'Spatial', 'type': 'categorical', 'order': tuple(sorted(self.dataset.locations[col].unique()))} for col in self.spatial_columns]
         # deprecated since they are already covered or offer no visualisation value
@@ -182,15 +275,30 @@ class DatasetDecorator:
         return [opt for opt in self.drop_down_select_options() if opt['type'] in ('categorical')]
 
     @property
-    def site_level_columns(self) -> List[str]:
-        return list(filter(lambda a: a.startswith('sitelevel_'), self.dataset.locations.columns))
+    def site_level_names(self) -> List[str]:
+        return [self.dataset.config.get('Site Hierarchy', level, fallback=level) for level in self.site_levels]
+
+    @property
+    def site_levels(self) -> List[str]:
+        return [col for col in self.dataset.locations.columns if col.startswith('sitelevel_')]
+
+    @property
+    def site_level_values(self) -> List[str]:
+        columns = []
+        for level in self.site_levels:
+            columns.extend(self.dataset.locations[level].unique())
+        return columns
 
     @property
     def temporal_columns(self) -> List[Tuple[str, List[Any]]]:
+        return [key for key, _ in self.temporal_columns_with_order]
+
+    @property
+    def temporal_columns_with_order(self) -> List[Tuple[str, List[Any]]]:
         return (
             ('hour', list(range(24))),
             ('weekday', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']),
-            ('date', sorted(self.dataset.files['date'].unique())),
+            # ('date', sorted(self.dataset.files['date'].unique())),
             ('month', ['January','February','March','April','May','June','July','August','September','October','November','December']),
             ('year', sorted(self.dataset.files['year'].unique())),
         )
@@ -246,6 +354,7 @@ class DatasetLoader:
 
 
 dataset_loader = DatasetLoader(root_dir)
+dataset_loader.datasets
 
 def filter_data(
     data: str,

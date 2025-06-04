@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from plotly.subplots import make_subplots
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 __ALL__ = [
     "bar_polar",
@@ -18,6 +18,7 @@ def bar_polar(
     col_facet: str,
     color: str | None = None,
     width: str | None = None,
+    category_orders: Dict[str, List[Any]] = {},
     radialaxis: Dict[str, Any] = {},
     angularaxis: Dict[str, Any] = {},
     **kwargs
@@ -25,12 +26,14 @@ def bar_polar(
     """
     Plotly express doesn't yet support faceted grids for polar plots, hence...
     """
-    row_categories = data[row_facet].unique()
-    col_categories = data[col_facet].unique()
+    row_order_idx = {value: idx for idx, value in  enumerate(category_orders[row_facet])}
+    col_order_idx = {value: idx for idx, value in  enumerate(category_orders[col_facet])}
+    row_categories = sorted(data[row_facet].unique(), key=lambda value: row_order_idx.get(value, float('inf')))
+    col_categories = sorted(data[col_facet].unique(), key=lambda value: col_order_idx.get(value, float('inf')))
     num_rows = len(row_categories)
     num_cols = len(col_categories)
     categories = list(itertools.product(row_categories, col_categories))
-    subplot_titles = [str(col_cat) for col_cat in col_categories] + [""] * ((num_rows - 1) * num_cols)
+    subplot_titles = [f"{col_facet}={col_cat}" for col_cat in col_categories] + [""] * ((num_rows - 1) * num_cols)
 
     fig = make_subplots(
         rows=num_rows, cols=num_cols,
@@ -54,7 +57,7 @@ def bar_polar(
 
     for i, row_category in enumerate(row_categories):
         fig.add_annotation(dict(
-            text=str(row_category),
+            text=f"{row_facet}={row_category}",
             x=1.05,
             y=1 - (i + 0.5) / num_rows,
             xref="paper",
@@ -99,6 +102,7 @@ def scatter_polar(
     col_facet: str,
     color: str | None = None,
     width: str | None = None,
+    category_orders: Dict[str, List[Any]] = {},
     radialaxis: Dict[str, Any] = {},
     angularaxis: Dict[str, Any] = {},
     **kwargs
@@ -106,8 +110,10 @@ def scatter_polar(
     """
     Plotly express doesn't yet support faceted grids for polar plots, hence...
     """
-    row_categories = data[row_facet].unique()
-    col_categories = data[col_facet].unique()
+    row_order_idx = {value: idx for idx, value in  enumerate(category_orders[row_facet])}
+    col_order_idx = {value: idx for idx, value in  enumerate(category_orders[col_facet])}
+    row_categories = sorted(data[row_facet].unique(), key=lambda value: row_order_idx.get(value, float('inf')))
+    col_categories = sorted(data[col_facet].unique(), key=lambda value: col_order_idx.get(value, float('inf')))
     num_rows = len(row_categories)
     num_cols = len(col_categories)
     categories = list(itertools.product(row_categories, col_categories))
@@ -171,31 +177,3 @@ def scatter_polar(
         })
 
     return fig
-
-# def box_polar(
-#     data: pd.DataFrame,
-#     r: str,
-#     theta: str,
-#     row_facet: str,
-#     col_facet: str,
-#     color: str | None = None,
-#     width: str | None = None,
-#     radialaxis: Dict[str, Any] = {},
-#     angularaxis: Dict[str, Any] = {},
-#     **kwargs
-# ) -> go.Figure:
-#     row_categories = data[row_facet].unique()
-#     col_categories = data[col_facet].unique()
-#     num_rows = len(row_categories)
-#     num_cols = len(col_categories)
-#     categories = list(itertools.product(row_categories, col_categories))
-#     subplot_titles = [str(col_cat) for col_cat in col_categories] + [""] * ((num_rows - 1) * num_cols)
-
-#     fig = make_subplots(
-#         rows=num_rows, cols=num_cols,
-#         specs=[[dict(type="polar")]*num_cols for _ in range(num_rows)],
-#         subplot_titles=subplot_titles,
-#         horizontal_spacing=0.05,
-#         vertical_spacing=0.05,
-#     )
-#     return fig

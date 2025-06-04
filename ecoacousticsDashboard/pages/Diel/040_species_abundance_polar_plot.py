@@ -36,10 +36,21 @@ plot_types = {
     "Scatter Polar": sketch.scatter_polar,
     "Bar Polar": sketch.bar_polar,
 }
+plot_type_kwargs = {
+    "Scatter Polar": dict(
+        mode="markers",
+        marker=dict(size=6, opacity=1.0),
+        fill="toself",
+    ),
+    "Bar Polar": dict(
+        marker_line_width=2,
+        opacity=0.8,
+    ),
+}
 plot_type_select = dmc.Select(
     id=f"{PAGE_NAME}-plot-type-select",
     label="Select polar plot type",
-    value="Scatter Polar",
+    value="Bar Polar",
     searchable=True,
     clearable=False,
     style={"width": 200},
@@ -90,15 +101,9 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, plot
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {colour_by=} {row_facet=} {col_facet=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
-    data = filter_data(dataset.species_predictions, locations=locations)
-
-    data = (
-        data[data["confidence"] > threshold]
-        .groupby(["common_name", "hour", row_facet, col_facet])
-        .agg(presence=("confidence", "count"))
-        .reset_index()
-        .sort_values(by=["hour", row_facet, col_facet])
-    )
+    data = dataset.views.species_abundance_by_hour(threshold, row_facet, col_facet)
+    data = filter_data(data, locations=locations)
+    category_orders = DatasetDecorator(dataset).category_orders()
 
     plot = plot_types[plot_type]
     fig = plot(
@@ -107,14 +112,12 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, plot
         theta="hour",
         row_facet=row_facet,
         col_facet=col_facet,
-        marker_line_color="black",
-        marker_line_width=2,
-        opacity=0.8,
         showlegend=False,
+        **plot_type_kwargs[plot_type],
+        category_orders=category_orders,
         radialaxis=dict(
-            # range=[0, data["presence"].max()],
             showticklabels=True,
-            title="Confidence",
+            title="Call Count",
             ticks="",
         ),
         angularaxis=dict(
@@ -122,7 +125,7 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, plot
             tickvals=[0, 90, 180, 270],
             ticktext=["00:00", "06:00", "12:00", "18:00"],
             direction="clockwise",
-            title="Hour of Day",
+            # title="Hour of Day",
             rotation=90,
             ticks=""
         )
@@ -130,7 +133,7 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, plot
 
     fig.update_layout(
         height=PLOT_HEIGHT,
-        margin=dict(r=150),
+        margin=dict(t=150, r=150),
         title=dict(
             text=PAGE_TITLE,
             x=0.5,
