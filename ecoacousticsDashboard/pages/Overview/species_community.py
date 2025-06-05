@@ -68,19 +68,19 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet):
     decorator = DatasetDecorator(dataset)
 
     fig = px.box(
-        data,
-        x="common_name",
-        y="confidence",
+        data.sort_values(by="confidence", ascending=False),
+        x="confidence",
+        y="common_name",
         color=colour_by,
         facet_row=row_facet,
         facet_col=col_facet,
         category_orders=decorator.category_orders(),
         points=False,
+        orientation="h",
     )
     layout_params = dict(
-        height=PLOT_HEIGHT,
+        height=10400,
         title=dict(
-            text=PAGE_TITLE,
             x=0.5,
             y=0.97,
             font=dict(size=24)
