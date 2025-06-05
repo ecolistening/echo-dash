@@ -7,48 +7,65 @@ from dash import html, ctx, dcc, callback, Output, State, Input, ALL
 from loguru import logger
 
 from utils.data import dataset_loader, filter_data, DatasetDecorator
-from utils.plot_filter_menu import get_filter_drop_down
+import components
 
 PAGE_NAME = 'species-community'
 PAGE_TITLE = 'Species Community'
-PLOT_HEIGHT = 800
-dash.register_page(__name__, title=PAGE_TITLE, name='Species Community')
 
-colour_select, row_facet_select, col_facet_select = get_filter_drop_down(
-    PAGE_NAME,
-    colour_by_cat=True,
-    include_symbol=False,
-    # TODO
-    # include_col_facet=False,
-    colour_default='location',
-    row_facet_default='location',
+dash.register_page(
+    __name__,
+    title=PAGE_TITLE,
+    name='Species Community'
 )
 
-filter_group = dmc.Group(children=[colour_select, row_facet_select, col_facet_select])
+PLOT_HEIGHT = 800
 
-graph = dcc.Graph(id=f'{PAGE_NAME}-graph')
+dataset_select_id = "dataset-select"
+graph_id = f"{PAGE_NAME}-graph"
+colour_select_id = f"{PAGE_NAME}-colour-select"
+row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
+row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
+col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
 
 layout = html.Div([
-    html.Div([html.H1(PAGE_TITLE)]),
+    html.Div([
+        html.H1(PAGE_TITLE)
+    ]),
     html.Hr(),
-    dmc.Divider(variant='dotted'),
-    filter_group,
-    graph,
+    dmc.Divider(variant="dotted"),
+    dmc.Group(
+        children=[
+            components.ColourSelect(
+                id=colour_select_id,
+                default="location",
+            ),
+            components.RowFacetSelect(
+                id=row_facet_select_id,
+                default=None,
+            ),
+            components.ColumnFacetSelect(
+                id=col_facet_select_id,
+                default=None,
+            ),
+        ]
+    ),
+    dcc.Graph(id=graph_id),
 ])
 
 @callback(
-    Output(f'{PAGE_NAME}-graph', component_property='figure'),
-    Input('dataset-select', component_property='value'),
-    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-    Input(colour_select, component_property='value'),
-    Input(row_facet_select, component_property='value'),
-    Input(col_facet_select, component_property='value'),
+    Output(graph_id, "figure"),
+    Input(dataset_select_id, "value"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    Input(colour_select_id, "value"),
+    Input(row_facet_select_id, "value"),
+    Input(col_facet_select_id, "value"),
 )
 def update_figure(dataset_name, locations, colour_by, row_facet, col_facet):
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {colour_by=} {row_facet=} {col_facet=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
     data = filter_data(dataset.species_predictions, locations=locations)
+    decorator = DatasetDecorator(dataset)
 
     fig = px.box(
         data,
@@ -57,7 +74,7 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet):
         color=colour_by,
         facet_row=row_facet,
         facet_col=col_facet,
-        category_orders=DatasetDecorator(dataset).category_orders(),
+        category_orders=decorator.category_orders(),
         points=False,
     )
     layout_params = dict(

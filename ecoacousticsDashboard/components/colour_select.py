@@ -5,7 +5,7 @@ from loguru import logger
 
 from utils.data import dataset_loader, DatasetDecorator
 
-# colour_select_id = f'{PAGE_NAME}-plot-options-color-by',
+from typing import Any, Dict, Tuple
 
 DEFAULT_SELECT_OPTIONS = dict(
     searchable=True,
@@ -13,12 +13,14 @@ DEFAULT_SELECT_OPTIONS = dict(
     persistence=True
 )
 
-def ColourDropdown(
+def ColourSelect(
     id: str,
     default=None,
     style: Dict[str, Any] = dict(width=200),
-) -> html.Div:
+    categorical: bool = False,
+) -> dmc.Select:
     dataset_select_id = 'dataset-select'
+
     select = dmc.Select(
         id=id,
         label="Colour by",
@@ -32,7 +34,7 @@ def ColourDropdown(
         Input(dataset_select_id, 'value'),
         State(select, 'value'),
     )
-    def update(dataset_name: str, colour_by: str) -> Tuple:
+    def update(dataset_name: str, colour_by: str) -> Tuple[str, ...]:
         logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} {colour_by=}")
 
         decorator = DatasetDecorator(dataset_loader.get_dataset(dataset_name))
@@ -40,7 +42,7 @@ def ColourDropdown(
 
         val_cat_options = [opt['value'] for opt in cat_options]
 
-        if colour_by_cat:
+        if categorical:
             options = cat_options
             val_options = val_cat_options
         else:
@@ -52,4 +54,4 @@ def ColourDropdown(
 
         return options
 
-    return component
+    return select
