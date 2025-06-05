@@ -10,6 +10,8 @@ from loguru import logger
 from menu.dataset import ds
 from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils import sketch
+from utils.content import get_tabs
+from utils.save_plot_fig import get_save_plot
 
 import components
 
@@ -118,6 +120,13 @@ layout = html.Div([
         ],
     ),
     dcc.Graph(id=graph_id),
+    dmc.Grid(
+        children=[
+            dmc.Col(get_tabs(PAGE_NAME), span=8),
+            dmc.Col(get_save_plot(graph_id), span=4),
+        ],
+        gutter="xl",
+    ),
 ])
 
 @callback(
