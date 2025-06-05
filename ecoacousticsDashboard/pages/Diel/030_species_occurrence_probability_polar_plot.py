@@ -147,6 +147,8 @@ def update_figure(
     category_orders = DatasetDecorator(dataset).category_orders()
 
     plot = plot_types[plot_type]
+    plot_kwargs = plot_type_kwargs[plot_type]
+    plot_kwargs["opacity"] = opacity / 100.0
     fig = plot(
         data,
         r="prob",
@@ -154,8 +156,7 @@ def update_figure(
         row_facet=row_facet,
         col_facet=col_facet,
         showlegend=False,
-        opacity=opacity / 100.0,
-        **plot_type_kwargs[plot_type],
+        **plot_kwargs,
         category_orders=category_orders,
         radialaxis=dict(
             range=[0, 1],
