@@ -9,44 +9,29 @@ from loguru import logger
 
 from menu.dataset import ds
 from utils.data import dataset_loader, filter_data, DatasetDecorator
-from utils.plot_filter_menu import get_filter_drop_down
 from utils import sketch
+
+import components
 
 PAGE_NAME = "species-occurrence-probability-polar-plot"
 PAGE_TITLE = "Polar Plot of Species Occurrence Probability by Time of Day"
 MENU_NAME = "Polar Species Probability by Time of Day"
+
+dash.register_page(
+    __name__,
+    title=PAGE_TITLE,
+    name=MENU_NAME,
+)
+
+# TODO: configure based on number of categories
 PLOT_HEIGHT = 800
 
-dash.register_page(__name__, title=PAGE_TITLE, name=MENU_NAME)
-
+# setup data
 dataset = dataset_loader.get_dataset(ds)
-# TODO: use species_id
 species_list = sorted(dataset.species_predictions.common_name.unique())
 species_default = species_list[0]
 
-colour_select, row_facet_select, col_facet_select = get_filter_drop_down(
-    PAGE_NAME,
-    colour_by_cat=True,
-    include_symbol=False,
-    colour_default="weekday",
-    row_facet_default="location",
-    col_facet_default="weekday",
-)
-
-species_select = dmc.Select(
-    id=f"{PAGE_NAME}-species-select",
-    label="Select species",
-    value=species_default,
-    searchable=True,
-    clearable=False,
-    style={"width": 200},
-    persistence=True,
-    data=[
-        {"value": common_name, "label": common_name }
-        for common_name in species_list
-    ],
-)
-
+# setup plot type selector
 plot_types = {
     "Scatter Polar": sketch.scatter_polar,
     "Bar Polar": sketch.bar_polar,
@@ -54,61 +39,107 @@ plot_types = {
 plot_type_kwargs = {
     "Scatter Polar": dict(
         mode="markers",
-        marker=dict(size=6, opacity=0.5),
+        marker=dict(size=6, opacity=1.0),
+        fill="toself",
     ),
     "Bar Polar": dict(
         marker_line_width=2,
+        opacity=0.8,
     ),
 }
-plot_type_select = dmc.Select(
-    id=f"{PAGE_NAME}-plot-type-select",
-    label="Select polar plot type",
-    value="Bar Polar",
-    searchable=True,
-    clearable=False,
-    style={"width": 200},
-    persistence=True,
-    data=[
-        {"value": plot_type, "label": plot_type }
-        for plot_type in plot_types.keys()
-    ],
-)
 
-opacity_slider_text = dmc.Text("Opacity", size="sm", align="right")
-opacity_slider = dmc.Slider(
-    id=f'{PAGE_NAME}-plot-options-opacity',
-    min=0, max=100, step=5, value=50,
-    marks=[
-        {'value': i, 'label': f'{i}%'} for i in range(0, 101, 20)
-    ],
-    persistence=True
-)
+# page selectors
+dataset_select_id = "dataset-select"
+graph_id = f"{PAGE_NAME}-graph"
+plot_type_select_id = f"{PAGE_NAME}-plot-type-select"
+species_select_id = f"{PAGE_NAME}-species-select"
+row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
+col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
+opacity_slider_id = f'{PAGE_NAME}-opacity-slider'
 
-filter_group = dmc.Group(children=[plot_type_select, species_select, colour_select, row_facet_select, col_facet_select, opacity_slider_text, opacity_slider], grow=True)
-
-graph = dcc.Graph(id=f"{PAGE_NAME}-graph")
-
+# full layout
 layout = html.Div([
-    html.Div([html.H1(PAGE_TITLE)]),
+    html.Div([
+        html.H1(PAGE_TITLE)
+    ]),
     html.Hr(),
     dmc.Divider(variant="dotted"),
-    filter_group,
-    graph,
+    dmc.Group(
+        grow=True,
+        children=[
+            dmc.Select(
+                id=f"{PAGE_NAME}-plot-type-select",
+                label="Select polar plot type",
+                value="Bar Polar",
+                data=[
+                    dict(value=plot_type, label=plot_type)
+                    for plot_type in plot_types.keys()
+                ],
+                searchable=True,
+                clearable=False,
+                style=dict(width=200),
+                persistence=True,
+            ),
+            dmc.Select(
+                id=species_select_id,
+                label="Select species",
+                value=species_default,
+                data=[
+                    dict(value=common_name, label=common_name)
+                    for common_name in species_list
+                ],
+                searchable=True,
+                clearable=False,
+                style=dict(width=200),
+                persistence=True,
+            ),
+            components.RowFacetSelect(
+                id=row_facet_select_id,
+                default=None,
+            ),
+            components.ColumnFacetSelect(
+                id=col_facet_select_id,
+                default=None,
+            ),
+            dmc.Text(
+                "Opacity",
+                size="sm",
+                align="right",
+            ),
+            dmc.Slider(
+                id=opacity_slider_id,
+                min=0, max=100, step=5, value=50,
+                marks=[
+                    dict(value=i, label=f'{i}%')
+                    for i in range(0, 101, 20)
+                ],
+                persistence=True
+            ),
+        ],
+    ),
+    dcc.Graph(id=graph_id),
 ])
 
 @callback(
-    Output(f"{PAGE_NAME}-graph", "figure"),
-    Input("dataset-select", "value"),
+    Output(graph_id, "figure"),
+    Input(dataset_select_id, "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input(colour_select, "value"),
-    Input(row_facet_select, "value"),
-    Input(col_facet_select, "value"),
-    Input(species_select, "value"),
-    Input(plot_type_select, "value"),
-    Input(opacity_slider, "value"),
+    Input(plot_type_select_id, "value"),
+    Input(species_select_id, "value"),
+    Input(row_facet_select_id, "value"),
+    Input(col_facet_select_id, "value"),
+    Input(opacity_slider_id, "value"),
 )
-def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, species_name, plot_type, opacity):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {colour_by=} {row_facet=} {col_facet=} {species_name=} {plot_type=} {opacity=}")
+def update_figure(
+    dataset_name: str,
+    locations,
+    plot_type: str,
+    species_name: str,
+    row_facet: str,
+    col_facet: str,
+    opacity: float,
+) -> go.Figure:
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {species_name=} {plot_type=} {row_facet=} {col_facet=} {opacity=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
     data = dataset.views.species_probability_by_hour(species_name, row_facet, col_facet)

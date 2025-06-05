@@ -8,30 +8,29 @@ from loguru import logger
 
 from menu.dataset import ds
 from utils.data import dataset_loader, filter_data, DatasetDecorator
-from utils.plot_filter_menu import get_filter_drop_down
 from utils import sketch
+
+import components
 
 PAGE_NAME = "species-abundance-polar-plot"
 PAGE_TITLE = "Polar Plot of Species Abundance by Time of Day"
 MENU_NAME = "Polar Species Abundance by Time of Day"
+
+dash.register_page(
+    __name__,
+    title=PAGE_TITLE,
+    name=MENU_NAME,
+)
+
+# TODO: configure based on number of categories
 PLOT_HEIGHT = 800
 
-dash.register_page(__name__, title=PAGE_TITLE, name=MENU_NAME)
-
+# setup data
 dataset = dataset_loader.get_dataset(ds)
-# TODO: use species_id
 species_list = sorted(dataset.species_predictions.common_name.unique())
 species_default = species_list[0]
 
-colour_select, row_facet_select, col_facet_select = get_filter_drop_down(
-    PAGE_NAME,
-    colour_by_cat=True,
-    include_symbol=False,
-    colour_default="weekday",
-    row_facet_default="location",
-    col_facet_default="weekday",
-)
-
+# setup plot type selector
 plot_types = {
     "Scatter Polar": sketch.scatter_polar,
     "Bar Polar": sketch.bar_polar,
@@ -47,60 +46,88 @@ plot_type_kwargs = {
         opacity=0.8,
     ),
 }
-plot_type_select = dmc.Select(
-    id=f"{PAGE_NAME}-plot-type-select",
-    label="Select polar plot type",
-    value="Bar Polar",
-    searchable=True,
-    clearable=False,
-    style={"width": 200},
-    persistence=True,
-    data=[
-        {"value": plot_type, "label": plot_type }
-        for plot_type in plot_types.keys()
-    ],
-)
 
-threshold_slider_text = dmc.Text("Detection Threshold", size="sm", align="right")
-threshold_slider = dmc.Slider(
-    id=f"{PAGE_NAME}-plot-size",
-    min=0.1, max=1.0,
-    step=0.1,
-    value=0.5,
-    marks=[
-        { "value": i, "label": str(i) }
-        for i in [0.1, 0.2, 0.4, 0.6, 0.8 , 0.1]
-    ],
-    persistence=True
-)
+# page selectors
+dataset_select_id = "dataset-select"
+graph_id = f"{PAGE_NAME}-graph"
+plot_type_select_id = f"{PAGE_NAME}-plot-type-select"
+row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
+col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
+threshold_slider_id = f"{PAGE_NAME}-threshold-slider"
 
-filter_group = dmc.Group(children=[plot_type_select, colour_select, row_facet_select, col_facet_select, threshold_slider_text, threshold_slider], grow=True)
-
-graph = dcc.Graph(id=f"{PAGE_NAME}-graph")
-
+# full layout
 layout = html.Div([
-    html.Div([html.H1(PAGE_TITLE)]),
+    html.Div([
+        html.H1(PAGE_TITLE),
+    ]),
     html.Hr(),
     dmc.Divider(variant="dotted"),
-    filter_group,
-    graph,
+    dmc.Group(
+        children=[
+            dmc.Select(
+                id=plot_type_select_id,
+                label="Select polar plot type",
+                value="Bar Polar",
+                data=[
+                    dict(value=plot_type, label=plot_type)
+                    for plot_type in plot_types.keys()
+                ],
+                searchable=True,
+                clearable=False,
+                style=dict(width=200),
+                persistence=True,
+            ),
+            components.RowFacetSelect(
+                id=row_facet_select_id,
+                default=None,
+            ),
+            components.ColumnFacetSelect(
+                id=col_facet_select_id,
+                default=None,
+            ),
+            dmc.Text(
+                children="Detection Threshold",
+                size="sm",
+                align="right",
+            ),
+            dmc.Slider(
+                id=threshold_slider_id,
+                min=0.1, max=1.0,
+                step=0.1,
+                value=0.5,
+                marks=[
+                    { "value": i, "label": str(i) }
+                    for i in [0.1, 0.2, 0.4, 0.6, 0.8 , 0.1]
+                ],
+                persistence=True,
+            ),
+        ],
+        grow=True,
+    ),
+    dcc.Graph(id=graph_id),
 ])
 
-
 @callback(
-    Output(f"{PAGE_NAME}-graph", "figure"),
-    Input("dataset-select", "value"),
+    Output(graph_id, "figure"),
+    Input(dataset_select_id, "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input(colour_select, "value"),
-    Input(row_facet_select, "value"),
-    Input(col_facet_select, "value"),
-    Input(plot_type_select, "value"),
-    Input(threshold_slider, "value"),
+    Input(plot_type_select_id, "value"),
+    Input(row_facet_select_id, "value"),
+    Input(col_facet_select_id, "value"),
+    Input(threshold_slider_id, "value"),
 )
-def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, plot_type, threshold):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {colour_by=} {row_facet=} {col_facet=}")
+def update_figure(
+    dataset_name: str,
+    locations,
+    plot_type: str,
+    row_facet: str,
+    col_facet: str,
+    threshold: float,
+) -> go.Figure:
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {plot_type=} {row_facet=} {col_facet=} {threshold=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
+    import code; code.interact(local=locals())
     data = dataset.views.species_abundance_by_hour(threshold, row_facet, col_facet)
     data = filter_data(data, locations=locations)
     category_orders = DatasetDecorator(dataset).category_orders()
@@ -137,4 +164,3 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet, plot
     )
 
     return fig
-

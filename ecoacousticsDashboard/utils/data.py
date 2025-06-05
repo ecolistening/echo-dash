@@ -16,7 +16,10 @@ from configparser import ConfigParser
 from config import root_dir
 from utils import list2tuple
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
+
+def dedup(l: List[Any]) -> List[Any]:
+    return list(dict.fromkeys(l))
 
 @attrs.define
 class Dataset:
@@ -180,58 +183,68 @@ class DatasetViews:
         return self.dataset.path / "views"
 
     @staticmethod
-    def get_lookup_key(*args: Tuple[str]) -> str:
+    def lookup_key(*args: Tuple[str]) -> str:
         return "_".join(args)
 
+    # FIXME: there's no validation on the inputs before a query is executed
     def species_probability_by_hour(
         self,
         species_name: str,
-        group_1: str,
-        group_2: str
+        *groups: str,
     ) -> pd.DataFrame:
-        lookup_id = self.get_lookup_key(species_name, group_1, group_2)
-        view_path =  self.path / f"birdnet_species_probability_by_hour_{lookup_id}.parquet"
+        groups = dedup(groups)
+        lookup_id = self.lookup_key(species_name, *groups)
+        query_name = DatasetViews.species_probability_by_hour.__name__
+        query = lambda: (
+            self.dataset.species_predictions[self.dataset.species_predictions.common_name == species_name]
+            .reset_index()
+            .rename(columns=dict(confidence="prob"))
+            .sort_values(by=["hour", *dedup(groups), "site"])
+        )
+        return self._fetch_view(lookup_id, query_name)
 
+    # FIXME: there's no validation on the inputs before a query is executed
+    def species_abundance_by_hour(
+        self,
+        threshold: float,
+        *groups: str,
+    ) -> pd.DataFrame:
+        groups = dedup(groups)
+        lookup_id = self.lookup_key(str(threshold), *groups)
+        query_name = DatasetViews.species_abundance_by_hour.__name__
+        query = lambda: (
+            self.dataset.species_predictions[self.dataset.species_predictions["confidence"] > threshold]
+            .groupby(dedup(["hour", *groups, "site"]))
+            .agg(presence=("confidence", "count"))
+            .reset_index()
+            .sort_values(by=["hour", *groups])
+        )
+        return self._fetch_view(lookup_id, query_name, query)
+
+    def _fetch_view(
+        self,
+        lookup_id: str,
+        query_name: str,
+        query: Callable,
+    ) -> pd.DataFrame:
+        view_path = self.path / "views" / f"{query_name}_{lookup_id}.parquet"
+        # if its not been cached and a persisted view exists, load it
         if lookup_id not in self.cache and view_path.exists():
-            logger.debug(f"Loading species species probability by hour with parameters {species_name=} {group_1=} {group_2=} from disk")
+            logger.debug(f"[LOAD] Query: {query_name}({lookup_id=})")
             self.cache[lookup_id] = pd.read_parquet(view_path)
-
+            return self.cache[lookup_id]
+        # if its not been cached, execute the query
         elif lookup_id not in self.cache:
-            logger.debug(f"Caching species probability by hour with parameters {species_name=} {group_1=} {group_2=}")
-            view = (
-                self.dataset.species_predictions[self.dataset.species_predictions.common_name == species_name]
-                .reset_index()
-                .rename(columns=dict(confidence="prob"))
-                .sort_values(by=["hour", group_1, group_2])
-            )
+            logger.debug(f"[CACHE] Query: {query_name}({lookup_id=})")
+            view = query()
             view_path.parent.mkdir(exist_ok=True, parents=True)
             view.to_parquet(view_path)
             self.cache[lookup_id] = view
-
-        return self.cache[lookup_id]
-
-    def species_abundance_by_hour(self, threshold: float, group_1: str, group_2: str) -> pd.DataFrame:
-        lookup_id = self.get_lookup_key(str(threshold), group_1, group_2)
-        view_path = self.path / "views" / f"birdnet_species_abundance_by_hour_{lookup_id}.parquet"
-
-        if lookup_id not in self.cache and view_path.exists():
-            logger.debug(f"Loading species species probability by hour with parameters {threshold=} {group_1=} {group_2=} from disk")
-            self.cache[lookup_id] = pd.read_parquet(view_path)
-
-        elif lookup_id not in self.cache:
-            logger.debug(f"Caching and persisting species abundance by hour with parameters {threshold=} {group_1=} {group_2=}")
-            view = (
-                self.dataset.species_predictions[self.dataset.species_predictions["confidence"] > threshold]
-                .groupby(["hour", group_1, group_2, "site"])
-                .agg(presence=("confidence", "count"))
-                .reset_index()
-                .sort_values(by=["hour", group_1, group_2])
-            )
-            view_path.parent.mkdir(exist_ok=True, parents=True)
-            view.to_parquet(view_path)
-            self.cache[lookup_id] = view
-
-        return self.cache[lookup_id]
+            return self.cache[lookup_id]
+        # it has been cached, simply return it
+        else:
+            logger.debug(f"[FETCH] Query: {query_name}({lookup_id=})")
+            return self.cache[lookup_id]
 
 
 @attrs.define
