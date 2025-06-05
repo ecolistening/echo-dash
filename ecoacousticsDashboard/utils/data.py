@@ -192,7 +192,7 @@ class DatasetViews:
         species_name: str,
         *groups: str,
     ) -> pd.DataFrame:
-        groups = dedup(groups)
+        groups = list(filter(lambda x: x is not None, dedup(groups)))
         lookup_id = self.lookup_key(species_name, *groups)
         query_name = DatasetViews.species_probability_by_hour.__name__
         query = lambda: (
@@ -201,7 +201,7 @@ class DatasetViews:
             .rename(columns=dict(confidence="prob"))
             .sort_values(by=["hour", *dedup(groups), "site"])
         )
-        return self._fetch_view(lookup_id, query_name)
+        return self._fetch_view(lookup_id, query_name, query)
 
     # FIXME: there's no validation on the inputs before a query is executed
     def species_abundance_by_hour(
@@ -209,7 +209,7 @@ class DatasetViews:
         threshold: float,
         *groups: str,
     ) -> pd.DataFrame:
-        groups = dedup(groups)
+        groups = list(filter(lambda x: x is not None, dedup(groups)))
         lookup_id = self.lookup_key(str(threshold), *groups)
         query_name = DatasetViews.species_abundance_by_hour.__name__
         query = lambda: (
