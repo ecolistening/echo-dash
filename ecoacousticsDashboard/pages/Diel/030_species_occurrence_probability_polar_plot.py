@@ -151,7 +151,10 @@ def update_figure(
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {species_name=} {plot_type=} {row_facet=} {col_facet=} {opacity=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
-    data = dataset.views.species_probability_by_hour(species_name, row_facet, col_facet)
+    data = dataset.views.species_probability(
+        species_name=species_name,
+        group_by=["hour", row_facet, col_facet],
+    )
     data = filter_data(data, locations=locations)
     category_orders = DatasetDecorator(dataset).category_orders()
 

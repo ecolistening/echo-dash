@@ -136,7 +136,10 @@ def update_figure(
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {plot_type=} {row_facet=} {col_facet=} {threshold=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
-    data = dataset.views.species_abundance_by_hour(threshold, row_facet, col_facet)
+    data = dataset.views.species_abundance(
+        threshold=threshold,
+        group_by=["hour", row_facet, col_facet],
+    )
     data = filter_data(data, locations=locations)
     category_orders = DatasetDecorator(dataset).category_orders()
 

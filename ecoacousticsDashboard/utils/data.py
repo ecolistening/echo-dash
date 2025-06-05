@@ -187,37 +187,37 @@ class DatasetViews:
         return "_".join(args)
 
     # FIXME: there's no validation on the inputs before a query is executed
-    def species_probability_by_hour(
+    def species_probability(
         self,
         species_name: str,
-        *groups: str,
+        group_by: List[str],
     ) -> pd.DataFrame:
-        groups = list(filter(lambda x: x is not None, dedup(groups)))
-        lookup_id = self.lookup_key(species_name, *groups)
-        query_name = DatasetViews.species_probability_by_hour.__name__
+        group_by = list(filter(lambda x: x is not None, dedup(group_by)))
+        lookup_id = self.lookup_key(species_name, *group_by)
+        query_name = DatasetViews.species_probability.__name__
         query = lambda: (
             self.dataset.species_predictions[self.dataset.species_predictions.common_name == species_name]
             .reset_index()
             .rename(columns=dict(confidence="prob"))
-            .sort_values(by=["hour", *dedup(groups), "site"])
+            .sort_values(by=[*group_by, "site"]) # FIXME: site is hard coded in here... why..?
         )
         return self._fetch_view(lookup_id, query_name, query)
 
     # FIXME: there's no validation on the inputs before a query is executed
-    def species_abundance_by_hour(
+    def species_abundance(
         self,
         threshold: float,
-        *groups: str,
+        group_by: List[str],
     ) -> pd.DataFrame:
-        groups = list(filter(lambda x: x is not None, dedup(groups)))
-        lookup_id = self.lookup_key(str(threshold), *groups)
-        query_name = DatasetViews.species_abundance_by_hour.__name__
+        group_by = list(filter(lambda x: x is not None, dedup(group_by)))
+        lookup_id = self.lookup_key(str(threshold), *group_by)
+        query_name = DatasetViews.species_abundance.__name__
         query = lambda: (
             self.dataset.species_predictions[self.dataset.species_predictions["confidence"] > threshold]
-            .groupby(dedup(["hour", *groups, "site"]))
+            .groupby([*group_by, "site"]) # FIXME: site is hard coded in here... why..?
             .agg(presence=("confidence", "count"))
             .reset_index()
-            .sort_values(by=["hour", *groups])
+            .sort_values(by=[*group_by, "site"])
         )
         return self._fetch_view(lookup_id, query_name, query)
 
