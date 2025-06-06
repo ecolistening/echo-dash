@@ -81,6 +81,7 @@ layout = html.Div([
                 style=dict(width=200),
                 persistence=True,
             ),
+            # FIXME: for polar plots
             components.ColourSelect(
                 id=colour_select_id,
                 default="month",
