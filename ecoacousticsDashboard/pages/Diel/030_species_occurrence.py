@@ -15,9 +15,9 @@ from utils.save_plot_fig import get_save_plot
 
 import components
 
-PAGE_NAME = "species-occurrence-probability-polar-plot"
-PAGE_TITLE = "Polar Plot of Species Occurrence Probability by Time of Day"
-MENU_NAME = "Polar Species Probability by Time of Day"
+PAGE_NAME = "species-occurrence"
+PAGE_TITLE = "Species Occurrence by Time of Day"
+MENU_NAME = "Species Occurrence by Time of Day"
 
 dash.register_page(
     __name__,
@@ -40,11 +40,15 @@ plot_types = {
 }
 plot_type_kwargs = {
     "Scatter Polar": dict(
+        r="prob",
+        theta="hour",
         mode="markers",
         marker=dict(size=6, opacity=1.0),
         fill="toself",
     ),
     "Bar Polar": dict(
+        r="prob",
+        theta="hour",
         marker_line_width=2,
         opacity=0.8,
     ),
@@ -70,7 +74,7 @@ layout = html.Div([
         grow=True,
         children=[
             dmc.Select(
-                id=f"{PAGE_NAME}-plot-type-select",
+                id=plot_type_select_id,
                 label="Select polar plot type",
                 value="Bar Polar",
                 data=[
@@ -112,7 +116,7 @@ layout = html.Div([
                 id=opacity_slider_id,
                 min=0, max=100, step=5, value=50,
                 marks=[
-                    dict(value=i, label=f'{i}%')
+                    dict(value=i, label=f',{i}%')
                     for i in range(0, 101, 20)
                 ],
                 persistence=True
@@ -163,12 +167,10 @@ def update_figure(
     plot_kwargs["opacity"] = opacity / 100.0
     fig = plot(
         data,
-        r="prob",
-        theta="hour",
-        row_facet=row_facet,
-        col_facet=col_facet,
-        showlegend=False,
         **plot_kwargs,
+        facet_row=row_facet,
+        facet_col=col_facet,
+        showlegend=False,
         category_orders=category_orders,
         radialaxis=dict(
             range=[0, 1],

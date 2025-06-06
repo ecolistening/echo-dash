@@ -14,8 +14,8 @@ def bar_polar(
     data: pd.DataFrame,
     r: str,
     theta: str,
-    row_facet: str,
-    col_facet: str,
+    facet_row: str,
+    facet_col: str,
     color: str | None = None,
     width: str | None = None,
     category_orders: Dict[str, List[Any]] = {},
@@ -26,23 +26,23 @@ def bar_polar(
     """
     Plotly express doesn't yet support faceted grids for polar plots, hence...
     """
-    if row_facet is None:
+    if facet_row is None:
         data["_row_facet"] = "All"
-        row_facet = "_row_facet"
-    if col_facet is None:
+        facet_row = "_row_facet"
+    if facet_col is None:
         data["_col_facet"] = "All"
-        col_facet = "_col_facet"
+        facet_col = "_col_facet"
 
-    row_order = category_orders.get(row_facet, sorted(data[row_facet].dropna().unique()))
-    col_order = category_orders.get(col_facet, sorted(data[col_facet].dropna().unique()))
+    row_order = category_orders.get(facet_row, sorted(data[facet_row].dropna().unique()))
+    col_order = category_orders.get(facet_col, sorted(data[facet_col].dropna().unique()))
     row_order_idx = {value: idx for idx, value in enumerate(row_order)}
     col_order_idx = {value: idx for idx, value in enumerate(col_order)}
 
-    row_categories = sorted(data[row_facet].unique(), key=lambda value: row_order_idx.get(value, float('inf')))
-    col_categories = sorted(data[col_facet].unique(), key=lambda value: col_order_idx.get(value, float('inf')))
+    row_categories = sorted(data[facet_row].unique(), key=lambda value: row_order_idx.get(value, float('inf')))
+    col_categories = sorted(data[facet_col].unique(), key=lambda value: col_order_idx.get(value, float('inf')))
     categories = list(itertools.product(row_categories, col_categories))
 
-    subplot_titles = [col_category for col_category in col_categories if col_facet != "_col_facet"]
+    subplot_titles = [col_category for col_category in col_categories if facet_col != "_col_facet"]
 
     num_rows = len(row_categories)
     num_cols = len(col_categories)
@@ -61,9 +61,9 @@ def bar_polar(
         show_colourbar = (row == 1 and col == 1)
 
         subset = data[
-            (data[row_facet] == row_category) &
-            (data[col_facet] == col_category)
-        ].sort_values(by=[theta, row_facet, col_facet])
+            (data[facet_row] == row_category) &
+            (data[facet_col] == col_category)
+        ].sort_values(by=[theta, facet_row, facet_col])
 
         trace = go.Barpolar(
             r=subset[r],
@@ -72,7 +72,7 @@ def bar_polar(
         )
         fig.add_trace(trace, row=row, col=col)
 
-    if row_facet != "_row_facet":
+    if facet_row != "_row_facet":
         for i, row_category in enumerate(row_categories):
             fig.add_annotation(dict(
                 text=row_category,
@@ -116,8 +116,8 @@ def scatter_polar(
     data: pd.DataFrame,
     r: str,
     theta: str,
-    row_facet: str,
-    col_facet: str,
+    facet_row: str,
+    facet_col: str,
     color: str | None = None,
     width: str | None = None,
     category_orders: Dict[str, List[Any]] = {},
@@ -128,23 +128,23 @@ def scatter_polar(
     """
     Plotly express doesn't yet support faceted grids for polar plots, hence...
     """
-    if row_facet is None:
+    if facet_row is None:
         data["_row_facet"] = "All"
-        row_facet = "_row_facet"
-    if col_facet is None:
+        facet_row = "_row_facet"
+    if facet_col is None:
         data["_col_facet"] = "All"
-        col_facet = "_col_facet"
+        facet_col = "_col_facet"
 
-    row_order = category_orders.get(row_facet, sorted(data[row_facet].dropna().unique()))
-    col_order = category_orders.get(col_facet, sorted(data[col_facet].dropna().unique()))
+    row_order = category_orders.get(facet_row, sorted(data[facet_row].dropna().unique()))
+    col_order = category_orders.get(facet_col, sorted(data[facet_col].dropna().unique()))
     row_order_idx = {value: idx for idx, value in enumerate(row_order)}
     col_order_idx = {value: idx for idx, value in enumerate(col_order)}
 
-    row_categories = sorted(data[row_facet].unique(), key=lambda value: row_order_idx.get(value, float('inf')))
-    col_categories = sorted(data[col_facet].unique(), key=lambda value: col_order_idx.get(value, float('inf')))
+    row_categories = sorted(data[facet_row].unique(), key=lambda value: row_order_idx.get(value, float('inf')))
+    col_categories = sorted(data[facet_col].unique(), key=lambda value: col_order_idx.get(value, float('inf')))
     categories = list(itertools.product(row_categories, col_categories))
 
-    subplot_titles = [col_category for col_category in col_categories if col_facet != "_col_facet"]
+    subplot_titles = [col_category for col_category in col_categories if facet_col != "_col_facet"]
 
     num_rows = len(row_categories)
     num_cols = len(col_categories)
@@ -163,9 +163,9 @@ def scatter_polar(
         show_colourbar = (row == 1 and col == 1)
 
         subset = data[
-            (data[row_facet] == row_category) &
-            (data[col_facet] == col_category)
-        ].sort_values(by=[theta, row_facet, col_facet])
+            (data[facet_row] == row_category) &
+            (data[facet_col] == col_category)
+        ].sort_values(by=[theta, facet_row, facet_col])
 
         trace = go.Scatterpolar(
             r=subset[r],
@@ -174,7 +174,7 @@ def scatter_polar(
         )
         fig.add_trace(trace, row=row, col=col)
 
-    if row_facet != "_row_facet":
+    if facet_row != "_row_facet":
         for i, row_category in enumerate(row_categories):
             fig.add_annotation(dict(
                 text=row_category,

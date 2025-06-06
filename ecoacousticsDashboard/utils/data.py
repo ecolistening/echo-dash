@@ -215,7 +215,7 @@ class DatasetViews:
         query = lambda: (
             self.dataset.species_predictions[self.dataset.species_predictions["confidence"] > threshold]
             .groupby([*group_by, "site"]) # FIXME: site is hard coded in here... why..?
-            .agg(presence=("confidence", "count"))
+            .agg(abundance=("confidence", "count"))
             .reset_index()
             .sort_values(by=[*group_by, "site"])
         )

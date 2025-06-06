@@ -11,10 +11,11 @@ from utils.content import get_tabs
 from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils.save_plot_fig import get_save_plot
 
+from utils import sketch
 import components
 
 PAGE_NAME = 'scatter-plot'
-PAGE_TITLE = 'Scatter Plot of Descriptor by Time of Day'
+PAGE_TITLE = 'Acoustic Descriptor by Time of Day'
 
 dash.register_page(
     __name__,
@@ -22,12 +23,38 @@ dash.register_page(
     name='Scatter Plot'
 )
 
-PLOTHEIGHT = 800
+PLOT_HEIGHT = 800
+
+# setup plot type selector
+plot_types = {
+    "Scatter": px.scatter,
+    "Scatter Polar": sketch.scatter_polar,
+}
+plot_type_kwargs = {
+    "Scatter": dict(
+        x='hour',
+        y='value',
+        hover_name="file",
+        hover_data=["timestamp", "path"], # Path last for sound sample modal
+        # mode="markers",
+        # marker=dict(size=6, opacity=1.0),
+        # fill="toself",
+    ),
+    "Scatter Polar": dict(
+        r='value',
+        theta='hour',
+        # # TODO: implement marker style and colour in custom polar facet grid plot
+        mode="markers",
+        marker=dict(size=6, opacity=1.0),
+        # fill="toself",
+    ),
+}
 
 dataset_select_id = "dataset-select"
 date_picker_id = "date-picker"
 feature_select_id = "feature-dropdown"
 graph_id = f"{PAGE_NAME}-graph"
+plot_type_select_id = f"{PAGE_NAME}-plot-type-select"
 colour_select_id = f"{PAGE_NAME}-colour-select"
 symbol_select_id = f"{PAGE_NAME}-symbol-select"
 row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
@@ -41,6 +68,19 @@ layout = html.Div([
     html.Hr(),
     dmc.Group(
         children=[
+            dmc.Select(
+                id=plot_type_select_id,
+                label="Select plot type",
+                value="Scatter",
+                data=[
+                    dict(value=plot_type, label=plot_type)
+                    for plot_type in plot_types.keys()
+                ],
+                searchable=True,
+                clearable=False,
+                style=dict(width=200),
+                persistence=True,
+            ),
             components.ColourSelect(
                 id=colour_select_id,
                 default="month",
@@ -82,6 +122,7 @@ layout = html.Div([
     Input(date_picker_id, component_property='value'),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input(feature_select_id, "value"),
+    Input(plot_type_select_id, "value"),
     Input(colour_select_id, "value"),
     Input(symbol_select_id, "value"),
     Input(row_facet_select_id, "value"),
@@ -89,20 +130,21 @@ layout = html.Div([
     Input(size_slider_id, "value"),
 )
 def update_figure(
-    dataset_name,
-    dates,
-    locations,
-    feature,
-    colour_by,
-    symbol_by,
-    row_facet,
-    col_facet,
-    dot_size
+    dataset_name: str,
+    dates: List,
+    locations: List[str],
+    feature: str,
+    plot_type: str,
+    colour_by: str,
+    symbol_by: str,
+    row_facet: str,
+    col_facet: str,
+    dot_size: int,
 ) -> go.Figure:
     logger.debug(
         f"Trigger ID={ctx.triggered_id}: {dataset_name=} "
-        f"dates:{len(dates)} locations:{len(locations)} "
-        f"{feature=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}"
+        f"num_dates={len(dates)} num_locations={len(locations)} {feature=} "
+        f"{plot_type=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}"
     )
 
     dataset = dataset_loader.get_dataset(dataset_name)
@@ -111,16 +153,14 @@ def update_figure(
     data = data.assign(month=data.timestamp.dt.month, hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
                        minute=data.timestamp.dt.minute)
 
-    fig = px.scatter(
+    plot = plot_types[plot_type]
+    plot_kwargs = plot_type_kwargs[plot_type]
+    fig = plot(
         data,
-        x='hour',
-        y='value',
-        hover_name='file',
-        hover_data=['timestamp', 'path'], # Path last for sound sample modal
-        height=PLOTHEIGHT,
+        **plot_kwargs,
         opacity=0.5,
         color=colour_by,
-        symbol=symbol_by,
+        # symbol=symbol_by,
         facet_row=row_facet,
         facet_col=col_facet,
         category_orders=DatasetDecorator(dataset).category_orders()
@@ -131,6 +171,7 @@ def update_figure(
 
     # Add centered title
     fig.update_layout(
+        height=PLOT_HEIGHT,
         title={
             'text':f"{PAGE_TITLE} ({feature})",
             'x':0.5,

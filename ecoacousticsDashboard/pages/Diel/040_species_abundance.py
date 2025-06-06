@@ -14,9 +14,9 @@ from utils.save_plot_fig import get_save_plot
 
 import components
 
-PAGE_NAME = "species-abundance-polar-plot"
-PAGE_TITLE = "Polar Plot of Species Abundance by Time of Day"
-MENU_NAME = "Polar Species Abundance by Time of Day"
+PAGE_NAME = "species-abundance"
+PAGE_TITLE = "Species Abundance by Time of Day"
+MENU_NAME = "Species Abundance by Time of Day"
 
 dash.register_page(
     __name__,
@@ -34,18 +34,55 @@ species_default = species_list[0]
 
 # setup plot type selector
 plot_types = {
+    "Scatter": px.scatter,
     "Scatter Polar": sketch.scatter_polar,
     "Bar Polar": sketch.bar_polar,
 }
 plot_type_kwargs = {
+    "Scatter": dict(
+        x='hour',
+        y='abundance',
+        # hover_name="file",
+        # hover_data=["timestamp", "path"],
+    ),
     "Scatter Polar": dict(
+        r="abundance",
+        theta="hour",
         mode="markers",
         marker=dict(size=6, opacity=1.0),
         fill="toself",
+        showlegend=False,
+        radialaxis=dict(
+            showticklabels=True,
+            ticks="",
+        ),
+        angularaxis=dict(
+            tickmode="array",
+            tickvals=(angles := list(range(0, 360, 45))),
+            ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
+            direction="clockwise",
+            rotation=90,
+            ticks=""
+        )
     ),
     "Bar Polar": dict(
+        r="abundance",
+        theta="hour",
         marker_line_width=2,
         opacity=0.8,
+        showlegend=False,
+        radialaxis=dict(
+            showticklabels=True,
+            ticks="",
+        ),
+        angularaxis=dict(
+            tickmode="array",
+            tickvals=(angles := list(range(0, 360, 45))),
+            ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
+            direction="clockwise",
+            # rotation=90,
+            ticks=""
+        )
     ),
 }
 
@@ -68,7 +105,7 @@ layout = html.Div([
         children=[
             dmc.Select(
                 id=plot_type_select_id,
-                label="Select polar plot type",
+                label="Select plot type",
                 value="Bar Polar",
                 data=[
                     dict(value=plot_type, label=plot_type)
@@ -146,27 +183,10 @@ def update_figure(
     plot = plot_types[plot_type]
     fig = plot(
         data,
-        r="presence",
-        theta="hour",
-        row_facet=row_facet,
-        col_facet=col_facet,
-        showlegend=False,
         **plot_type_kwargs[plot_type],
+        facet_row=row_facet,
+        facet_col=col_facet,
         category_orders=category_orders,
-        radialaxis=dict(
-            showticklabels=True,
-            # title="Call Count",
-            ticks="",
-        ),
-        angularaxis=dict(
-            tickmode="array",
-            tickvals=(angles := list(range(0, 360, 45))),
-            ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
-            direction="clockwise",
-            # title="Hour of Day",
-            rotation=90,
-            ticks=""
-        )
     )
 
     fig.update_layout(
