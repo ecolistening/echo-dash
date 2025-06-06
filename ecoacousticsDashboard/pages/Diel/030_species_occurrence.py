@@ -16,7 +16,7 @@ from utils.save_plot_fig import get_save_plot
 import components
 
 PAGE_NAME = "species-occurrence"
-PAGE_TITLE = "Species Occurrence"
+PAGE_TITLE = "Species Occurrence by Time of Day"
 MENU_NAME = "Species Occurrence"
 
 dash.register_page(
