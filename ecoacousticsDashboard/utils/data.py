@@ -345,11 +345,11 @@ class DatasetLoader:
         datasets = {}
         for dataset in datasets_table.reset_index().to_dict(orient="records"):
             try:
-                logger.debug(f"Loading and caching {dataset["dataset_name"]}")
+                logger.debug(f"Loading and caching {dataset['dataset_name']}")
                 ds = Dataset(**dataset)
                 datasets[ds.dataset_name] = ds
             except Exception as e:
-                logger.error(f"Unable to load dataset {dataset["dataset_name"]}")
+                logger.error(f"Unable to load dataset {dataset['dataset_name']}")
                 logger.error(e)
         return datasets
 
