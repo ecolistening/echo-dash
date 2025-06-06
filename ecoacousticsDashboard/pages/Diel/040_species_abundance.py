@@ -15,8 +15,8 @@ from utils.save_plot_fig import get_save_plot
 import components
 
 PAGE_NAME = "species-abundance"
-PAGE_TITLE = "Species Abundance by Time of Day"
-MENU_NAME = "Species Abundance by Time of Day"
+PAGE_TITLE = "Species Abundance"
+MENU_NAME = "Species Abundance"
 
 dash.register_page(
     __name__,
@@ -56,6 +56,7 @@ plot_type_kwargs = {
             showticklabels=True,
             ticks="",
         ),
+        # TODO: figure out why normal scatter and polar plots show different times, something to do with angle?
         angularaxis=dict(
             tickmode="array",
             tickvals=(angles := list(range(0, 360, 45))),
@@ -80,7 +81,7 @@ plot_type_kwargs = {
             tickvals=(angles := list(range(0, 360, 45))),
             ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
             direction="clockwise",
-            # rotation=90,
+            rotation=90,
             ticks=""
         )
     ),
@@ -144,13 +145,7 @@ layout = html.Div([
         grow=True,
     ),
     dcc.Graph(id=graph_id),
-    dmc.Grid(
-        children=[
-            dmc.Col(get_tabs(PAGE_NAME), span=8),
-            dmc.Col(get_save_plot(graph_id), span=4),
-        ],
-        gutter="xl",
-    ),
+    components.Footer(PAGE_NAME, feature=False),
 ])
 
 @callback(

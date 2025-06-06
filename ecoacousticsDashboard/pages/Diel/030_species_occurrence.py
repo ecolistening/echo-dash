@@ -16,8 +16,8 @@ from utils.save_plot_fig import get_save_plot
 import components
 
 PAGE_NAME = "species-occurrence"
-PAGE_TITLE = "Species Occurrence by Time of Day"
-MENU_NAME = "Species Occurrence by Time of Day"
+PAGE_TITLE = "Species Occurrence"
+MENU_NAME = "Species Occurrence"
 
 dash.register_page(
     __name__,
@@ -124,13 +124,7 @@ layout = html.Div([
         ],
     ),
     dcc.Graph(id=graph_id),
-    dmc.Grid(
-        children=[
-            dmc.Col(get_tabs(PAGE_NAME), span=8),
-            dmc.Col(get_save_plot(graph_id), span=4),
-        ],
-        gutter="xl",
-    ),
+    components.Footer(PAGE_NAME, feature=False),
 ])
 
 @callback(
