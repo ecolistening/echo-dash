@@ -26,7 +26,7 @@ def get_content(name):
     if file_path is None:
         logger.error(f"File \'{name}\' not found.")
         return ["No text found."]
-    
+
     logger.debug(f"Content filepath: {file_path}")
 
     file_path_str = str(file_path)
@@ -37,7 +37,7 @@ def get_content(name):
     else:
         logger.error(f"Unknown file type: \'{file_path}\'")
         return None
-    
+
     return content
 
 def get_content_md(file_path):
@@ -54,7 +54,7 @@ def get_content_md(file_path):
     '''
 
     content = [dcc.Markdown(line,dangerously_allow_html=True) for line in lines]
-    
+
     # div =  html.Div(content, 
     #     style={'marginLeft': 10, 'marginRight': 10, 'marginTop': 10, 'marginBottom': 10, 
     #            'backgroundColor':'#F7FBFE',
@@ -97,7 +97,7 @@ def get_content_text(file_path):
                 text = ""
             else:
                 text += a
-    
+
     if text != '':
         if make_title:
             if hash_c == 1: title=html.H1(text)

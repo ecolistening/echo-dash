@@ -33,6 +33,12 @@ class Dataset:
     dataset_path: str
     audio_path: str
 
+    def as_dict(self):
+        return dict(
+            dataset_id=dataset_id,
+            dataset_name=dataset_name,
+        )
+
     def __attrs_post_init__(self) -> None:
         # cache files and site data
         self.files
@@ -318,10 +324,10 @@ class DatasetDecorator:
 @attrs.define
 class DatasetLoader:
     root_dir: pathlib.Path
+    datasets: List[str] = attrs.field(factory=list)
 
-    @cached_property
-    def datasets(self) -> Dict[str, Dataset]:
-        return self._init_datasets(self.datasets_table)
+    def __attrs_post_init__(self) -> None:
+        self._init_datasets(self.datasets_table)
 
     @cached_property
     def datasets_table(self):
@@ -333,22 +339,24 @@ class DatasetLoader:
     def get_dataset_names(self):
         return list(self.datasets.keys())
 
-    @staticmethod
-    def _init_datasets(datasets_table: pd.DataFrame) -> Dict[str, Dataset]:
-        datasets = {}
+    def get_sites(self, dataset_name: str):
+        dataset = self.datasets[dataset_name]
+        return dataset.locations
+
+    def _init_datasets(self, datasets_table: pd.DataFrame) -> Dict[str, Dataset]:
+        self.datasets = {}
         for dataset in datasets_table.reset_index().to_dict(orient="records"):
             try:
                 logger.debug(f"Loading and caching {dataset['dataset_name']}")
-                ds = Dataset(**dataset)
-                datasets[ds.dataset_name] = ds
+                dataset = Dataset(**dataset)
+                self.datasets[dataset.dataset_name] = dataset
             except Exception as e:
                 logger.error(f"Unable to load dataset {dataset['dataset_name']}")
                 logger.error(e)
-        return datasets
 
 
-dataset_loader = DatasetLoader(root_dir)
-dataset_loader.datasets
+# dataset_loader = DatasetLoader(root_dir)
+# dataset_loader.datasets
 
 def filter_data(
     data: str,
