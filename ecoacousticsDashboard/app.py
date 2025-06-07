@@ -11,7 +11,6 @@ from menu.dataset import dataset_input, dataset_settings_button, settings_drawer
 from menu.filter import filters
 
 def create_dash_app(requests_pathname_prefix: str = None) -> dash.Dash:
-    logger.info("Starting Dash server...")
     server = flask.Flask(__name__)
     server.secret_key = os.environ.get("secret_key", "secret")
 
