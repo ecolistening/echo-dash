@@ -94,7 +94,9 @@ layout = html.Div([
         dmc.Col(html.Div(), span=1),
     ]),
     dmc.Divider(variant='dotted',style={"margin-top": "10px"}),
-    dcc.Graph(id=f'{PAGENAME}-graph'),
+    dcc.Loading(
+        dcc.Graph(id=f'{PAGENAME}-graph'),
+    ),
     dcc.Store(id=f'{PAGENAME}-hash'),
     get_modal_sound_sample(PAGENAME),
     drilldown_file_div := html.Div(),

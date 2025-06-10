@@ -50,6 +50,7 @@ plot_type_kwargs = {
             opacity=1.0,
             color="rgba(133, 143, 249, 1.0)",
         ),
+        trace_height=400,
     ),
     "Scatter Polar": dict(
         r="richness",
@@ -73,7 +74,8 @@ plot_type_kwargs = {
             direction="clockwise",
             rotation=90,
             ticks=""
-        )
+        ),
+        trace_height=400,
     ),
     "Bar Polar": dict(
         r="richness",
@@ -96,7 +98,8 @@ plot_type_kwargs = {
             direction="clockwise",
             rotation=90,
             ticks=""
-        )
+        ),
+        trace_height=400,
     ),
 }
 
@@ -160,7 +163,9 @@ layout = html.Div([
         ],
         grow=True,
     ),
-    dcc.Graph(id=graph_id),
+    dcc.Loading(
+        dcc.Graph(id=graph_id),
+    ),
     components.Footer(PAGE_NAME, feature=False),
 ])
 
@@ -210,7 +215,6 @@ def update_figure(
     )
 
     fig.update_layout(
-        height=PLOT_HEIGHT,
         margin=dict(t=150, r=150),
     )
 

@@ -49,7 +49,9 @@ layout = html.Div([
             ),
         ]
     ),
-    dcc.Graph(id=graph_id),
+    dcc.Loading(
+        dcc.Graph(id=graph_id),
+    ),
 ])
 
 @callback(

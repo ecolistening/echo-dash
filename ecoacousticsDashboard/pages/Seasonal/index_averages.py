@@ -68,7 +68,9 @@ layout = html.Div([
         #     outliers_tickbox,
         #     separate_plots_tickbox
     ]),
-    dcc.Graph(id=f'{PAGENAME}-graph'),
+    dcc.Loading(
+        dcc.Graph(id=f'{PAGENAME}-graph'),
+    ),
     appendix,
     drilldown_file_div := html.Div(),
 ])

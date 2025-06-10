@@ -13,43 +13,42 @@ from utils.content import get_tabs
 from utils.data import dataset_loader
 from utils.save_plot_fig import get_save_plot
 
-PAGENAME = 'map'
+import components
+
+PAGE_NAME = 'map'
 PAGETITLE = 'Location Map'
 PLOTHEIGHT = 800
 dash.register_page(__name__, title=PAGETITLE, name='Map')
 
-appendix = dmc.Grid(
-    children=[
-        dmc.Col(get_tabs(PAGENAME,feature=False), span=8),
-        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
-    ],
-    gutter="xl",
-)
+dataset_select_id = "dataset-select"
+date_picker_id = "date-picker"
+feature_select_id = "feature-dropdown"
+graph_id = f"{PAGE_NAME}-graph"
 
 layout = html.Div([
     html.Div(
         [dmc.Title(PAGETITLE, order=1)],
     ),
     dmc.Divider(variant='dotted'),
-    main_plot := dcc.Graph(id=f'{PAGENAME}-graph'),
-    appendix,
+    dcc.Loading(
+        dcc.Graph(id=graph_id),
+    ),
+    components.Footer(
+        PAGE_NAME,
+    ),
 ])
 
 
 # Add controls to build the interaction
 @callback(
-    Output(main_plot, component_property='figure'),
-    Input('dataset-select', component_property='value'),
-    Input('date-picker', component_property='value'),
-    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-    # Input('checklist-locations-hierarchy', component_property='value'),
-    # Input('checklist-locations', component_property='value'),
-    Input('feature-dropdown', component_property='value'),
+    Output(graph_id, "figure"),
+    Input(dataset_select_id, "value"),
 )
-def update_graph(dataset, dates, locations, feature):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=}")
+def update_graph(dataset_name):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=}")
 
-    data = dataset_loader.get_sites(dataset)
+    dataset = dataset_loader.get_dataset(dataset_name)
+    data = dataset.locations
     if data is None:
         return go.Figure(go.Scattergeo())
 
@@ -71,10 +70,15 @@ def update_graph(dataset, dates, locations, feature):
 
     logger.debug(f"{dataset=} {latitude_range=:.4f} {longitude_range=:.4f} {max_bound=:.4f} {np.log(max_bound)=:.4f} {zoom=:.4f}")
 
-    fig = px.scatter_mapbox(data, lat="latitude", lon="longitude", hover_name="site",
-                            hover_data=['timezone'],
-                            color_discrete_sequence=["red"],
-                            zoom=zoom, height=PLOTHEIGHT)
+    fig = px.scatter_mapbox(
+        data,
+        lat="latitude",
+        lon="longitude",
+        hover_name="site",
+        hover_data=['timezone'],
+        color_discrete_sequence=["red"],
+        zoom=zoom, height=PLOTHEIGHT
+    )
     fig.update_layout(mapbox_style="open-street-map")
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
 

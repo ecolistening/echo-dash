@@ -37,7 +37,9 @@ layout = html.Div([
     dmc.Title(PAGETITLE, order=1),
     dmc.Divider(variant='dotted'),
     filter_group,
-    dcc.Graph(id=f'{PAGENAME}-graph'),
+    dcc.Loading(
+        dcc.Graph(id=f'{PAGENAME}-graph'),
+    ),
     drilldown_file_div := html.Div(),
     appendix,
 ])
