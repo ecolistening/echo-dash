@@ -20,8 +20,19 @@ def scatter(
     color: str | None = None,
     width: str | None = None,
     category_orders: Dict[str, List[Any]] = {},
+    trace_height: int = 200,
     **kwargs,
 ) -> go.Figure:
+    if facet_row is None:
+        data["_row_facet"] = "All"
+        facet_row = "_row_facet"
+    if facet_col is None:
+        data["_col_facet"] = "All"
+        facet_col = "_col_facet"
+
+    row_categories = category_orders.get(facet_row, sorted(data[facet_row].dropna().unique()))
+    num_rows = len(row_categories)
+
     fig = px.scatter(
         data,
         x=x,
@@ -30,7 +41,12 @@ def scatter(
         facet_col=facet_col,
         category_orders=category_orders,
     )
+
     fig.update_traces(**kwargs)
+
+    fig.update_layout(
+        height=num_rows * trace_height,
+    )
     return fig
 
 def bar_polar(
@@ -44,6 +60,8 @@ def bar_polar(
     category_orders: Dict[str, List[Any]] = {},
     radialaxis: Dict[str, Any] = {},
     angularaxis: Dict[str, Any] = {},
+    trace_height: int = 200,
+    # trace_width: int = 200,
     **kwargs
 ) -> go.Figure:
     """
@@ -129,6 +147,10 @@ def bar_polar(
             f"polar{i if i > 1 else ''}": dict(radialaxis=radialaxis, angularaxis=angularaxis),
         })
 
+    fig.update_layout(
+        height=num_rows * trace_height,
+    )
+
     return fig
 
 def scatter_polar(
@@ -142,6 +164,7 @@ def scatter_polar(
     category_orders: Dict[str, List[Any]] = {},
     radialaxis: Dict[str, Any] = {},
     angularaxis: Dict[str, Any] = {},
+    trace_height: int = 200,
     **kwargs
 ) -> go.Figure:
     """
@@ -225,5 +248,9 @@ def scatter_polar(
         fig.update_layout({
             f"polar{i if i > 1 else ''}": dict(radialaxis=radialaxis, angularaxis=angularaxis),
         })
+
+    fig.update_layout(
+        height=num_rows * trace_height,
+    )
 
     return fig

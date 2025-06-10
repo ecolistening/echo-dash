@@ -28,8 +28,6 @@ dash.register_page(
     name=MENU_NAME,
 )
 
-# TODO: configure based on number of categories
-PLOT_HEIGHT = 800
 DEFAULT_THRESHOLD = 0.5
 
 # setup data
@@ -50,6 +48,7 @@ plot_type_kwargs = {
             opacity=1.0,
             color="rgba(133, 143, 249, 1.0)",
         ),
+        trace_height=400,
     ),
     "Scatter Polar": dict(
         r="abundance",
@@ -73,7 +72,8 @@ plot_type_kwargs = {
             direction="clockwise",
             rotation=90,
             ticks=""
-        )
+        ),
+        trace_height=400,
     ),
     "Bar Polar": dict(
         r="abundance",
@@ -96,7 +96,8 @@ plot_type_kwargs = {
             direction="clockwise",
             rotation=90,
             ticks=""
-        )
+        ),
+        trace_height=400,
     ),
 }
 
@@ -161,7 +162,9 @@ layout = html.Div([
             ),
         ],
     ),
-    dcc.Graph(id=graph_id),
+    dcc.Loading(
+        dcc.Graph(id=graph_id),
+    ),
     components.Footer(PAGE_NAME, feature=False),
 ])
 
@@ -184,7 +187,6 @@ def update_figure(
     col_facet: str,
     threshold: float
 ) -> go.Figure:
-    # dates = [date.fromisoformat(d) for d in dates]
     logger.debug(
         f"Trigger ID={ctx.triggered_id}:"
         f"{dataset_name=} dates={dates} locations={locations}"
@@ -197,7 +199,7 @@ def update_figure(
         threshold,
         group_by=group_by,
         dates=list2tuple(dates),
-        locations=list2tuple(locations)
+        locations=list2tuple(locations),
     )
 
     category_orders = DatasetDecorator(dataset).category_orders()
@@ -210,7 +212,6 @@ def update_figure(
     )
 
     fig.update_layout(
-        height=PLOT_HEIGHT,
         margin=dict(r=150),
     )
 
