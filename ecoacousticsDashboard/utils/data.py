@@ -15,6 +15,7 @@ import pandas as pd
 from configparser import ConfigParser
 from config import root_dir
 from utils import list2tuple
+from utils import query as Q
 
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -167,6 +168,7 @@ class Dataset:
         return config
 
 
+# FIXME: there's no validation on the inputs before a query is executed
 @attrs.define
 class DatasetViews:
     """
@@ -186,40 +188,30 @@ class DatasetViews:
     def lookup_key(*args: Tuple[str]) -> str:
         return "_".join(args)
 
-    # FIXME: there's no validation on the inputs before a query is executed
-    def species_probability(
-        self,
-        species_name: str,
-        group_by: List[str],
-    ) -> pd.DataFrame:
-        group_by = list(filter(lambda x: x is not None, dedup(group_by)))
-        lookup_id = self.lookup_key(species_name, *group_by)
-        query_name = DatasetViews.species_probability.__name__
-        query = lambda: (
-            self.dataset.species_predictions[self.dataset.species_predictions.common_name == species_name]
-            .reset_index()
-            .rename(columns=dict(confidence="prob"))
-            .sort_values(by=[*group_by, "site"]) # FIXME: site is hard coded in here... why..?
-        )
-        return self._fetch_view(lookup_id, query_name, query)
-
-    # FIXME: there's no validation on the inputs before a query is executed
-    def species_abundance(
+    def species_richness(
         self,
         threshold: float,
         group_by: List[str],
     ) -> pd.DataFrame:
         group_by = list(filter(lambda x: x is not None, dedup(group_by)))
-        lookup_id = self.lookup_key(str(threshold), *group_by)
-        query_name = DatasetViews.species_abundance.__name__
-        query = lambda: (
-            self.dataset.species_predictions[self.dataset.species_predictions["confidence"] > threshold]
-            .groupby([*group_by, "site"]) # FIXME: site is hard coded in here... why..?
-            .agg(abundance=("confidence", "count"))
-            .reset_index()
-            .sort_values(by=[*group_by, "site"])
+        return self._fetch_view(
+            self.lookup_key(str(threshold), *group_by),
+            DatasetViews.species_richness.__name__,
+            lambda: Q.species_richness_query(self.dataset.species_predictions, threshold, group_by),
         )
-        return self._fetch_view(lookup_id, query_name, query)
+
+    def species_abundance(
+        self,
+        species_name: str,
+        threshold: float,
+        group_by: List[str],
+    ) -> pd.DataFrame:
+        group_by = list(filter(lambda x: x is not None, dedup(group_by)))
+        return self._fetch_view(
+            self.lookup_key(str(species_name), str(threshold), *group_by),
+            DatasetViews.species_abundance.__name__,
+            lambda: Q.species_abundance_query(self.dataset.species_predictions, species_name, threshold, group_by),
+        )
 
     def _fetch_view(
         self,

@@ -1,10 +1,12 @@
 import dash
 import dash_mantine_components as dmc
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
 from dash import html, ctx, dcc, callback, Output, State, Input, ALL
 from loguru import logger
+from typing import Any, Dict, List
 
 from menu.dataset import ds
 from utils.data import dataset_loader, filter_data, DatasetDecorator
@@ -26,11 +28,10 @@ dash.register_page(
 
 # TODO: configure based on number of categories
 PLOT_HEIGHT = 800
+DEFAULT_THRESHOLD = 0.5
 
 # setup data
 dataset = dataset_loader.get_dataset(ds)
-species_list = sorted(dataset.species_predictions.common_name.unique())
-species_default = species_list[0]
 
 # setup plot type selector
 plot_types = {
@@ -41,7 +42,7 @@ plot_types = {
 plot_type_kwargs = {
     "Scatter": dict(
         x='hour',
-        y='abundance',
+        y='richness',
         # hover_name="file",
         # hover_data=["timestamp", "path"],
     ),
@@ -56,7 +57,6 @@ plot_type_kwargs = {
             showticklabels=True,
             ticks="",
         ),
-        # TODO: figure out why normal scatter and polar plots show different times, something to do with angle?
         angularaxis=dict(
             tickmode="array",
             tickvals=(angles := list(range(0, 360, 45))),
@@ -91,6 +91,7 @@ plot_type_kwargs = {
 dataset_select_id = "dataset-select"
 graph_id = f"{PAGE_NAME}-graph"
 plot_type_select_id = f"{PAGE_NAME}-plot-type-select"
+species_select_id = f"{PAGE_NAME}-species-select"
 row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
 col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
 threshold_slider_id = f"{PAGE_NAME}-threshold-slider"
@@ -98,20 +99,31 @@ threshold_slider_id = f"{PAGE_NAME}-threshold-slider"
 # full layout
 layout = html.Div([
     html.Div([
-        html.H1(PAGE_TITLE),
+        html.H1(PAGE_TITLE)
     ]),
     html.Hr(),
     dmc.Divider(variant="dotted"),
     dmc.Group(
+        grow=True,
         children=[
             dmc.Select(
                 id=plot_type_select_id,
-                label="Select plot type",
+                label="Select polar plot type",
                 value="Bar Polar",
                 data=[
                     dict(value=plot_type, label=plot_type)
                     for plot_type in plot_types.keys()
                 ],
+                searchable=True,
+                clearable=False,
+                style=dict(width=200),
+                persistence=True,
+            ),
+            dmc.Select(
+                id=species_select_id,
+                label="Select species",
+                value=None,
+                data=[],
                 searchable=True,
                 clearable=False,
                 style=dict(width=200),
@@ -126,59 +138,81 @@ layout = html.Div([
                 default=None,
             ),
             dmc.Text(
-                children="Detection Threshold",
+                "Threshold",
                 size="sm",
                 align="right",
             ),
             dmc.Slider(
                 id=threshold_slider_id,
-                min=0.1, max=1.0,
+                min=0.1, max=0.9,
                 step=0.1,
-                value=0.5,
+                value=DEFAULT_THRESHOLD,
                 marks=[
-                    { "value": i, "label": str(i) }
-                    for i in [0.1, 0.2, 0.4, 0.6, 0.8 , 0.1]
+                    dict(value=i, label=np.format_float_positional(i, precision=1))
+                    for i in np.arange(0.1, 0.9, 0.1)
                 ],
                 persistence=True,
             ),
         ],
-        grow=True,
     ),
     dcc.Graph(id=graph_id),
     components.Footer(PAGE_NAME, feature=False),
 ])
 
 @callback(
+    Output(species_select_id, "value"),
+    Output(species_select_id, "data"),
+    Input(dataset_select_id, "value"),
+    Input(threshold_slider_id, "value"),
+    Input(species_select_id, "value"),
+)
+def update_species_select(
+    dataset_name: str,
+    threshold: float,
+    current_species_name: str
+) -> List[Dict[str, str]]:
+    dataset = dataset_loader.get_dataset(dataset_name)
+    scoped_species = sorted(dataset.species_predictions[dataset.species_predictions["confidence"] > threshold].common_name.unique())
+    species_options = [dict(value=common_name, label=common_name) for common_name in scoped_species]
+    if len(scoped_species) and current_species_name is None:
+        current_species_name = scoped_species[0]
+    return current_species_name, species_options
+
+@callback(
     Output(graph_id, "figure"),
     Input(dataset_select_id, "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input(plot_type_select_id, "value"),
+    Input(species_select_id, "value"),
     Input(row_facet_select_id, "value"),
     Input(col_facet_select_id, "value"),
     Input(threshold_slider_id, "value"),
+    prevent_initial_call=True,
 )
 def update_figure(
     dataset_name: str,
     locations,
     plot_type: str,
+    species_name: str,
     row_facet: str,
     col_facet: str,
-    threshold: float,
+    threshold: float
 ) -> go.Figure:
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {plot_type=} {row_facet=} {col_facet=} {threshold=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {species_name=} {plot_type=} {row_facet=} {col_facet=} {threshold=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
     data = dataset.views.species_abundance(
+        species_name=species_name,
         threshold=threshold,
-        group_by=["hour", row_facet, col_facet],
+        group_by=["hour", row_facet, col_facet, "site"],
     )
     data = filter_data(data, locations=locations)
     category_orders = DatasetDecorator(dataset).category_orders()
-
     plot = plot_types[plot_type]
+    plot_kwargs = plot_type_kwargs[plot_type]
     fig = plot(
         data,
-        **plot_type_kwargs[plot_type],
+        **plot_kwargs,
         facet_row=row_facet,
         facet_col=col_facet,
         category_orders=category_orders,
@@ -186,7 +220,8 @@ def update_figure(
 
     fig.update_layout(
         height=PLOT_HEIGHT,
-        margin=dict(t=150, r=150),
+        margin=dict(r=150),
     )
 
     return fig
+

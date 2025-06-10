@@ -68,7 +68,7 @@ def update_figure(dataset_name, locations, colour_by, row_facet, col_facet):
     decorator = DatasetDecorator(dataset)
 
     fig = px.box(
-        data.sort_values(by="confidence", ascending=False),
+        data.sort_values(by="confidence", ascending=True),
         x="confidence",
         y="common_name",
         color=colour_by,

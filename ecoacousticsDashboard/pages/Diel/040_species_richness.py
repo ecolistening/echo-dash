@@ -15,9 +15,9 @@ from utils.save_plot_fig import get_save_plot
 
 import components
 
-PAGE_NAME = "species-occurrence"
-PAGE_TITLE = "Species Occurrence by Time of Day"
-MENU_NAME = "Species Occurrence"
+PAGE_NAME = "species-richness"
+PAGE_TITLE = "Species Richness by Time of Day"
+MENU_NAME = "Species Richness"
 
 dash.register_page(
     __name__,
@@ -30,27 +30,58 @@ PLOT_HEIGHT = 800
 
 # setup data
 dataset = dataset_loader.get_dataset(ds)
-species_list = sorted(dataset.species_predictions.common_name.unique())
-species_default = species_list[0]
 
 # setup plot type selector
 plot_types = {
+    "Scatter": px.scatter,
     "Scatter Polar": sketch.scatter_polar,
     "Bar Polar": sketch.bar_polar,
 }
 plot_type_kwargs = {
+    "Scatter": dict(
+        x='hour',
+        y='richness',
+        # hover_name="file",
+        # hover_data=["timestamp", "path"],
+    ),
     "Scatter Polar": dict(
-        r="prob",
+        r="richness",
         theta="hour",
         mode="markers",
         marker=dict(size=6, opacity=1.0),
         fill="toself",
+        showlegend=False,
+        radialaxis=dict(
+            showticklabels=True,
+            ticks="",
+        ),
+        angularaxis=dict(
+            tickmode="array",
+            tickvals=(angles := list(range(0, 360, 45))),
+            ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
+            direction="clockwise",
+            rotation=90,
+            ticks=""
+        )
     ),
     "Bar Polar": dict(
-        r="prob",
+        r="richness",
         theta="hour",
         marker_line_width=2,
         opacity=0.8,
+        showlegend=False,
+        radialaxis=dict(
+            showticklabels=True,
+            ticks="",
+        ),
+        angularaxis=dict(
+            tickmode="array",
+            tickvals=(angles := list(range(0, 360, 45))),
+            ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
+            direction="clockwise",
+            rotation=90,
+            ticks=""
+        )
     ),
 }
 
@@ -58,41 +89,26 @@ plot_type_kwargs = {
 dataset_select_id = "dataset-select"
 graph_id = f"{PAGE_NAME}-graph"
 plot_type_select_id = f"{PAGE_NAME}-plot-type-select"
-species_select_id = f"{PAGE_NAME}-species-select"
 row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
 col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
-opacity_slider_id = f'{PAGE_NAME}-opacity-slider'
+threshold_slider_id = f"{PAGE_NAME}-threshold-slider"
 
 # full layout
 layout = html.Div([
     html.Div([
-        html.H1(PAGE_TITLE)
+        html.H1(PAGE_TITLE),
     ]),
     html.Hr(),
     dmc.Divider(variant="dotted"),
     dmc.Group(
-        grow=True,
         children=[
             dmc.Select(
                 id=plot_type_select_id,
-                label="Select polar plot type",
+                label="Select plot type",
                 value="Bar Polar",
                 data=[
                     dict(value=plot_type, label=plot_type)
                     for plot_type in plot_types.keys()
-                ],
-                searchable=True,
-                clearable=False,
-                style=dict(width=200),
-                persistence=True,
-            ),
-            dmc.Select(
-                id=species_select_id,
-                label="Select species",
-                value=species_default,
-                data=[
-                    dict(value=common_name, label=common_name)
-                    for common_name in species_list
                 ],
                 searchable=True,
                 clearable=False,
@@ -108,20 +124,23 @@ layout = html.Div([
                 default=None,
             ),
             dmc.Text(
-                "Opacity",
+                children="Detection Threshold",
                 size="sm",
                 align="right",
             ),
             dmc.Slider(
-                id=opacity_slider_id,
-                min=0, max=100, step=5, value=50,
+                id=threshold_slider_id,
+                min=0.1, max=0.9,
+                step=0.1,
+                value=0.5,
                 marks=[
-                    dict(value=i, label=f',{i}%')
-                    for i in range(0, 101, 20)
+                    dict(value=i, label=np.format_float_positional(i, precision=1))
+                    for i in np.arange(0.1, 0.9, 0.1)
                 ],
-                persistence=True
+                persistence=True,
             ),
         ],
+        grow=True,
     ),
     dcc.Graph(id=graph_id),
     components.Footer(PAGE_NAME, feature=False),
@@ -132,61 +151,40 @@ layout = html.Div([
     Input(dataset_select_id, "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input(plot_type_select_id, "value"),
-    Input(species_select_id, "value"),
     Input(row_facet_select_id, "value"),
     Input(col_facet_select_id, "value"),
-    Input(opacity_slider_id, "value"),
+    Input(threshold_slider_id, "value"),
 )
 def update_figure(
     dataset_name: str,
     locations,
     plot_type: str,
-    species_name: str,
     row_facet: str,
     col_facet: str,
-    opacity: float,
+    threshold: float,
 ) -> go.Figure:
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {species_name=} {plot_type=} {row_facet=} {col_facet=} {opacity=}")
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {plot_type=} {row_facet=} {col_facet=} {threshold=}")
 
     dataset = dataset_loader.get_dataset(dataset_name)
-    data = dataset.views.species_probability(
-        species_name=species_name,
-        group_by=["hour", row_facet, col_facet],
+    data = dataset.views.species_richness(
+        threshold=threshold,
+        group_by=["hour", row_facet, col_facet, "site"],
     )
     data = filter_data(data, locations=locations)
     category_orders = DatasetDecorator(dataset).category_orders()
 
     plot = plot_types[plot_type]
-    plot_kwargs = plot_type_kwargs[plot_type]
-    plot_kwargs["opacity"] = opacity / 100.0
     fig = plot(
         data,
-        **plot_kwargs,
+        **plot_type_kwargs[plot_type],
         facet_row=row_facet,
         facet_col=col_facet,
-        showlegend=False,
         category_orders=category_orders,
-        radialaxis=dict(
-            range=[0, 1],
-            showticklabels=True,
-            # title="Confidence",
-            ticks="",
-        ),
-        angularaxis=dict(
-            tickmode="array",
-            tickvals=(angles := list(range(0, 360, 45))),
-            ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
-            direction="clockwise",
-            # title="Hour of Day",
-            rotation=90,
-            ticks=""
-        )
     )
 
     fig.update_layout(
         height=PLOT_HEIGHT,
-        margin=dict(r=150),
+        margin=dict(t=150, r=150),
     )
 
     return fig
-

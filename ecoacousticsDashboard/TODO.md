@@ -1,0 +1,2 @@
+- [ ] Make modal a side component
+- [ ] Make a side collapse, and adjust the width of the UMAP plot on open/close of the Collapse module

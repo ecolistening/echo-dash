@@ -42,7 +42,7 @@ def bar_polar(
     col_categories = sorted(data[facet_col].unique(), key=lambda value: col_order_idx.get(value, float('inf')))
     categories = list(itertools.product(row_categories, col_categories))
 
-    subplot_titles = [col_category for col_category in col_categories if facet_col != "_col_facet"]
+    subplot_titles = [str(col_category) for col_category in col_categories if facet_col != "_col_facet"]
 
     num_rows = len(row_categories)
     num_cols = len(col_categories)
@@ -75,7 +75,7 @@ def bar_polar(
     if facet_row != "_row_facet":
         for i, row_category in enumerate(row_categories):
             fig.add_annotation(dict(
-                text=row_category,
+                text=str(row_category),
                 x=1.05,
                 y=1 - (i + 0.5) / num_rows,
                 xref="paper",
@@ -95,7 +95,7 @@ def bar_polar(
             polar_key = 'polar' if subplot_i == 1 else f'polar{subplot_i}'
             domain = fig.layout[polar_key].domain
             fig.add_annotation(dict(
-                text=angular_title,
+                text=str(angular_title),
                 x=domain.x[1] - 0.01,
                 y=domain.y[1] - 0.01,
                 xref="paper",
@@ -144,7 +144,7 @@ def scatter_polar(
     col_categories = sorted(data[facet_col].unique(), key=lambda value: col_order_idx.get(value, float('inf')))
     categories = list(itertools.product(row_categories, col_categories))
 
-    subplot_titles = [col_category for col_category in col_categories if facet_col != "_col_facet"]
+    subplot_titles = [str(col_category) for col_category in col_categories if facet_col != "_col_facet"]
 
     num_rows = len(row_categories)
     num_cols = len(col_categories)
@@ -177,7 +177,7 @@ def scatter_polar(
     if facet_row != "_row_facet":
         for i, row_category in enumerate(row_categories):
             fig.add_annotation(dict(
-                text=row_category,
+                text=str(row_category),
                 x=1.05,
                 y=1 - (i + 0.5) / num_rows,
                 xref="paper",
@@ -197,7 +197,7 @@ def scatter_polar(
             polar_key = 'polar' if subplot_i == 1 else f'polar{subplot_i}'
             domain = fig.layout[polar_key].domain
             fig.add_annotation(dict(
-                text=angular_title,
+                text=str(angular_title),
                 x=domain.x[1] - 0.01,
                 y=domain.y[1] - 0.01,
                 xref="paper",
