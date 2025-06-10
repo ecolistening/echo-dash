@@ -121,10 +121,12 @@ layout = html.Div([
             components.RowFacetSelect(
                 id=row_facet_select_id,
                 default=None,
+                ignore_options=["hour"],
             ),
             components.ColumnFacetSelect(
                 id=col_facet_select_id,
                 default=None,
+                ignore_options=["hour"],
             ),
             dmc.Text(
                 children="Detection Threshold",
@@ -189,7 +191,6 @@ def update_figure(
         .reset_index(name="richness")
     )
 
-    import code; code.interact(local=locals())
     category_orders = DatasetDecorator(dataset).category_orders()
 
     plot = plot_types[plot_type]

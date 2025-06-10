@@ -33,14 +33,14 @@ def bar_polar(
         data["_col_facet"] = "All"
         facet_col = "_col_facet"
 
-    row_categories = category_orders.get(facet_row, [])
-    col_categories = category_orders.get(facet_col, [])
+    row_categories = category_orders.get(facet_row, sorted(data[facet_row].dropna().unique()))
+    col_categories = category_orders.get(facet_col, sorted(data[facet_col].dropna().unique()))
     categories = list(itertools.product(row_categories, col_categories))
 
     subplot_titles = [str(col_category) for col_category in col_categories if facet_col != "_col_facet"]
 
-    num_rows = len(row_categories) or 1
-    num_cols = len(col_categories) or 1
+    num_rows = len(row_categories)
+    num_cols = len(col_categories)
 
     fig = make_subplots(
         rows=num_rows, cols=num_cols,
@@ -133,11 +133,6 @@ def scatter_polar(
 
     row_order = category_orders.get(facet_row, sorted(data[facet_row].dropna().unique()))
     col_order = category_orders.get(facet_col, sorted(data[facet_col].dropna().unique()))
-    row_order_idx = {value: idx for idx, value in enumerate(row_order)}
-    col_order_idx = {value: idx for idx, value in enumerate(col_order)}
-
-    row_categories = sorted(data[facet_row].unique(), key=lambda value: row_order_idx.get(value, float('inf')))
-    col_categories = sorted(data[facet_col].unique(), key=lambda value: col_order_idx.get(value, float('inf')))
     categories = list(itertools.product(row_categories, col_categories))
 
     subplot_titles = [str(col_category) for col_category in col_categories if facet_col != "_col_facet"]

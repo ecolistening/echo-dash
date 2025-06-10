@@ -133,10 +133,12 @@ layout = html.Div([
             components.RowFacetSelect(
                 id=row_facet_select_id,
                 default=None,
+                ignore_options=["hour"],
             ),
             components.ColumnFacetSelect(
                 id=col_facet_select_id,
                 default=None,
+                ignore_options=["hour"],
             ),
             dmc.Text(
                 "Threshold",
@@ -221,7 +223,7 @@ def update_figure(
         .max()
         .reset_index(name="max_count")
         .groupby(group_by)
-        .agg(abundance=("max_count", "mean"))
+        .agg(abundance=("max_count", "sum"))
         .reset_index()
     )
 
