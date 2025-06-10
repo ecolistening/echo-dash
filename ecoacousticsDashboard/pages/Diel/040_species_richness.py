@@ -37,7 +37,7 @@ dataset = dataset_loader.get_dataset(ds)
 
 # setup plot type selector
 plot_types = {
-    "Scatter": px.scatter,
+    "Scatter": sketch.scatter,
     "Scatter Polar": sketch.scatter_polar,
     "Bar Polar": sketch.bar_polar,
 }
@@ -45,12 +45,21 @@ plot_type_kwargs = {
     "Scatter": dict(
         x='hour',
         y='richness',
+        marker=dict(
+            size=10,
+            opacity=1.0,
+            color="rgba(133, 143, 249, 1.0)",
+        ),
     ),
     "Scatter Polar": dict(
         r="richness",
         theta="hour",
         mode="markers",
-        marker=dict(size=6, opacity=1.0),
+        marker=dict(
+            size=10,
+            opacity=1.0,
+            color="rgba(133, 143, 249, 1.0)",
+        ),
         fill="toself",
         showlegend=False,
         radialaxis=dict(
@@ -72,6 +81,10 @@ plot_type_kwargs = {
         marker_line_width=2,
         opacity=0.8,
         showlegend=False,
+        marker=dict(
+            color="rgba(133, 143, 249, 0.6)",
+            line=dict(color="rgba(133, 143, 249, 1.0)", width=2)
+        ),
         radialaxis=dict(
             showticklabels=True,
             ticks="",
@@ -170,7 +183,6 @@ def update_figure(
     col_facet: str,
     threshold: float,
 ) -> go.Figure:
-    dates = [date.fromisoformat(d) for d in dates]
     logger.debug(
         f"Trigger ID={ctx.triggered_id}: "
         f"{dataset_name=} dates={dates} locations={locations} "
@@ -179,16 +191,11 @@ def update_figure(
 
     group_by = list(filter(lambda x: x is not None, dedup(["hour", row_facet, col_facet])))
     dataset = dataset_loader.get_dataset(dataset_name)
-    data = dataset.species_predictions
-    data = (
-        data[
-            (data['site'].isin([l.strip('/') for l in list2tuple(locations)])) &
-            (data.timestamp.dt.date.between(*list2tuple(dates), inclusive="both")) &
-            (data["confidence"] > threshold)
-        ]
-        .groupby(group_by)["species_id"]
-        .nunique()
-        .reset_index(name="richness")
+    data = dataset.views.species_richness(
+        threshold,
+        group_by=group_by,
+        dates=list2tuple(dates),
+        locations=list2tuple(locations)
     )
 
     category_orders = DatasetDecorator(dataset).category_orders()

@@ -1,5 +1,6 @@
 import itertools
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 
 from plotly.subplots import make_subplots
@@ -9,6 +10,28 @@ __ALL__ = [
     "bar_polar",
     "scatter_polar",
 ]
+
+def scatter(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    facet_row: str,
+    facet_col: str,
+    color: str | None = None,
+    width: str | None = None,
+    category_orders: Dict[str, List[Any]] = {},
+    **kwargs,
+) -> go.Figure:
+    fig = px.scatter(
+        data,
+        x=x,
+        y=y,
+        facet_row=facet_row,
+        facet_col=facet_col,
+        category_orders=category_orders,
+    )
+    fig.update_traces(**kwargs)
+    return fig
 
 def bar_polar(
     data: pd.DataFrame,

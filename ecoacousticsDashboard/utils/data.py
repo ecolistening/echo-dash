@@ -195,7 +195,6 @@ class DatasetViews:
         dates: List[str] = [],
         locations: List[str] = [],
     ) -> pd.DataFrame:
-        group_by = list(filter(lambda x: x is not None, dedup(group_by)))
         return self._fetch_view(
             self.lookup_key(str(threshold), *group_by, *dates, *locations),
             DatasetViews.species_richness.__name__,
@@ -209,7 +208,6 @@ class DatasetViews:
         dates: List[str] = [],
         locations: List[str] = [],
     ) -> pd.DataFrame:
-        group_by = list(filter(lambda x: x is not None, dedup(group_by)))
         return self._fetch_view(
             self.lookup_key(str(threshold), *group_by, *dates, *locations),
             DatasetViews.species_abundance.__name__,

@@ -37,20 +37,29 @@ dataset = dataset_loader.get_dataset(ds)
 
 # setup plot type selector
 plot_types = {
-    "Scatter": px.scatter,
+    "Scatter": sketch.scatter,
     "Scatter Polar": sketch.scatter_polar,
     "Bar Polar": sketch.bar_polar,
 }
 plot_type_kwargs = {
     "Scatter": dict(
-        x="hour",
-        y="abundance",
+        x='hour',
+        y='abundance',
+        marker=dict(
+            size=10,
+            opacity=1.0,
+            color="rgba(133, 143, 249, 1.0)",
+        ),
     ),
     "Scatter Polar": dict(
         r="abundance",
         theta="hour",
         mode="markers",
-        marker=dict(size=6, opacity=1.0),
+        marker=dict(
+            size=10,
+            opacity=1.0,
+            color="rgba(133, 143, 249, 1.0)",
+        ),
         fill="toself",
         showlegend=False,
         radialaxis=dict(
@@ -72,6 +81,10 @@ plot_type_kwargs = {
         marker_line_width=2,
         opacity=0.8,
         showlegend=False,
+        marker=dict(
+            color="rgba(133, 143, 249, 0.6)",
+            line=dict(color="rgba(133, 143, 249, 1.0)", width=2)
+        ),
         radialaxis=dict(
             showticklabels=True,
             ticks="",
@@ -120,16 +133,6 @@ layout = html.Div([
                 style=dict(width=200),
                 persistence=True,
             ),
-            # dmc.Select(
-            #     id=species_select_id,
-            #     label="Select species",
-            #     value=None,
-            #     data=[],
-            #     searchable=True,
-            #     clearable=False,
-            #     style=dict(width=200),
-            #     persistence=True,
-            # ),
             components.RowFacetSelect(
                 id=row_facet_select_id,
                 default=None,
@@ -162,25 +165,6 @@ layout = html.Div([
     components.Footer(PAGE_NAME, feature=False),
 ])
 
-# @callback(
-#     Output(species_select_id, "value"),
-#     Output(species_select_id, "data"),
-#     Input(dataset_select_id, "value"),
-#     Input(threshold_slider_id, "value"),
-#     Input(species_select_id, "value"),
-# )
-# def update_species_select(
-#     dataset_name: str,
-#     threshold: float,
-#     current_species_name: str
-# ) -> List[Dict[str, str]]:
-#     dataset = dataset_loader.get_dataset(dataset_name)
-#     scoped_species = sorted(dataset.species_predictions[dataset.species_predictions["confidence"] > threshold].common_name.unique())
-#     species_options = [dict(value=common_name, label=common_name) for common_name in scoped_species]
-#     if len(scoped_species) and current_species_name is None:
-#         current_species_name = scoped_species[0]
-#     return current_species_name, species_options
-
 @callback(
     Output(graph_id, "figure"),
     Input(dataset_select_id, "value"),
@@ -200,7 +184,7 @@ def update_figure(
     col_facet: str,
     threshold: float
 ) -> go.Figure:
-    dates = [date.fromisoformat(d) for d in dates]
+    # dates = [date.fromisoformat(d) for d in dates]
     logger.debug(
         f"Trigger ID={ctx.triggered_id}:"
         f"{dataset_name=} dates={dates} locations={locations}"
@@ -209,22 +193,11 @@ def update_figure(
 
     group_by = list(filter(lambda x: x is not None, dedup(["hour", row_facet, col_facet])))
     dataset = dataset_loader.get_dataset(dataset_name)
-    data = dataset.species_predictions
-    data = (
-        data[
-            (data['site'].isin([l.strip('/') for l in list2tuple(locations)])) &
-            (data.timestamp.dt.date.between(*list2tuple(dates), inclusive="both")) &
-            (data["confidence"] > threshold)
-        ]
-        .groupby([*group_by, "species_id", "start_time", "end_time"])
-        .size()
-        .reset_index(name="count")
-        .groupby([*group_by, "species_id"])["count"]
-        .max()
-        .reset_index(name="max_count")
-        .groupby(group_by)
-        .agg(abundance=("max_count", "sum"))
-        .reset_index()
+    data = dataset.views.species_abundance(
+        threshold,
+        group_by=group_by,
+        dates=list2tuple(dates),
+        locations=list2tuple(locations)
     )
 
     category_orders = DatasetDecorator(dataset).category_orders()
@@ -242,4 +215,23 @@ def update_figure(
     )
 
     return fig
+
+# @callback(
+#     Output(species_select_id, "value"),
+#     Output(species_select_id, "data"),
+#     Input(dataset_select_id, "value"),
+#     Input(threshold_slider_id, "value"),
+#     Input(species_select_id, "value"),
+# )
+# def update_species_select(
+#     dataset_name: str,
+#     threshold: float,
+#     current_species_name: str
+# ) -> List[Dict[str, str]]:
+#     dataset = dataset_loader.get_dataset(dataset_name)
+#     scoped_species = sorted(dataset.species_predictions[dataset.species_predictions["confidence"] > threshold].common_name.unique())
+#     species_options = [dict(value=common_name, label=common_name) for common_name in scoped_species]
+#     if len(scoped_species) and current_species_name is None:
+#         current_species_name = scoped_species[0]
+#     return current_species_name, species_options
 
