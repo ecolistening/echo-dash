@@ -4,10 +4,13 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
+from datetime import date
 from dash import html, ctx, dcc, callback, Output, State, Input, ALL
 from loguru import logger
+from typing import Any, Dict, List
 
 from menu.dataset import ds
+from utils import list2tuple, dedup
 from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils import sketch
 from utils.content import get_tabs
@@ -27,6 +30,7 @@ dash.register_page(
 
 # TODO: configure based on number of categories
 PLOT_HEIGHT = 800
+DEFAULT_THRESHOLD = 0.5
 
 # setup data
 dataset = dataset_loader.get_dataset(ds)
@@ -41,8 +45,6 @@ plot_type_kwargs = {
     "Scatter": dict(
         x='hour',
         y='richness',
-        # hover_name="file",
-        # hover_data=["timestamp", "path"],
     ),
     "Scatter Polar": dict(
         r="richness",
@@ -87,6 +89,7 @@ plot_type_kwargs = {
 
 # page selectors
 dataset_select_id = "dataset-select"
+date_picker_id = "date-picker"
 graph_id = f"{PAGE_NAME}-graph"
 plot_type_select_id = f"{PAGE_NAME}-plot-type-select"
 row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
@@ -149,6 +152,7 @@ layout = html.Div([
 @callback(
     Output(graph_id, "figure"),
     Input(dataset_select_id, "value"),
+    Input(date_picker_id, "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input(plot_type_select_id, "value"),
     Input(row_facet_select_id, "value"),
@@ -157,20 +161,35 @@ layout = html.Div([
 )
 def update_figure(
     dataset_name: str,
-    locations,
+    dates: List[str],
+    locations: List[str],
     plot_type: str,
     row_facet: str,
     col_facet: str,
     threshold: float,
 ) -> go.Figure:
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {plot_type=} {row_facet=} {col_facet=} {threshold=}")
-
-    dataset = dataset_loader.get_dataset(dataset_name)
-    data = dataset.views.species_richness(
-        threshold=threshold,
-        group_by=["hour", row_facet, col_facet, "site"],
+    dates = [date.fromisoformat(d) for d in dates]
+    logger.debug(
+        f"Trigger ID={ctx.triggered_id}: "
+        f"{dataset_name=} dates={dates} locations={locations} "
+        f"{plot_type=} {row_facet=} {col_facet=} {threshold=} "
     )
-    data = filter_data(data, locations=locations)
+
+    group_by = list(filter(lambda x: x is not None, dedup(["hour", row_facet, col_facet])))
+    dataset = dataset_loader.get_dataset(dataset_name)
+    data = dataset.species_predictions
+    data = (
+        data[
+            (data['site'].isin([l.strip('/') for l in list2tuple(locations)])) &
+            (data.timestamp.dt.date.between(*list2tuple(dates), inclusive="both")) &
+            (df["confidence"] > threshold)
+        ]
+        .groupby(group_by)["species_id"]
+        .nunique()
+        .reset_index(name="richness")
+    )
+
+    import code; code.interact(local=locals())
     category_orders = DatasetDecorator(dataset).category_orders()
 
     plot = plot_types[plot_type]

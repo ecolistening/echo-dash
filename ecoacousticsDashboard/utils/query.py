@@ -1,36 +1,49 @@
 import pandas as pd
+from loguru import logger
 from typing import List
 
 def species_abundance_query(
     df: pd.DataFrame,
-    species_name: str,
     threshold: float,
-    group_by: List[str]
+    group_by: List[str],
+    dates: List[str],
+    locations: List[str],
 ) -> pd.DataFrame:
     """
     If two vocalizations from the same species overlap in time, assume they come from different individuals,
     therefore abundance is computed using the proxy of the maximum number of simultaneous detected vocalisations
     """
     return (
-        df[(df["confidence"] > threshold) & (df["common_name"] == species_name)]
+        df[
+            (data['site'].isin([l.strip('/') for l in locations])) &
+            (data.timestamp.dt.date.between(*dates)) &
+            (df["confidence"] > threshold)
+        ]
         .groupby([*group_by, "species_id", "start_time", "end_time"])
         .size()
         .reset_index(name="count")
         .groupby([*group_by, "species_id"])["count"]
         .max()
-        .reset_index(name="abundance")
+        .reset_index(name="max_count")
+        .groupby(group_by).agg(abundance=("max_count", "sum"))
     )
 
 def species_richness_query(
     df: pd.DataFrame,
     threshold: float,
-    group_by: List[str]
+    group_by: List[str],
+    dates: List[str],
+    locations: List[str],
 ) -> pd.DataFrame:
     """
     A count of unique species
     """
     return (
-        df[df["confidence"] > threshold]
+        df[
+            (data['site'].isin([l.strip('/') for l in locations])) &
+            (data.timestamp.dt.date.between(*dates)) &
+            (df["confidence"] > threshold)
+        ]
         .groupby(group_by)["species_id"]
         .nunique()
         .reset_index(name="richness")

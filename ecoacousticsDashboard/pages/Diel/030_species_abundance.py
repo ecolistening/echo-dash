@@ -4,11 +4,13 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
+from datetime import date
 from dash import html, ctx, dcc, callback, Output, State, Input, ALL
 from loguru import logger
 from typing import Any, Dict, List
 
 from menu.dataset import ds
+from utils import list2tuple, dedup
 from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils import sketch
 from utils.content import get_tabs
@@ -41,10 +43,8 @@ plot_types = {
 }
 plot_type_kwargs = {
     "Scatter": dict(
-        x='hour',
-        y='richness',
-        # hover_name="file",
-        # hover_data=["timestamp", "path"],
+        x="hour",
+        y="abundance",
     ),
     "Scatter Polar": dict(
         r="abundance",
@@ -89,9 +89,10 @@ plot_type_kwargs = {
 
 # page selectors
 dataset_select_id = "dataset-select"
+date_picker_id = "date-picker"
 graph_id = f"{PAGE_NAME}-graph"
 plot_type_select_id = f"{PAGE_NAME}-plot-type-select"
-species_select_id = f"{PAGE_NAME}-species-select"
+# species_select_id = f"{PAGE_NAME}-species-select"
 row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
 col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
 threshold_slider_id = f"{PAGE_NAME}-threshold-slider"
@@ -119,16 +120,16 @@ layout = html.Div([
                 style=dict(width=200),
                 persistence=True,
             ),
-            dmc.Select(
-                id=species_select_id,
-                label="Select species",
-                value=None,
-                data=[],
-                searchable=True,
-                clearable=False,
-                style=dict(width=200),
-                persistence=True,
-            ),
+            # dmc.Select(
+            #     id=species_select_id,
+            #     label="Select species",
+            #     value=None,
+            #     data=[],
+            #     searchable=True,
+            #     clearable=False,
+            #     style=dict(width=200),
+            #     persistence=True,
+            # ),
             components.RowFacetSelect(
                 id=row_facet_select_id,
                 default=None,
@@ -159,63 +160,78 @@ layout = html.Div([
     components.Footer(PAGE_NAME, feature=False),
 ])
 
-@callback(
-    Output(species_select_id, "value"),
-    Output(species_select_id, "data"),
-    Input(dataset_select_id, "value"),
-    Input(threshold_slider_id, "value"),
-    Input(species_select_id, "value"),
-)
-def update_species_select(
-    dataset_name: str,
-    threshold: float,
-    current_species_name: str
-) -> List[Dict[str, str]]:
-    dataset = dataset_loader.get_dataset(dataset_name)
-    scoped_species = sorted(dataset.species_predictions[dataset.species_predictions["confidence"] > threshold].common_name.unique())
-    species_options = [dict(value=common_name, label=common_name) for common_name in scoped_species]
-    if len(scoped_species) and current_species_name is None:
-        current_species_name = scoped_species[0]
-    return current_species_name, species_options
+# @callback(
+#     Output(species_select_id, "value"),
+#     Output(species_select_id, "data"),
+#     Input(dataset_select_id, "value"),
+#     Input(threshold_slider_id, "value"),
+#     Input(species_select_id, "value"),
+# )
+# def update_species_select(
+#     dataset_name: str,
+#     threshold: float,
+#     current_species_name: str
+# ) -> List[Dict[str, str]]:
+#     dataset = dataset_loader.get_dataset(dataset_name)
+#     scoped_species = sorted(dataset.species_predictions[dataset.species_predictions["confidence"] > threshold].common_name.unique())
+#     species_options = [dict(value=common_name, label=common_name) for common_name in scoped_species]
+#     if len(scoped_species) and current_species_name is None:
+#         current_species_name = scoped_species[0]
+#     return current_species_name, species_options
 
 @callback(
     Output(graph_id, "figure"),
     Input(dataset_select_id, "value"),
+    Input(date_picker_id, 'value'),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input(plot_type_select_id, "value"),
-    Input(species_select_id, "value"),
     Input(row_facet_select_id, "value"),
     Input(col_facet_select_id, "value"),
     Input(threshold_slider_id, "value"),
-    prevent_initial_call=True,
 )
 def update_figure(
     dataset_name: str,
-    locations,
+    dates: List[str],
+    locations: List[str],
     plot_type: str,
-    species_name: str,
     row_facet: str,
     col_facet: str,
     threshold: float
 ) -> go.Figure:
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {species_name=} {plot_type=} {row_facet=} {col_facet=} {threshold=}")
-
-    dataset = dataset_loader.get_dataset(dataset_name)
-    data = dataset.views.species_abundance(
-        species_name=species_name,
-        threshold=threshold,
-        group_by=["hour", row_facet, col_facet, "site"],
+    dates = [date.fromisoformat(d) for d in dates]
+    logger.debug(
+        f"Trigger ID={ctx.triggered_id}:"
+        f"{dataset_name=} dates={dates} locations={locations}"
+        f"{plot_type=} {row_facet=} {col_facet=} {threshold=}"
     )
-    data = filter_data(data, locations=locations)
+
+    group_by = list(filter(lambda x: x is not None, dedup(["hour", row_facet, col_facet])))
+    dataset = dataset_loader.get_dataset(dataset_name)
+    data = dataset.species_predictions
+    data = (
+        data[
+            (data['site'].isin([l.strip('/') for l in list2tuple(locations)])) &
+            (data.timestamp.dt.date.between(*list2tuple(dates), inclusive="both")) &
+            (data["confidence"] > threshold)
+        ]
+        .groupby([*group_by, "species_id", "start_time", "end_time"])
+        .size()
+        .reset_index(name="count")
+        .groupby([*group_by, "species_id"])["count"]
+        .max()
+        .reset_index(name="max_count")
+        .groupby(group_by)
+        .agg(abundance=("max_count", "mean"))
+        .reset_index()
+    )
+
     category_orders = DatasetDecorator(dataset).category_orders()
-    plot = plot_types[plot_type]
-    plot_kwargs = plot_type_kwargs[plot_type]
-    fig = plot(
+    fig = plot_types[plot_type](
         data,
-        **plot_kwargs,
         facet_row=row_facet,
         facet_col=col_facet,
         category_orders=category_orders,
+        **plot_type_kwargs[plot_type],
     )
 
     fig.update_layout(

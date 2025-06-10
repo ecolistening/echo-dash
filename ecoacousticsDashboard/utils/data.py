@@ -192,25 +192,28 @@ class DatasetViews:
         self,
         threshold: float,
         group_by: List[str],
+        dates: List[str] = [],
+        locations: List[str] = [],
     ) -> pd.DataFrame:
         group_by = list(filter(lambda x: x is not None, dedup(group_by)))
         return self._fetch_view(
-            self.lookup_key(str(threshold), *group_by),
+            self.lookup_key(str(threshold), *group_by, *dates, *locations),
             DatasetViews.species_richness.__name__,
-            lambda: Q.species_richness_query(self.dataset.species_predictions, threshold, group_by),
+            lambda: Q.species_richness_query(self.dataset.species_predictions, threshold, group_by, dates, locations),
         )
 
     def species_abundance(
         self,
-        species_name: str,
         threshold: float,
         group_by: List[str],
+        dates: List[str] = [],
+        locations: List[str] = [],
     ) -> pd.DataFrame:
         group_by = list(filter(lambda x: x is not None, dedup(group_by)))
         return self._fetch_view(
-            self.lookup_key(str(species_name), str(threshold), *group_by),
+            self.lookup_key(str(threshold), *group_by, *dates, *locations),
             DatasetViews.species_abundance.__name__,
-            lambda: Q.species_abundance_query(self.dataset.species_predictions, species_name, threshold, group_by),
+            lambda: Q.species_abundance_query(self.dataset.species_predictions, threshold, group_by, dates, locations),
         )
 
     def _fetch_view(
@@ -291,7 +294,7 @@ class DatasetDecorator:
         return (
             ('hour', list(range(24))),
             ('weekday', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']),
-            ('date', sorted(self.dataset.files['date'].unique())),
+            # ('date', sorted(self.dataset.files['date'].unique())),
             ('month', ['January','February','March','April','May','June','July','August','September','October','November','December']),
             ('year', sorted(self.dataset.files['year'].unique())),
         )
