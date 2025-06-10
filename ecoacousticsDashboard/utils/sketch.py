@@ -131,8 +131,8 @@ def scatter_polar(
         data["_col_facet"] = "All"
         facet_col = "_col_facet"
 
-    row_order = category_orders.get(facet_row, sorted(data[facet_row].dropna().unique()))
-    col_order = category_orders.get(facet_col, sorted(data[facet_col].dropna().unique()))
+    row_categories = category_orders.get(facet_row, sorted(data[facet_row].dropna().unique()))
+    col_categories = category_orders.get(facet_col, sorted(data[facet_col].dropna().unique()))
     categories = list(itertools.product(row_categories, col_categories))
 
     subplot_titles = [str(col_category) for col_category in col_categories if facet_col != "_col_facet"]
