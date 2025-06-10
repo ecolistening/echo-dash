@@ -184,7 +184,7 @@ def update_figure(
         data[
             (data['site'].isin([l.strip('/') for l in list2tuple(locations)])) &
             (data.timestamp.dt.date.between(*list2tuple(dates), inclusive="both")) &
-            (df["confidence"] > threshold)
+            (data["confidence"] > threshold)
         ]
         .groupby(group_by)["species_id"]
         .nunique()
