@@ -4,7 +4,7 @@ import sys
 import uvicorn
 
 from dotenv import load_dotenv
-from fastapi import Request
+from fastapi import Request, HTTPException
 from loguru import logger
 
 load_dotenv()
@@ -40,21 +40,27 @@ def get_datasets():
 async def set_dataset(request: Request):
     data = await request.json()
     dataset_name = data.get("dataset_name", None)
+    if dataset_name not in list(dataset_loader.datasets.keys()):
+        raise HTTPException(status_code=404, detail=f"{dataset_name} is not a valid dataset")
     STATE["current_dataset"] = dataset_name
     logger.debug(f"Current dataset set as {dataset_name}")
     return dict(dataset_name=dataset_name)
 
 @api.get("/api/v1/dataset/config")
 def get_config():
-    dataset_name = STATE["current_dataset"]
+    dataset_name = STATE.get("current_dataset", None)
+    if not dataset_name:
+        raise HTTPException(status_code=404, detail="Dataset not set")
     dataset = dataset_loader.datasets[dataset_name]
     return {section: dict(dataset.config.items(section)) for section in dataset.config.sections()}
 
 @api.get("/api/v1/dataset/sites-tree")
 def get_sites_tree():
-    dataset_name = STATE["current_dataset"]
+    dataset_name = STATE("current_dataset", None)
+    if not dataset_name:
+        raise HTTPException(status_code=404, detail="Dataset not set")
     dataset = dataset_loader.datasets[dataset_name]
-    return dataset.sites_tree
+    return bt.tree_to_nested_dict(dataset.sites_tree, all_attrs=True)
 
 api.mount("/", WSGIMiddleware(app.server))
 
