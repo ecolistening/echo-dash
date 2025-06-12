@@ -115,6 +115,14 @@ class Dataset:
             .join(self.species, on="species_id")
             .join(self.files, on="file_id")
             .join(self.locations, on="site_id")
+            # HACK: site-level time data should really be separate
+            # because its shared across birdnet and acoustic features
+            .merge(
+                self.acoustic_features[["file", "dddn"]].drop_duplicates(),
+                left_on="file_name",
+                right_on="file",
+                how="left",
+            )
         )
 
     @cached_property
@@ -220,7 +228,7 @@ class DatasetViews:
         query_name: str,
         query: Callable,
     ) -> pd.DataFrame:
-        view_path = self.path / "views" / f"{query_name}_{lookup_id}.parquet"
+        view_path = self.path / f"{query_name}_{lookup_id}.parquet"
         # if its not been cached and a persisted view exists, load it
         if lookup_id not in self.cache and view_path.exists():
             logger.debug(f"[LOAD] Query: {query_name}({lookup_id=})")
