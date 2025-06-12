@@ -98,9 +98,11 @@ class Dataset:
             logger.debug("Updated location with habitat code")
         return data
 
+    # TODO: problem with caching 10M rows! so switched out the larger version...
+    # a better way needs to be designed for this... our data files can get very large
     @cached_property
     def birdnet_species_probs(self) -> pd.DataFrame:
-        birdnet_species_probs_path = self.path / "birdnet_species_probs_table.parquet"
+        birdnet_species_probs_path = self.path / "birdnet_species_probs_table_min_conf=0.5.parquet"
         logger.debug(f"Loading & caching \"{birdnet_species_probs_path}\"..")
         return pd.read_parquet(birdnet_species_probs_path)
 
