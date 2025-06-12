@@ -1,5 +1,3 @@
-# Import packages
-
 import dash
 import dash_mantine_components as dmc
 import numpy as np
