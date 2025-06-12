@@ -151,12 +151,12 @@ layout = html.Div([
             ),
             dmc.Slider(
                 id=threshold_slider_id,
-                min=0.1, max=0.9,
+                min=0.5, max=0.9,
                 step=0.1,
                 value=DEFAULT_THRESHOLD,
                 marks=[
                     dict(value=i, label=np.format_float_positional(i, precision=1))
-                    for i in np.arange(0.1, 0.9, 0.1)
+                    for i in np.arange(0.5, 0.9, 0.1)
                 ],
                 persistence=True,
             ),

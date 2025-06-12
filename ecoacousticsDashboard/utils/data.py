@@ -1,4 +1,5 @@
 import attrs
+import hashlib
 import cachetools
 from dataclasses import dataclass
 from datetime import date
@@ -97,9 +98,11 @@ class Dataset:
             logger.debug("Updated location with habitat code")
         return data
 
+    # TODO: problem with caching 10M rows! so switched out the larger version...
+    # a better way needs to be designed for this... our data files can get very large
     @cached_property
     def birdnet_species_probs(self) -> pd.DataFrame:
-        birdnet_species_probs_path = self.path / "birdnet_species_probs_table.parquet"
+        birdnet_species_probs_path = self.path / "birdnet_species_probs_table_min_conf=0.5.parquet"
         logger.debug(f"Loading & caching \"{birdnet_species_probs_path}\"..")
         return pd.read_parquet(birdnet_species_probs_path)
 
@@ -195,8 +198,10 @@ class DatasetViews:
 
     @staticmethod
     def lookup_key(*args: Tuple[str]) -> str:
-        safe_args = [quote(arg, safe='') for arg in args]
-        return "_".join(safe_args)
+        key = "_".join([quote(arg, safe='') for arg in sorted(args)])
+        h = hashlib.new("sha256")
+        h.update(key.encode("utf-8"))
+        return h.hexdigest()
 
     def species_richness(
         self,
