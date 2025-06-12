@@ -1,4 +1,5 @@
 import attrs
+import hashlib
 import cachetools
 from dataclasses import dataclass
 from datetime import date
@@ -195,8 +196,10 @@ class DatasetViews:
 
     @staticmethod
     def lookup_key(*args: Tuple[str]) -> str:
-        safe_args = [quote(arg, safe='') for arg in args]
-        return "_".join(safe_args)
+        key = "_".join([quote(arg, safe='') for arg in sorted(args)])
+        h = hashlib.new("sha256")
+        h.update(key.encode("utf-8"))
+        return h.hexdigest()
 
     def species_richness(
         self,
