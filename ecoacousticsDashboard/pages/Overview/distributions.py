@@ -7,7 +7,7 @@ from dash import html, ctx, dcc, callback, Output, State, Input, ALL
 from loguru import logger
 
 from utils.content import get_tabs
-from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
+from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils.plot_filter_menu import get_filter_drop_down
 from utils.save_plot_fig import get_save_plot
 
@@ -37,7 +37,9 @@ layout = html.Div([
     dmc.Title(PAGETITLE, order=1),
     dmc.Divider(variant='dotted'),
     filter_group,
-    dcc.Graph(id=f'{PAGENAME}-graph'),
+    dcc.Loading(
+        dcc.Graph(id=f'{PAGENAME}-graph'),
+    ),
     drilldown_file_div := html.Div(),
     appendix,
 ])
@@ -60,20 +62,20 @@ layout = html.Div([
 
     prevent_initial_call=True,
 )
-def update_graph(dataset, dates, locations, feature, colour_by, row_facet, col_facet, normalised):  # , time_agg, outliers, colour_locations, ):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {row_facet=} {col_facet=} {normalised=}")
+def update_graph(dataset_name, dates, locations, feature, colour_by, row_facet, col_facet, normalised):  # , time_agg, outliers, colour_locations, ):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {row_facet=} {col_facet=} {normalised=}")
 
-    data = load_and_filter_dataset(dataset, dates, feature, locations)
-    
-    category_orders = get_categorical_orders_for_dataset(dataset)
+    dataset = dataset_loader.get_dataset(dataset_name)
+    data = filter_data(dataset.acoustic_features, dates=dates, feature=feature, locations=locations)
 
-    fig = px.histogram( data, x='value', marginal='rug', opacity=0.75, height=PLOTHEIGHT,
-                        color=colour_by,
-                        facet_row=row_facet,
-                        facet_col=col_facet,
-                        histnorm='percent' if normalised else None,
-                        category_orders=category_orders,
-                       )
+    fig = px.histogram(
+        data, x='value', marginal='rug', opacity=0.75, height=PLOTHEIGHT,
+        color=colour_by,
+        facet_row=row_facet,
+        facet_col=col_facet,
+        histnorm='percent' if normalised else None,
+        category_orders=DatasetDecorator(dataset).category_orders(),
+    )
 
     # Add centered title
     fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",

@@ -1,6 +1,10 @@
 #from base64 import b64encode
 from dash import dcc
 from loguru import logger
+from typing import Any, List
+
+def dedup(l: List[Any]) -> List[Any]:
+    return list(dict.fromkeys(l))
 
 def list2tuple(arr):
     if isinstance(arr,tuple):

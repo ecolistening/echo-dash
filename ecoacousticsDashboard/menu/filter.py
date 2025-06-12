@@ -10,13 +10,14 @@ from dash import html, callback, Output, Input, State, ALL, ctx, no_update
 from loguru import logger
 
 from menu.dataset import ds, dataset_input
-from utils.data import load_dataset, load_and_filter_sites, load_config
+from utils.data import dataset_loader, load_and_filter_sites, load_config
 
 def path_name(node):
     return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
 
 # Initial load of dataset and tree
-df = load_dataset(ds)
+dataset = dataset_loader.get_dataset(ds)
+df = dataset.acoustic_features
 tree = load_and_filter_sites(ds)
 
 if df is None or 'feature' not in df.columns:
@@ -90,7 +91,7 @@ filters = dmc.Stack([
     location_hierarchy,
 ])
 
-def update_locations(dataset, children=None, values=None):
+def update_locations(dataset_name, children=None, values=None):
     '''Update the locations options.
 
     This function provides either the initial location options or updates it when selections are made.
@@ -99,7 +100,7 @@ def update_locations(dataset, children=None, values=None):
     '''
     wrap_in_accordian = children is None
     children = children if children is not None else []
-    tree = load_and_filter_sites(dataset)
+    tree = load_and_filter_sites(dataset_name)
 
     if tree is None:
         logger.warning("Tree not found.")
@@ -134,7 +135,7 @@ def update_locations(dataset, children=None, values=None):
             flatvalues = list(itertools.chain(*values))
 
         if wrap_in_accordian:
-            config = load_config(dataset)
+            config = load_config(dataset_name)
 
             acc = dmc.AccordionItem(
                 [
@@ -175,12 +176,13 @@ def update_locations(dataset, children=None, values=None):
     Input(date_input, component_property='value'),
     State(feature_input, component_property='value'),
 )
-def update_menu(dataset, date_value, feature_value):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} {date_value=} {feature_value=}")
+def update_menu(dataset_name, date_value, feature_value):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} {date_value=} {feature_value=}")
 
     date_value = [date.fromisoformat(v) for v in date_value]
 
-    data = load_dataset(dataset)
+    dataset = dataset_loader.get_dataset(dataset_name)
+    data = dataset.acoustic_features
 
     if data is None:
         logger.warning("data not found.")
@@ -204,7 +206,7 @@ def update_menu(dataset, date_value, feature_value):
     if ctx.triggered_id is None or ctx.triggered_id == 'dataset-select':
         date_value[0] = min_date
         date_value[1] = max_date
-        locations = html.Div(dmc.Accordion(children=update_locations(dataset)), id="checklist-locations-div")
+        locations = html.Div(dmc.Accordion(children=update_locations(dataset_name)), id="checklist-locations-div")
 
     elif ctx.triggered_id == 'date-picker':
         if date_value[0] < min_date or date_value[0] > max_date:

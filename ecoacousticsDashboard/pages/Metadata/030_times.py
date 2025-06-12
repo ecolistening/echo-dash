@@ -8,7 +8,7 @@ from dash import html, ctx, dcc, callback, Output, Input, State, ALL
 from loguru import logger
 
 from utils.content import get_tabs
-from utils.data import load_and_filter_dataset, get_categorical_orders_for_dataset
+from utils.data import dataset_loader, filter_data, DatasetDecorator
 from utils.modal_sound_sample import get_modal_sound_sample
 from utils.plot_filter_menu import get_filter_drop_down, get_size_slider
 from utils.save_plot_fig import get_save_plot
@@ -66,23 +66,25 @@ layout = html.Div([
 
     prevent_initial_call=True,
 )
-def update_graph(dataset, dates, locations, feature, colour_by, symbol_by, row_facet, col_facet, dot_size):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}")
+def update_graph(dataset_name, dates, locations, feature, colour_by, symbol_by, row_facet, col_facet, dot_size):
+    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}")
 
-    data = load_and_filter_dataset(dataset, dates, feature, locations)
+    dataset = dataset_loader.get_dataset(dataset_name)
+    data = filter_data(dataset.acoustic_features, dates=dates, locations=locations, feature=feature)
+
     data = data.assign(date=data.timestamp.dt.date,
                        hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0)
 
-    category_orders = get_categorical_orders_for_dataset(dataset)
-
-    fig = px.scatter(data, x='date', y='hour', opacity=0.25,
-                     height=PLOTHEIGHT,
-                     hover_name='file', hover_data=['path'], # Path last for sound sample modal
-                     color=colour_by,
-                     symbol=symbol_by,
-                     facet_row=row_facet,
-                     facet_col=col_facet,
-                     category_orders=category_orders,) 
+    fig = px.scatter(
+        data, x='date', y='hour', opacity=0.25,
+        height=PLOTHEIGHT,
+        hover_name='file', hover_data=['path'], # Path last for sound sample modal
+        color=colour_by,
+        symbol=symbol_by,
+        facet_row=row_facet,
+        facet_col=col_facet,
+        category_orders=DatasetDecorator(dataset).category_orders(),
+    )
     fig.update_layout(scattermode="group", scattergap=0.75)
 
     # Add centered title

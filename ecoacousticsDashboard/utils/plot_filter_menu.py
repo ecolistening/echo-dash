@@ -2,7 +2,7 @@ import dash_mantine_components as dmc
 from dash import ctx, callback, Output, Input, State
 from loguru import logger
 
-from utils.data import get_options_for_dataset, get_cat_options_for_dataset
+from utils.data import dataset_loader, DatasetDecorator
 
 def get_filter_drop_down(pagename, set_callback=True, select_width=200,
                             colour_default=None, colour_by_cat=False, #include_colour=True,
@@ -71,10 +71,11 @@ def get_filter_drop_down(pagename, set_callback=True, select_width=200,
                 State(row_facet_select, component_property='value'),
                 State(col_facet_select, component_property='value'),
             )
-            def update_options(dataset, colour_by, symbol_by, row_facet, col_facet):
-                logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=}")
-                
-                cat_options = get_cat_options_for_dataset(dataset)
+            def update_options(dataset_name, colour_by, symbol_by, row_facet, col_facet):
+                logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} {colour_by=} {symbol_by=} {row_facet=} {col_facet=}")
+
+                decorator = DatasetDecorator(dataset_loader.get_dataset(dataset_name))
+                cat_options = decorator.categorical_drop_down_select_options()
 
                 # Ensure option is available for dataset
                 val_cat_options = [opt['value'] for opt in cat_options]
@@ -83,7 +84,7 @@ def get_filter_drop_down(pagename, set_callback=True, select_width=200,
                     colour_options = cat_options
                     val_colour_options = val_cat_options
                 else:
-                    colour_options = get_options_for_dataset(dataset)
+                    colour_options = decorator.drop_down_select_options()
                     val_colour_options = [opt['value'] for opt in colour_options]
 
                 if colour_by not in val_colour_options: colour_by = None
@@ -112,10 +113,11 @@ def get_filter_drop_down(pagename, set_callback=True, select_width=200,
                 State(row_facet_select, component_property='value'),
                 State(col_facet_select, component_property='value'),
             )
-            def update_options(dataset, colour_by, row_facet, col_facet):
-                logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset=} {colour_by=} {row_facet=} {col_facet=}")
-                
-                cat_options = get_cat_options_for_dataset(dataset)
+            def update_options(dataset_name, colour_by, row_facet, col_facet):
+                logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} {colour_by=} {row_facet=} {col_facet=}")
+
+                decorator = DatasetDecorator(dataset_loader.get_dataset(dataset_name))
+                cat_options = decorator.categorical_drop_down_select_options()
 
                 # Ensure option is available for dataset
                 val_cat_options = [opt['value'] for opt in cat_options]
@@ -124,7 +126,7 @@ def get_filter_drop_down(pagename, set_callback=True, select_width=200,
                     colour_options = cat_options
                     val_colour_options = val_cat_options
                 else:
-                    colour_options = get_options_for_dataset(dataset)
+                    colour_options = decorator.drop_down_select_options()
                     val_colour_options = [opt['value'] for opt in colour_options]
 
                 if colour_by not in val_colour_options: colour_by = None
