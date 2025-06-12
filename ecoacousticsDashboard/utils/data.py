@@ -11,6 +11,7 @@ from typing import List
 import bigtree as bt
 from loguru import logger
 import pandas as pd
+from urllib.parse import quote, unquote
 
 from configparser import ConfigParser
 from config import root_dir
@@ -194,7 +195,8 @@ class DatasetViews:
 
     @staticmethod
     def lookup_key(*args: Tuple[str]) -> str:
-        return "_".join(args)
+        safe_args = [quote(arg, safe='') for arg in args]
+        return "_".join(safe_args)
 
     def species_richness(
         self,

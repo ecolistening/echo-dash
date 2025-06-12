@@ -41,8 +41,8 @@ plot_types = {
 }
 plot_type_kwargs = {
     "Scatter": dict(
-        x='hour',
-        y='abundance',
+        x="hour",
+        y="abundance",
         marker=dict(
             size=10,
             opacity=1.0,

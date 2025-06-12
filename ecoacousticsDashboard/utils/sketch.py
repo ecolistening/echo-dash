@@ -142,6 +142,7 @@ def bar_polar(
                 align="center"
             ))
 
+    radialaxis["range"] = [0, data[r].max()]
     for i in range(1, num_rows * num_cols + 1):
         fig.update_layout({
             f"polar{i if i > 1 else ''}": dict(radialaxis=radialaxis, angularaxis=angularaxis),
@@ -244,6 +245,7 @@ def scatter_polar(
                 align="center"
             ))
 
+    radialaxis["range"] = [0, data[r].max()]
     for i in range(1, num_rows * num_cols + 1):
         fig.update_layout({
             f"polar{i if i > 1 else ''}": dict(radialaxis=radialaxis, angularaxis=angularaxis),
