@@ -1,5 +1,6 @@
-import os
 import bigtree as bt
+import pathlib
+import os
 import sys
 import uvicorn
 
@@ -16,7 +17,7 @@ logger.debug(f"Python Version: {sys.version}")
 
 logger.info("Setup datasets...")
 from data.dataset_loader import DatasetLoader
-dataset_loader = DatasetLoader(os.environ.get("DATA_DIR"))
+dataset_loader = DatasetLoader(pathlib.Path(os.environ.get("DATA_DIR")))
 
 logger.info("Setup Dash server...")
 from app import create_dash_app
@@ -30,6 +31,10 @@ api = fastapi.FastAPI()
 
 STATE = {}
 
+def validate_current_dataset():
+    if not STATE.get("current_dataset"):
+        raise HTTPException(status_code=404, detail="Dataset not set")
+
 @api.get("/api/v1/datasets")
 def get_datasets():
     datasets = list(dataset_loader.datasets.keys())
@@ -40,27 +45,36 @@ def get_datasets():
 async def set_dataset(request: Request):
     data = await request.json()
     dataset_name = data.get("dataset_name", None)
+
     if dataset_name not in list(dataset_loader.datasets.keys()):
         raise HTTPException(status_code=404, detail=f"{dataset_name} is not a valid dataset")
+
     STATE["current_dataset"] = dataset_name
     logger.debug(f"Current dataset set as {dataset_name}")
     return dict(dataset_name=dataset_name)
 
 @api.get("/api/v1/dataset/config")
 def get_config():
-    dataset_name = STATE.get("current_dataset", None)
-    if not dataset_name:
-        raise HTTPException(status_code=404, detail="Dataset not set")
-    dataset = dataset_loader.datasets[dataset_name]
+    validate_current_dataset()
+    dataset = dataset_loader.datasets[STATE["current_dataset"]]
+    return {section: dict(dataset.config.items(section)) for section in dataset.config.sections()}
+
+@api.post("/api/v1/dataset/config")
+async def set_config(request: Request):
+    validate_current_dataset()
+    dataset = dataset_loader.datasets[STATE["current_dataset"]]
+    data = await request.json()
+    site_labels = data.get("site_labels")
+    for i, label in enumerate(site_labels):
+        dataset.config.set('Site Hierarchy', f'sitelevel_{i + 1}', label)
+    dataset.save_config()
     return {section: dict(dataset.config.items(section)) for section in dataset.config.sections()}
 
 @api.get("/api/v1/dataset/sites-tree")
 def get_sites_tree():
-    dataset_name = STATE("current_dataset", None)
-    if not dataset_name:
-        raise HTTPException(status_code=404, detail="Dataset not set")
-    dataset = dataset_loader.datasets[dataset_name]
-    return bt.tree_to_nested_dict(dataset.sites_tree, all_attrs=True)
+    validate_current_dataset()
+    dataset = dataset_loader.datasets[STATE["current_dataset"]]
+    return bt.tree_to_dict(dataset.sites_tree, all_attrs=True)
 
 api.mount("/", WSGIMiddleware(app.server))
 

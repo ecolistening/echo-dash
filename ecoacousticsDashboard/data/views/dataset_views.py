@@ -8,7 +8,6 @@ from functools import cached_property
 from loguru import logger
 from typing import Callable, List, Tuple
 
-from data.dataset import Dataset
 from utils import dedup
 
 # FIXME: there's no validation on the inputs before a query is executed
@@ -17,7 +16,7 @@ class DatasetViews:
     """
     DatasetViews class loads persisted views, or creates, caches and persists new views
     """
-    dataset: Dataset
+    dataset: "Dataset"
 
     @cached_property
     def cache(self):

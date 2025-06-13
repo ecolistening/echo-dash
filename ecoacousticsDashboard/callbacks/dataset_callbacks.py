@@ -1,4 +1,9 @@
-from dash import callback, Output, Input
+import bigtree as bt
+import dash
+import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
+
+from dash import callback, Output, Input, State, ALL, ctx
 from loguru import logger
 from typing import Any, Dict, List
 
@@ -7,6 +12,7 @@ from api import (
     FETCH_DATASETS,
     SET_CURRENT_DATASET,
     FETCH_DATASET_CONFIG,
+    SET_DATASET_CONFIG,
     FETCH_DATASET_SITES_TREE,
 )
 from store import (
@@ -17,14 +23,15 @@ from store import (
 )
 from components.nav_bar import (
     load_datasets_id,
+    settings_drawer_id,
+    dataset_settings_button_id,
+    dataset_settings_save_button_id,
+    dataset_settings_cancel_button_id,
+    dataset_settings_sites_form_id,
+    dataset_settings_dataset_name_id,
 )
 from components.dataset_select import (
     dataset_select_id,
-)
-from components.dataset_settings import (
-    dataset_settings_button_id,
-    dataset_settings_sites_form_id,
-    dataset_settings_dataset_name_id,
 )
 
 @callback(
@@ -85,14 +92,30 @@ def populate_datasets_selector(datasets: List[str] = []) -> List[Dict[str, Any]]
 def set_dataset_selector_default(dataset_name: str) -> str:
     return dataset_name
 
+# ------ Config GET/SET Methods ----- #
+
 @callback(
     Output(DATASET_CONFIG_STORE, "data"),
     Input(DATASET_STORE, "data"),
-    prevent_initial_call=True,)
+    prevent_initial_call=True,
+)
 def get_dataset_config(dataset_name: str) -> Dict[str, Any]:
     return dispatch(
         FETCH_DATASET_CONFIG,
         payload=dict(dataset_name=dataset_name),
+        default={},
+    )
+
+@callback(
+    Output(DATASET_CONFIG_STORE, "data", allow_duplicate=True),
+    Input(dataset_settings_save_button_id, "n_clicks"),
+    State({"type": "sitelevel_label", "index": ALL}, "value"),
+    prevent_initial_call=True,
+)
+def set_dataset_config(save_button, site_labels):
+    return dispatch(
+        SET_DATASET_CONFIG,
+        payload=dict(site_labels=site_labels),
         default={},
     )
 
@@ -112,13 +135,16 @@ def get_dataset_sites_tree(dataset_name: str) -> Dict[str, Any]:
     Output(dataset_settings_sites_form_id, "children"),
     Input(DATASET_CONFIG_STORE, "data"),
     Input(SITES_TREE_STORE, "data"),
+    prevent_initial_call=True,
 )
-def set_site_form(tree, config: Dict[str, Any]):
-    import pdb; pdb.set_trace()
+def set_sites_form(config: Dict[str, Any], tree_dict: Dict[str, Any]) -> List[dmc.TextInput]:
+    if config is None or tree_dict is None:
+        return []
+    tree = bt.dict_to_tree(tree_dict)
     return [
         dmc.TextInput(
-            label = f"Level {i}",
-            id={"type": "sitelevel_label", "index": i-1},
+            label=f"Level {i}",
+            id={"type": "sitelevel_label", "index": i - 1},
             value=config.get("Site Hierarchy").get(f"sitelevel_{i}", ""),
         )
         for i in range(1, tree.max_depth)
@@ -130,3 +156,17 @@ def set_site_form(tree, config: Dict[str, Any]):
 )
 def set_dataset_settings_text(dataset_name: str):
     return f"Settings for the {dataset_name} dataset"
+
+@callback(
+    Output(settings_drawer_id, "opened"),
+    Input(dataset_settings_button_id, "n_clicks"),
+    Input(dataset_settings_cancel_button_id, "n_clicks"),
+    Input(DATASET_CONFIG_STORE, "data"),
+    prevent_initial_call=True,
+)
+def toggle_settings_drawer(*args: Any):
+    if ctx.triggered_id == dataset_settings_button_id:
+        return True
+    elif ctx.triggered_id == dataset_settings_cancel_button_id:
+        return False
+    return False

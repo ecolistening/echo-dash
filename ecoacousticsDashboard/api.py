@@ -16,12 +16,14 @@ BASE_URL = f"http://{HOST_NAME}:{PORT}/api/v1"
 FETCH_DATASETS = "fetch_datasets"
 SET_CURRENT_DATASET = "set_current_dataaset"
 FETCH_DATASET_CONFIG = "fetch_dataset_config"
+SET_DATASET_CONFIG = "set_dataset_config"
 FETCH_DATASET_SITES_TREE = "fetch_dataset_sites_tree"
 
 API = {
     FETCH_DATASETS: functools.partial(requests.get, f"{BASE_URL}/datasets"),
     SET_CURRENT_DATASET: functools.partial(requests.post, f"{BASE_URL}/dataset"),
     FETCH_DATASET_CONFIG: functools.partial(requests.get, f"{BASE_URL}/dataset/config"),
+    SET_DATASET_CONFIG: functools.partial(requests.post, f"{BASE_URL}/dataset/config"),
     FETCH_DATASET_SITES_TREE: functools.partial(requests.get, f"{BASE_URL}/dataset/sites-tree"),
 }
 

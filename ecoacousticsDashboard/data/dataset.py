@@ -6,7 +6,10 @@ import pandas as pd
 import pathlib
 
 from configparser import ConfigParser
+from functools import cached_property
 from loguru import logger
+
+from data.views.dataset_views import DatasetViews
 
 @attrs.define
 class Dataset:
@@ -52,6 +55,10 @@ class Dataset:
         config_path = self.path / "config.ini"
         logger.debug(f"Load config from \"{config_path}\"..")
         return self._read_or_build_config(config_path)
+
+    def save_config(self):
+        with open(self.path / "config.ini", "w") as f:
+            self.config.write(f)
 
     @cached_property
     def acoustic_features(self) -> pd.DataFrame:
