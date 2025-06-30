@@ -12,4 +12,8 @@ def umap_data(
 ) -> pd.DataFrame:
     pipe = make_pipeline(RobustScaler(), UMAP(**kwargs))
     proj = pipe.fit_transform(data)
-    return pd.DataFrame(proj, index=data.index).reset_index()
+    return (
+        pd.DataFrame(proj, index=data.index)
+        .rename(columns={0: "UMAP Dim 1", 1: "UMAP Dim 2"})
+        .reset_index()
+    )

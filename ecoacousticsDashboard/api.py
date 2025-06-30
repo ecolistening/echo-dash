@@ -61,7 +61,7 @@ def fetch_acoustic_features_umap(
     index = data.columns[~data.columns.isin(["feature", "value"])]
 
     logger.debug(f"Check for duplicates..")
-    data = data.drop_duplicates(subset=index.tolist() + ['feature'], keep='first')
+    data = data.drop_duplicates(subset=[*index, "feature"], keep='first')
     if num_samples > (remaining := data.shape[0]):
         logger.debug(f"Removed {num_samples - remaining} duplicate samples.")
 
@@ -74,9 +74,9 @@ def fetch_acoustic_features_umap(
     # HACK /fin
 
     logger.debug(f"Running and caching UMAP for {dataset_name} with {remaining} samples")
-    umap_projection = umap_data(data)
+    proj = umap_data(data)
     logger.debug(f"UMAP complete")
-    return data, umap_projection
+    return proj
 
 def send_download_data(
     dataset_name,
@@ -108,12 +108,16 @@ def send_download_data(
     else:
         raise KeyError(f"Unsupported output data type: '{dl_type}'")
 
-
 def setup():
     for dataset in DATASETS:
         dates = (dataset.files.date.min(), dataset.files.date.max())
         locations = list2tuple(dataset.locations.site_name.unique().tolist())
-        fetch_acoustic_features_umap(dataset.dataset_name, dates=dates, locations=locations)
+        fetch_acoustic_features_umap(
+            dataset.dataset_name,
+            dates=dates,
+            locations=locations,
+            # sample_size=len(dataset.files)
+        )
 
 setup()
 
