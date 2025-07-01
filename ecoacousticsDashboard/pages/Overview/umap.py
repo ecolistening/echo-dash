@@ -15,6 +15,7 @@ from dash import (
     State,
     no_update,
 )
+from io import StringIO
 from loguru import logger
 from typing import (
     Any,
@@ -25,6 +26,7 @@ from typing import (
 
 from api import (
     dispatch,
+    FETCH_FILES,
     FETCH_ACOUSTIC_FEATURES,
     FETCH_ACOUSTIC_FEATURES_UMAP,
     FETCH_DATASET_CATEGORIES,
@@ -57,13 +59,11 @@ sample_slider_id = f"{PAGE_NAME}-plot-options-sample"
 size_slider_id = f"{PAGE_NAME}-size-slider"
 umap_hash_id = f"{PAGE_NAME}-hash"
 plot_data_id = "plot-data"
-plot_umap_data_id = "plot-data-umap"
 download_dataframe_id = "download-dataframe"
 
 layout = html.Div([
     dcc.Store(id=umap_hash_id),
     dcc.Store(id=plot_data_id),
-    dcc.Store(id=plot_umap_data_id),
     dmc.Title(PAGE_TITLE, order=1),
     dmc.Divider(variant="dotted"),
     dmc.Group([
@@ -97,7 +97,7 @@ layout = html.Div([
             dmc.Text(
                 "Opacity",
                 size='sm',
-                align="right",
+                align="left",
             ),
             dmc.Slider(
                 id=opacity_slider_id,
@@ -116,7 +116,7 @@ layout = html.Div([
             dmc.Text(
                 "Sample Size",
                 size="sm",
-                align="right",
+                align="left",
             ),
             dmc.Slider(
                 id=sample_slider_id,
@@ -184,15 +184,16 @@ def update_sample_slider(
         f"dataset={dataset_name} dates:{len(dates)} locations:{len(locations)} "
         f"{sample_size=} "
     )
-    # TODO: fix so its the total number of instances, e.g. segment_id / file_id
-    acoustic_features = dispatch(
-        FETCH_ACOUSTIC_FEATURES,
+    # FIXME: to support Kilpis we need to fix this so its the total number of instances, i.e. file_segment_id
+    # ideally this should be constructed in soundade during the index files stage
+    files = dispatch(
+        FETCH_FILES,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
         locations=list2tuple(locations),
         default=[],
     )
-    max_samples = len(acoustic_features)
+    max_samples = len(files)
     slider_ticks = np.linspace(1, max_samples, 5, endpoint=True, dtype=int)
     marks = [dict(value=i, label=f"{i}") for i in slider_ticks]
     sample_size = min(sample_size or max_samples, max_samples)
@@ -211,6 +212,7 @@ def update_sample_slider(
     Input(col_facet_select_id, "value"),
     Input(opacity_slider_id, "value"),
     Input(size_slider_id, "value"),
+    State(plot_data_id, "data"),
     prevent_initial_call=True,
 )
 def update_figure(
@@ -224,6 +226,7 @@ def update_figure(
     col_facet: str,
     opacity: int,
     dot_size: int,
+    data: Any | None = None,
 ) -> Tuple[Any, ...]:
     logger.debug(
         f"Trigger ID={ctx.triggered_id}: "
@@ -231,20 +234,28 @@ def update_figure(
         f"{sample_size=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=} {dot_size=}"
     )
 
-    data = dispatch(
-        FETCH_ACOUSTIC_FEATURES_UMAP,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        # sample_size=sample_size,
-    )
+    # on the first run, the whole of UMAP is cached in the browser
+    if data is None:
+        data = dispatch(
+            FETCH_ACOUSTIC_FEATURES_UMAP,
+            dataset_name=dataset_name,
+            dates=list2tuple(dates),
+            locations=list2tuple(locations),
+            sample_size=sample_size,
+        )
+        umap_data = data
+        data = data.to_json(date_format="iso", orient="table")
+    # if its available, rather than rerun UMAP, subsample and draw
+    else:
+        umap_data = pd.read_json(StringIO(data), orient="table").sample(sample_size)
+
     category_orders = dispatch(
         FETCH_DATASET_CATEGORIES,
         dataset_name=dataset_name,
     )
 
     fig = px.scatter(
-        data,
+        umap_data,
         x="UMAP Dim 1",
         y="UMAP Dim 2",
         opacity=opacity / 100.0,
@@ -272,7 +283,7 @@ def update_figure(
 
     fig.update_traces(marker=dict(size=dot_size))
 
-    return fig, data.to_json(date_format='iso', orient='table')
+    return fig, data
 
 @callback(
     Output(download_dataframe_id, "data"),

@@ -32,6 +32,16 @@ def fetch_dataset_categories(
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).category_orders()
 
+def fetch_files(
+    dataset_name: str,
+    **filters,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
+    data = dataset.files.join(dataset.locations, on="site_id")
+    logger.debug(f"Applying filters {filters}")
+    return filter_data(data, **filters)
+
 @functools.lru_cache(maxsize=10)
 def fetch_acoustic_features(
     dataset_name: str,
@@ -46,35 +56,24 @@ def fetch_acoustic_features(
 @functools.lru_cache(maxsize=4)
 def fetch_acoustic_features_umap(
     dataset_name: str,
+    sample_size: int,
     **filters: Any,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    logger.debug(f"Fetch acoustic features for dataset={dataset_name}")
     dataset = DATASETS.get_dataset(dataset_name)
-    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
     data = dataset.acoustic_features
     logger.debug(f"Applying filters {filters}")
     data = filter_data(data, **filters)
-
-    # FIXME This is a bit of a hack. The dataset should be clean by the time it gets here.
-    # DOUBLE FIXME: Moved across Lucas's hack from the front-end, this should be fixed in this sprint
-    # the hack is in order to pivot, there should be no duplicates in the data, i.e. path / feature / value
-    num_samples = data.shape[0]
-    index = data.columns[~data.columns.isin(["feature", "value"])]
-
-    logger.debug(f"Check for duplicates..")
-    data = data.drop_duplicates(subset=[*index, "feature"], keep='first')
-    if num_samples > (remaining := data.shape[0]):
-        logger.debug(f"Removed {num_samples - remaining} duplicate samples.")
-
-    data = data.pivot(columns='feature', index=index, values='value')
-
-    num_samples = data.shape[0]
-    data = data.loc[np.isfinite(data).all(axis=1), :]
-    if num_samples > (remaining := data.shape[0]):
-        logger.debug(f"Removed {num_samples - remaining} NaN samples.")
-    # HACK /fin
-
-    logger.debug(f"Running and caching UMAP for {dataset_name} with {remaining} samples")
-    proj = umap_data(data)
+    logger.debug(f"Pivoting features")
+    data = data.pivot(
+        index=data.columns[~data.columns.isin(["feature", "value"])],
+        columns='feature',
+        values='value',
+    )
+    logger.debug(f"Subsampling {sample_size} from {len(data)}")
+    sample = data.sample(min(sample_size, len(data)))
+    logger.debug(f"Running and caching UMAP")
+    proj = umap_data(sample)
     logger.debug(f"UMAP complete")
     return proj
 
@@ -109,6 +108,10 @@ def send_download_data(
         raise KeyError(f"Unsupported output data type: '{dl_type}'")
 
 def setup():
+    """
+    Sets up the LRU cache for UMAP
+    Not a great solution
+    """
     for dataset in DATASETS:
         dates = (dataset.files.date.min(), dataset.files.date.max())
         locations = list2tuple(dataset.locations.site_name.unique().tolist())
@@ -116,7 +119,7 @@ def setup():
             dataset.dataset_name,
             dates=dates,
             locations=locations,
-            # sample_size=len(dataset.files)
+            sample_size=len(dataset.files)
         )
 
 setup()
@@ -150,6 +153,7 @@ def dispatch(
 
 FETCH_DATASET = "fetch_dataset"
 FETCH_DATASET_CONFIG = "fetch_dataset_config"
+FETCH_FILES = "fetch_files"
 FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
 FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
@@ -159,6 +163,7 @@ API = {
     FETCH_DATASET: fetch_dataset,
     FETCH_DATASET_CONFIG: fetch_dataset_config,
     FETCH_DATASET_CATEGORIES: fetch_dataset_categories,
+    FETCH_FILES: fetch_files,
     FETCH_ACOUSTIC_FEATURES: fetch_acoustic_features,
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
     SEND_DATA_FOR_DOWNLOAD: send_download_data,

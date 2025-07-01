@@ -80,12 +80,38 @@ class Dataset:
             how="left",
             suffixes=('', '_y'),
         )
+
+        # FIXME This is a bit of a hack. The dataset should be clean by the time it gets here.
+        # DOUBLE FIXME: Moved across Lucas's hack from the front-end, this should be fixed in this sprint
+        # the hack is in order to pivot, there should be no duplicates in the data, i.e. path / feature / value
+        # UPDATE: I believe the duplicates are not actually duplicates, but features corresponding to windows of
+        # the spectrogram, these should either be treated independently and given a unique identifier in soundade
+        # or shown as aggregate statistics (as in soundade's summary stats)
+        def dedup_acoustic_features(data):
+            num_samples = data.shape[0]
+            index = data.columns[~data.columns.isin(["feature", "value"])]
+
+            logger.debug(f"Check for duplicates..")
+            data = data.drop_duplicates(subset=[*index, "feature"], keep='first')
+            if num_samples > (remaining := data.shape[0]):
+                logger.debug(f"Removed {num_samples - remaining} duplicate samples.")
+
+            data = data.pivot(columns='feature', index=index, values='value')
+
+            num_samples = data.shape[0]
+            data = data.loc[np.isfinite(data).all(axis=1), :]
+            if num_samples > (remaining := data.shape[0]):
+                logger.debug(f"Removed {num_samples - remaining} NaN samples.")
+
+            return data.reset_index().melt(
+                id_vars=index,
+                value_vars=data.columns,
+                var_name="feature"
+            )
+
         # TODO: Several hacks left by Lucas, persist to get this view working, can be removed when switching to better structured data
         # 1. remove duplicates
-        num_samples = data.shape[0]
-        data = data.drop_duplicates()
-        if num_samples > data.shape[0]:
-            logger.debug(f"Removed {num_samples - data.shape[0]} duplicate samples: {data.shape=}")
+        data = dedup_acoustic_features(data)
         # 2. strip
         striptext = None
         if self.dataset_name == "Cairngorms":
@@ -100,28 +126,6 @@ class Dataset:
             data['location'] = data['habitat code']
             logger.debug("Updated location with habitat code")
         return data
-
-    @cached_property
-    def umap_acoustic_features(self) -> pd.DataFrame:
-        data = self.acoustic_features
-        # FIXME This is a bit of a hack. The dataset should be clean by the time it gets here.
-        # Moved across Lucas's hack from the front-end, this should be fixed in this sprint
-        sample_no = data.shape[0]
-        idx_cols = list(filter(lambda a: a not in ['feature', 'value'], data.columns))
-
-        logger.debug(f"Check for duplicates..")
-        data_nodup = data.drop_duplicates(subset=idx_cols + ['feature'], keep='first')
-        if sample_no>data_nodup.shape[0]:
-            logger.debug(f"Removed {sample_no-data_nodup.shape[0]} duplicate samples.")
-
-        logger.debug(f"Select columns {idx_cols}")
-        idx_data = data_nodup.pivot(columns='feature', index=idx_cols, values='value')
-
-        sample_no = idx_data.shape[0]
-        idx_data = idx_data.loc[np.isfinite(idx_data).all(axis=1), :]
-        if sample_no>idx_data.shape[0]:
-            logger.debug(f"Removed {sample_no-idx_data.shape[0]} NaN samples.")
-        return umap_data(idx_data)
 
     # TODO: problem with caching 10M rows! so switched out the larger version...
     # a better way needs to be designed for this... our data files can get very large
