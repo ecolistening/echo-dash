@@ -32,13 +32,30 @@ def fetch_dataset_categories(
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).category_orders()
 
+def fetch_dataset_dropdown_options(
+    dataset_name: str
+) -> Dict[str, Any]:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return DatasetDecorator(dataset).category_orders()
+
 def fetch_files(
     dataset_name: str,
     **filters,
 ) -> pd.DataFrame:
-    dataset = DATASETS.get_dataset(dataset_name)
     logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
-    data = dataset.files.join(dataset.locations, on="site_id")
+    dataset = DATASETS.get_dataset(dataset_name)
+    # FIXME: another hack, we should just be able to get the files table
+    # but we have two sources of truth at the moment
+    data = dataset.files.join(
+        dataset.locations,
+        on="site_id",
+    ).merge(
+        dataset.acoustic_features[["file", "site"]],
+        left_on=["file_name", "site_name"],
+        right_on=["file", "site"],
+        how="inner",
+        suffixes=('', '_IGNORE'),
+    ).drop_duplicates()
     logger.debug(f"Applying filters {filters}")
     return filter_data(data, **filters)
 
@@ -70,9 +87,8 @@ def fetch_acoustic_features_umap(
         columns='feature',
         values='value',
     )
-    logger.debug(f"Subsampling {sample_size} from {len(data)}")
     sample = data.sample(min(sample_size, len(data)))
-    logger.debug(f"Running and caching UMAP")
+    logger.debug(f"Running UMAP on subsample {sample_size}/{len(data)} ")
     proj = umap_data(sample)
     logger.debug(f"UMAP complete")
     return proj
@@ -119,14 +135,18 @@ def setup():
             dataset.dataset_name,
             dates=dates,
             locations=locations,
-            sample_size=len(dataset.files)
+            sample_size=len(fetch_files(
+                dataset.dataset_name,
+                dates=dates,
+                locations=locations,
+            ))
         )
 
 setup()
 
 # NOTE:
 # Please use the dispatch pattern mapping a string to a function
-# instead of making the function call directly
+# instead of making an API function call directly in UI components
 #
 # Example: dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name)
 # Returns: { config }
