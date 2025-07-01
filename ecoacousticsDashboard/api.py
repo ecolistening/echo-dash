@@ -40,13 +40,15 @@ def fetch_dataset_dropdown_options(
 
 def fetch_files(
     dataset_name: str,
-    **filters,
+    file_ids: List[str] | None = None,
+    **filters: Any,
 ) -> pd.DataFrame:
     logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
     dataset = DATASETS.get_dataset(dataset_name)
     # FIXME: another hack, we should just be able to get the files table
     # but we have two sources of truth at the moment
-    data = dataset.files.join(
+    file_ids = file_ids or dataset.files.index
+    data = dataset.files.loc[file_ids].join(
         dataset.locations,
         on="site_id",
     ).merge(
@@ -78,6 +80,9 @@ def fetch_acoustic_features_umap(
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     logger.debug(f"Fetch acoustic features for dataset={dataset_name}")
     dataset = DATASETS.get_dataset(dataset_name)
+    if (umap_path := (dataset.path / "umap.parquet")).exists():
+        logger.debug(f"Loading UMAP from {umap_path}")
+        return pd.read_parquet(umap_path)
     data = dataset.acoustic_features
     logger.debug(f"Applying filters {filters}")
     data = filter_data(data, **filters)
@@ -91,6 +96,8 @@ def fetch_acoustic_features_umap(
     logger.debug(f"Running UMAP on subsample {sample_size}/{len(data)} ")
     proj = umap_data(sample)
     logger.debug(f"UMAP complete")
+    logger.debug(f"Persisting UMAP to {umap_path}")
+    proj.to_parquet(umap_path)
     return proj
 
 def send_download_data(

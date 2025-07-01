@@ -74,13 +74,12 @@ class Dataset:
         # TODO: my own hack to ensure temporal fields are on the acoustic indices (used in options / filters)
         # we will be able to do a simple table join once finished
         data = data.merge(
-            self.files.join(self.locations, on="site_id"),
+            self.files.join(self.locations, on="site_id").reset_index(),
             left_on=["file", "site"],
             right_on=["file_name", "site_name"],
             how="left",
             suffixes=('', '_y'),
         )
-
         # FIXME This is a bit of a hack. The dataset should be clean by the time it gets here.
         # DOUBLE FIXME: Moved across Lucas's hack from the front-end, this should be fixed in this sprint
         # the hack is in order to pivot, there should be no duplicates in the data, i.e. path / feature / value
