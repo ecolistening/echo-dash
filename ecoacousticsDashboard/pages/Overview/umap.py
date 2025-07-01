@@ -203,6 +203,7 @@ def update_umap_data_store(
         default=[],
     )
     max_samples = len(files)
+    sample_size = min(1000, max_samples)
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES_UMAP,
         dataset_name=dataset_name,
@@ -222,7 +223,7 @@ def update_umap_data_store(
         dict(value=i, label=f"{i}")
         for i in np.linspace(1, max_samples, 5, endpoint=True, dtype=int)
     ]
-    return json_data, category_orders, max_samples, max_samples, ticks
+    return json_data, category_orders, max_samples, sample_size, ticks
 
 @callback(
     Output(graph_id, "figure"),
