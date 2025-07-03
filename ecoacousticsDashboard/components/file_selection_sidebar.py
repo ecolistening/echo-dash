@@ -21,7 +21,8 @@ from api import (
     FETCH_FILES,
 )
 
-# TODO: add pagination to help with load time
+PAGE_LIMIT = 10
+
 def FileSelectionSidebar(
     dataset_id: str,
     graph_id: str,
@@ -30,45 +31,18 @@ def FileSelectionSidebar(
     data_store_id: str,
     span: int = 4,
 ) -> dmc.Col:
-    files_count_id = "files_count"
+    files_pagination_id = "files-pagination"
+    files_count_id = "files-count"
     files_accordion_id = "selection-sidebar-files-accordion"
-    files_panel = [
-        dmc.AccordionItem(
-            value="files",
-            children=[
-                dmc.AccordionControl("Files"),
-                dmc.AccordionPanel(
-                    dmc.Accordion(
-                        id=files_accordion_id,
-                        value=[],
-                        chevronPosition="right",
-                    )
-                )
-            ]
-        )
-    ]
-
-    sidebar = dmc.Col(
-        id=sidebar_id,
-        span=0,
-        children=html.Div([
-            dmc.Title(
-                id=files_count_id,
-                order=2
-            ),
-            dmc.Accordion(
-                chevronPosition="right",
-                children=files_panel,
-            ),
-        ]),
-    )
 
     @callback(
+        Output(graph_container_id, "span"),
         Output(sidebar_id, "span"),
-        Output("graph-container", "span"),
+        Output(sidebar_id, "style"),
         Output(data_store_id, "data"),
-        Output(files_accordion_id, "children"),
         Output(files_count_id, "children"),
+        Output(files_pagination_id, "page"),
+        Output(files_pagination_id, "total"),
         State(dataset_id, "value"),
         Input(graph_id, "selectedData"),
         prevent_initial_call=True,
@@ -80,15 +54,46 @@ def FileSelectionSidebar(
         logger.debug(f"Trigger ID={ctx.triggered_id}: {selected_data=} {dataset_name=}")
 
         if selected_data is None or len(selected_data['points']) == 0:
-            return 0, 12, "", html.Div(), f"None selected..."
-
-        file_ids = [point["hovertext"] for point in selected_data["points"]]
+            return (
+                graph_container_span := 12,
+                sidebar_span := 0,
+                sidebar_style := {"display": "none"},
+                selected_data_json := "",
+                selected_text := "",
+                current_page := 1,
+                total_pages := 1,
+            )
         data = dispatch(
             FETCH_FILES,
             dataset_name=dataset_name,
-            file_ids=file_ids,
+            file_ids=[
+                point["hovertext"]
+                for point in selected_data["points"]
+            ],
         )
-        files_accordion = html.Div([
+        return (
+            graph_container_span := 12 - span,
+            sidebar_span := span,
+            sidebar_style := {"display": "block"},
+            selected_data_json := data.to_json(date_format="iso", orient="table"),
+            selected_text := f"{len(data)} selected...",
+            current_page := 1,
+            total_pages := (len(data) + PAGE_LIMIT - 1) // PAGE_LIMIT,
+        )
+
+    @callback(
+        Output(files_accordion_id, "children"),
+        State(data_store_id, "data"),
+        Input(files_pagination_id, "page"),
+        prevent_initial_call=True,
+    )
+    def change_page(
+        json_data: str,
+        current_page: int,
+    ) -> html.Div:
+        logger.debug(f"Trigger ID={ctx.triggered_id}: {current_page=}")
+        data = pd.read_json(StringIO(json_data), orient="table")
+        return html.Div([
             dmc.AccordionItem(
                 value=row["file_id"],
                 children=[
@@ -101,13 +106,8 @@ def FileSelectionSidebar(
                     )
                 ]
             )
-            for _, row in data.iterrows()
+            for _, row in data.iloc[(current_page - 1):(current_page - 1) + PAGE_LIMIT].iterrows()
         ])
-        json_data = data.to_json(
-            date_format="iso",
-            orient="table",
-        )
-        return span, 12 - span, json_data, files_accordion, f"{len(data)} selected..."
 
     @callback(
         Output({"type": "file-content", "index": MATCH}, "children"),
@@ -124,10 +124,7 @@ def FileSelectionSidebar(
         if (file_id := matched["index"]) not in open_values:
             raise exceptions.PreventUpdate
 
-        data = pd.read_json(
-            StringIO(json_data),
-            orient="table"
-        ).set_index("file_id")
+        data = pd.read_json(StringIO(json_data), orient="table").set_index("file_id")
 
         file_info = data.loc[file_id]
         return html.Div([
@@ -136,4 +133,29 @@ def FileSelectionSidebar(
             )
         ])
 
-    return sidebar
+    return dmc.Col(
+        id=sidebar_id,
+        span=0,
+        style={"display": "none"},
+        children=html.Div([
+            dmc.Title(
+                id=files_count_id,
+                order=2
+            ),
+            dmc.Pagination(
+                id=files_pagination_id,
+                size="sm",
+                color="indigo",
+                total=1,
+                page=1,
+                siblings=1,
+                boundaries=1,
+                mt=20,
+            ),
+            dmc.Accordion(
+                id=files_accordion_id,
+                value=[],
+                chevronPosition="right",
+            )
+        ]),
+    )
