@@ -1,4 +1,5 @@
 from .colour_select import *
+from .file_selection_sidebar import *
 from .size_slider import *
 from .facet_select import *
 from .symbol_select import *

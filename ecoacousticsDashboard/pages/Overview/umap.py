@@ -167,34 +167,12 @@ layout = html.Div([
             components.FigureDownloader(graph_id),
         ]), span=4),
     ], gutter="xl"),
-    dbc.Offcanvas(
-        id=toggle_sidebar_id,
-        children=html.Div([
-            dmc.Title('Subselection', order=2),
-            dmc.Accordion(
-                id="sidebar-accordion",
-                chevronPosition="right",
-                children=[
-                    dmc.AccordionItem(
-                        value="files",
-                        children=[
-                            dmc.AccordionControl("Files"),
-                            dmc.AccordionPanel(
-                                dmc.Accordion(
-                                    id="files-accordion",
-                                    value=[],
-                                    chevronPosition="right",
-                                )
-                            )
-                        ]
-                    )
-                ]
-            ),
-        ]),
-        is_open=False,
-        placement="end",
-        backdrop=False,
-    )
+    components.FileSelectionSidebar(
+        dataset_id=dataset_select_id,
+        graph_id=graph_id,
+        sidebar_id=toggle_sidebar_id,
+        data_store_id=sidebar_file_data_id,
+    ),
 ])
 
 @callback(
@@ -314,73 +292,6 @@ def update_figure(
     )
 
     return fig
-
-@callback(
-    Output(toggle_sidebar_id, "is_open"),
-    Output(sidebar_file_data_id, "data"),
-    Output("files-accordion", "children"),
-    State(dataset_select_id, "value"),
-    Input(graph_id, "selectedData"),
-    prevent_initial_call=True,
-)
-def toggle_selection_sidebar(
-    dataset_name: str,
-    selected_data: Dict[str, Any],
-) -> bool:
-    if selected_data is None or len(selected_data['points']) == 0:
-        return False, "", html.Div()
-
-    file_ids = [point["hovertext"] for point in selected_data["points"]]
-    data = dispatch(
-        FETCH_FILES,
-        dataset_name=dataset_name,
-        file_ids=file_ids,
-    )
-    files_accordion = [
-        dmc.AccordionItem(
-            value=row["file_id"],
-            children=[
-                dmc.AccordionControl(row["file_name"]),
-                dmc.AccordionPanel(
-                    html.Div(
-                        id={"type": "file-content", "index": row["file_id"]},
-                        children=[],
-                    )
-                )
-            ]
-        )
-        for _, row in data.iterrows()
-    ]
-    json_data = data.to_json(
-        date_format="iso",
-        orient="table",
-    )
-    return True, json_data, files_accordion
-
-@callback(
-    Output({"type": "file-content", "index": MATCH}, "children"),
-    State(sidebar_file_data_id, "data"),
-    State({"type": "file-content", "index": MATCH}, "id"),
-    Input("files-accordion", "value"),
-    prevent_initial_call=True,
-)
-def toggle_file_panel(
-    json_data: str,
-    matched: str,
-    open_values: str,
-) -> html.Div:
-    if (file_id := matched["index"]) not in open_values:
-        raise dash.exceptions.PreventUpdate
-
-    data = pd.read_json(
-        StringIO(json_data),
-        orient="table"
-    ).set_index("file_id")
-
-    file_info = data.loc[file_id]
-    return html.Div([
-        dmc.Text(f"{file_id}")
-    ])
 
 @callback(
     Output(download_dataframe_id, "data"),
