@@ -135,8 +135,27 @@ layout = html.Div([
         variant="dotted",
         style={"margin-top": "15px"}
     ),
-    dcc.Loading([
-        dcc.Graph(id=graph_id),
+    # Note: this is slightly hacky but it works
+    # the file selection sidebar changes the span of the
+    # sibling column span to make itself visible
+    dmc.Grid([
+        dmc.Col(
+            id="graph-container",
+            span=12,
+            children=[
+                dcc.Loading([
+                    dcc.Graph(id=graph_id),
+                ]),
+            ],
+        ),
+        components.FileSelectionSidebar(
+            dataset_id=dataset_select_id,
+            graph_id=graph_id,
+            graph_container_id="graph-container",
+            sidebar_id=toggle_sidebar_id,
+            data_store_id=sidebar_file_data_id,
+            span=4,
+        ),
     ]),
     dmc.Divider(
         variant="dotted",
@@ -167,12 +186,6 @@ layout = html.Div([
             components.FigureDownloader(graph_id),
         ]), span=4),
     ], gutter="xl"),
-    components.FileSelectionSidebar(
-        dataset_id=dataset_select_id,
-        graph_id=graph_id,
-        sidebar_id=toggle_sidebar_id,
-        data_store_id=sidebar_file_data_id,
-    ),
 ])
 
 @callback(

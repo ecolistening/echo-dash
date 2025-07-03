@@ -21,12 +21,15 @@ from api import (
     FETCH_FILES,
 )
 
+# TODO: add pagination to help with load time
 def FileSelectionSidebar(
     dataset_id: str,
     graph_id: str,
+    graph_container_id: str,
     sidebar_id: str,
     data_store_id: str,
-) -> dbc.Offcanvas:
+    span: int = 4,
+) -> dmc.Col:
     files_count_id = "files_count"
     files_accordion_id = "selection-sidebar-files-accordion"
     files_panel = [
@@ -44,8 +47,10 @@ def FileSelectionSidebar(
             ]
         )
     ]
-    sidebar = dbc.Offcanvas(
+
+    sidebar = dmc.Col(
         id=sidebar_id,
+        span=0,
         children=html.Div([
             dmc.Title(
                 id=files_count_id,
@@ -56,13 +61,11 @@ def FileSelectionSidebar(
                 children=files_panel,
             ),
         ]),
-        is_open=False,
-        placement="end",
-        backdrop=False,
     )
 
     @callback(
-        Output(sidebar_id, "is_open"),
+        Output(sidebar_id, "span"),
+        Output("graph-container", "span"),
         Output(data_store_id, "data"),
         Output(files_accordion_id, "children"),
         Output(files_count_id, "children"),
@@ -77,7 +80,7 @@ def FileSelectionSidebar(
         logger.debug(f"Trigger ID={ctx.triggered_id}: {selected_data=} {dataset_name=}")
 
         if selected_data is None or len(selected_data['points']) == 0:
-            return False, "", html.Div(), f"None selected..."
+            return 0, 12, "", html.Div(), f"None selected..."
 
         file_ids = [point["hovertext"] for point in selected_data["points"]]
         data = dispatch(
@@ -104,7 +107,7 @@ def FileSelectionSidebar(
             date_format="iso",
             orient="table",
         )
-        return True, json_data, files_accordion, f"{len(data)} selected..."
+        return span, 12 - span, json_data, files_accordion, f"{len(data)} selected..."
 
     @callback(
         Output({"type": "file-content", "index": MATCH}, "children"),
