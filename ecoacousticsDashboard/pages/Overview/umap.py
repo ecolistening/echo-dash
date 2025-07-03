@@ -133,7 +133,7 @@ layout = html.Div([
     ], grow=True),
     dmc.Divider(
         variant="dotted",
-        style={"margin-top": "15px"}
+        style={"margin-top": "30px"}
     ),
     # Note: this is slightly hacky but it works
     # the file selection sidebar changes the span of the
