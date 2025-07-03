@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-from dash import html, dcc, callback, Output, Input, ALL, MATCH, ctx, State
+from dash import html, dcc, callback, Output, Input, ALL, MATCH, ctx, State, no_update
 from io import StringIO
 from loguru import logger
 from typing import (
@@ -171,10 +171,25 @@ layout = html.Div([
         id=toggle_sidebar_id,
         children=html.Div([
             dmc.Title('Subselection', order=2),
-            html.Div(
-                id=sidebar_file_content_id,
-                children=[]
-            )
+            dmc.Accordion(
+                id="sidebar-accordion",
+                chevronPosition="right",
+                children=[
+                    dmc.AccordionItem(
+                        value="files",
+                        children=[
+                            dmc.AccordionControl("Files"),
+                            dmc.AccordionPanel(
+                                dmc.Accordion(
+                                    id="files-accordion",
+                                    value=[],
+                                    chevronPosition="right",
+                                )
+                            )
+                        ]
+                    )
+                ]
+            ),
         ]),
         is_open=False,
         placement="end",
@@ -191,7 +206,6 @@ layout = html.Div([
     Input(dataset_select_id, "value"),
     Input(date_picker_id, "value"),
     Input(locations_hierarchy_id, "value"),
-    prevent_initial_call=True,
 )
 def update_umap_data_store(
     dataset_name: str,
@@ -295,24 +309,78 @@ def update_figure(
         height=PLOT_HEIGHT,
     )
 
-    # removed because we already have the title at the top of the page
-    # fig.update_layout(
-    #     title=dict(
-    #         text=PAGE_TITLE,
-    #         x=0.5,
-    #         y=0.97,
-    #         font=dict(size=24),
-    #     )
-    # )
-
-    # Select sample for audio modal
-    # fig.update_layout(clickmode='event+select')
-
     fig.update_traces(
         marker=dict(size=dot_size)
     )
 
     return fig
+
+@callback(
+    Output(toggle_sidebar_id, "is_open"),
+    Output(sidebar_file_data_id, "data"),
+    Output("files-accordion", "children"),
+    State(dataset_select_id, "value"),
+    Input(graph_id, "selectedData"),
+    prevent_initial_call=True,
+)
+def toggle_selection_sidebar(
+    dataset_name: str,
+    selected_data: Dict[str, Any],
+) -> bool:
+    if selected_data is None or len(selected_data['points']) == 0:
+        return False, "", html.Div()
+
+    file_ids = [point["hovertext"] for point in selected_data["points"]]
+    data = dispatch(
+        FETCH_FILES,
+        dataset_name=dataset_name,
+        file_ids=file_ids,
+    )
+    files_accordion = [
+        dmc.AccordionItem(
+            value=row["file_id"],
+            children=[
+                dmc.AccordionControl(row["file_name"]),
+                dmc.AccordionPanel(
+                    html.Div(
+                        id={"type": "file-content", "index": row["file_id"]},
+                        children=[],
+                    )
+                )
+            ]
+        )
+        for _, row in data.iterrows()
+    ]
+    json_data = data.to_json(
+        date_format="iso",
+        orient="table",
+    )
+    return True, json_data, files_accordion
+
+@callback(
+    Output({"type": "file-content", "index": MATCH}, "children"),
+    State(sidebar_file_data_id, "data"),
+    State({"type": "file-content", "index": MATCH}, "id"),
+    Input("files-accordion", "value"),
+    prevent_initial_call=True,
+)
+def toggle_file_panel(
+    json_data: str,
+    matched: str,
+    open_values: str,
+) -> html.Div:
+    if (file_id := matched["index"]) not in open_values:
+        raise dash.exceptions.PreventUpdate
+
+    data = pd.read_json(
+        StringIO(json_data),
+        orient="table"
+    ).set_index("file_id")
+
+    file_info = data.loc[file_id]
+    return html.Div([
+        dmc.Text(f"{file_id}")
+    ])
 
 @callback(
     Output(download_dataframe_id, "data"),
@@ -339,103 +407,3 @@ def download_data(
         dl_type=ctx.triggered_id,
     )
 
-@callback(
-    Output(toggle_sidebar_id, "is_open"),
-    Output(sidebar_file_data_id, "data"),
-    State(dataset_select_id, "value"),
-    Input(graph_id, "selectedData"),
-    prevent_initial_call=True,
-)
-def toggle_selection_sidebar(
-    dataset_name: str,
-    selected_data: Dict[str, Any],
-) -> bool:
-    logger.debug(selected_data)
-    if selected_data is None or len(selected_data['points']) == 0:
-        return False, ""
-    file_ids = [point["hovertext"] for point in selected_data["points"]]
-    json_data = dispatch(
-        FETCH_FILES,
-        dataset_name=dataset_name,
-        file_ids=file_ids,
-    ).to_json(
-        date_format="iso",
-        orient="table",
-    )
-    return True, json_data
-
-@callback(
-    Output(sidebar_file_content_id, "children"),
-    State(dataset_select_id, "value"),
-    Input(sidebar_file_data_id, "data"),
-    prevent_initial_call=True,
-)
-def update_sidebar_file_content(
-    dataset_name: str,
-    json_data: str,
-) -> bool:
-    if not len(json_data):
-        return html.Div()
-
-    data = pd.read_json(StringIO(json_data), orient="table")
-
-    kids = [
-        dmc.Accordion(
-            id="files-accordion",
-            chevronPosition="right",
-            children=[
-                dmc.AccordionItem(
-                    value=str(i),
-                    children=[
-                        dmc.AccordionControl(file_data.file_name),
-                        # dmc.AccordionPanel(
-                        #     html.Audio(
-                        #         id={ "type": "audio-player", "index": file_id },
-                        #         src="",
-                        #         controls=True,
-                        #     )
-                        # )
-                    ]
-                )
-            ]
-        )
-        for i, (file_id, file_data) in enumerate(data.iterrows())
-    ]
-
-    return dmc.Accordion(
-        chevronPosition="right",
-        children=[
-            dmc.AccordionItem(
-                value="files",
-                children=[
-                    dmc.AccordionControl("Files"),
-                    dmc.AccordionPanel(kids)
-                ]
-            )
-        ]
-    )
-
-# @callback(
-#     Output({ "type": "audio-player", "index": MATCH }, "src"),
-#     State(dataset_select_id, "value"),
-#     State(sidebar_file_data_id, "data"),
-#     State({ "type": "audio-player", "index": MATCH }, "id"),
-#     Input("files-accordion", "value"),
-#     prevent_initial_call=True,
-# )
-# def update_audio_src(
-#     dataset_name: str,
-#     json_data: str,
-#     audio_id: Dict[str, str],
-#     open_value: str,
-# ) -> str:
-#     if not len(json_data):
-#         return html.Div()
-
-#     data = pd.read_json(StringIO(json_data), orient="table")
-
-#     if open_value == audio_id["index"]:
-#         row = data.loc[open_value]
-#         audio_bytes, file_type, audio_path = AudioAPI.get_audio_bytes(row.file_path, dataset)
-#         return audio_bytes_to_enc(audio_bytes, file_type)
-#     return ""

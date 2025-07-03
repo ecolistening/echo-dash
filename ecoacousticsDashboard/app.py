@@ -16,10 +16,15 @@ from dash import Dash, dcc, Output, Input, callback
 from menu.dataset import dataset_input, dataset_settings_button, settings_drawer
 from menu.filter import filters
 
-app = Dash(__name__, use_pages=True, external_stylesheets=[
-    dbc.themes.LITERA, dbc.icons.BOOTSTRAP,
-    "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;900&display=swap"
-])
+app = Dash(
+    __name__,
+    use_pages=True,
+    suppress_callback_exceptions=True,
+    external_stylesheets=[
+        dbc.themes.LITERA, dbc.icons.BOOTSTRAP,
+        "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;900&display=swap"
+    ]
+)
 
 server = app.server
 

@@ -51,7 +51,7 @@ def fetch_files(
     data = dataset.files.loc[file_ids].join(
         dataset.locations,
         on="site_id",
-    ).merge(
+    ).reset_index().merge(
         dataset.acoustic_features[["file", "site"]],
         left_on=["file_name", "site_name"],
         right_on=["file", "site"],
