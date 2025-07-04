@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 
 from dash import html, dcc, callback, Output, Input, ALL, MATCH, ctx, State, no_update
+from dash_iconify import DashIconify
 from io import StringIO
 from loguru import logger
 from typing import (
@@ -25,8 +26,7 @@ from api import (
 )
 import components
 
-from utils import list2tuple, audio_bytes_to_enc
-from utils.webhost import AudioAPI
+from utils import list2tuple
 
 PAGE_NAME = "UMAP"
 PAGE_TITLE = "UMAP of Soundscape Descriptors"
@@ -68,35 +68,138 @@ layout = html.Div([
     dcc.Store(id=plot_data_id),
     dcc.Store(id=category_orders_id),
     dcc.Store(id=sidebar_file_data_id),
-    dmc.Title(PAGE_TITLE, order=1),
-    dmc.Divider(variant="dotted"),
-    dmc.Group([
-        components.ColourSelect(
-            id=colour_select_id,
-            default=None,
-        ),
-        components.SymbolSelect(
-            id=symbol_select_id,
-            default=None,
-        ),
-        components.RowFacetSelect(
-            id=row_facet_select_id,
-            default=None,
-        ),
-        components.ColumnFacetSelect(
-            id=col_facet_select_id,
-            default=None,
-        ),
-        components.SizeSlider(
-            id=size_slider_id,
-            default=3,
-        ),
-    ], grow=True),
-    dmc.Divider(
-        variant="dotted",
-        style={"margin-top": "15px"}
+    # dmc.Title(PAGE_TITLE, order=1),
+    # dmc.Divider(variant="dotted"),
+    dmc.Group(
+        grow=True,
+        style={"margin-bottom": "0.5em"},
+        children=[
+            components.ColourSelect(
+                id=colour_select_id,
+                default=None,
+            ),
+            components.SymbolSelect(
+                id=symbol_select_id,
+                default=None,
+            ),
+            components.RowFacetSelect(
+                id=row_facet_select_id,
+                default=None,
+            ),
+            components.ColumnFacetSelect(
+                id=col_facet_select_id,
+                default=None,
+            ),
+            html.Div(
+                style={
+                    "padding": "1rem",
+                    "display": "flex",
+                    # "flex-wrap": "wrap",
+                    "align-content": "center",
+                    "justify-content": "right",
+                },
+                children=dmc.Group(
+                    grow=True,
+                    children=[
+                        dmc.HoverCard(
+                            children=[
+                                dmc.HoverCardTarget(
+                                    children=dmc.ActionIcon(
+                                        DashIconify(
+                                            icon="uil:image-download",
+                                            width=24,
+                                        ),
+                                        id="image-download-icon",
+                                        variant="light",
+                                        color="blue",
+                                        size="lg",
+                                        n_clicks=0,
+                                    ),
+                                ),
+                                dmc.HoverCardDropdown(
+                                    children=[
+                                        dmc.Text("Download image as..."),
+                                        components.FigureDownloader(graph_id),
+                                    ]
+                                )
+                            ],
+                        ),
+                        dmc.HoverCard(
+                            children=[
+                                dmc.HoverCardTarget(
+                                    children=dmc.ActionIcon(
+                                        DashIconify(
+                                            icon="uil:file-download-alt",
+                                            width=24,
+                                        ),
+                                        id="export-data-icon",
+                                        variant="light",
+                                        color="blue",
+                                        size="lg",
+                                        n_clicks=0,
+                                    ),
+                                ),
+                                dmc.HoverCardDropdown(
+                                    children=[
+                                        dmc.Text("Export filtered data as..."),
+                                        dmc.Group(
+                                            grow=True,
+                                            children=[
+                                                dmc.Button("csv", variant="filled", id='dl_csv'),
+                                                dmc.Button("excel", variant="filled", id='dl_xls'),
+                                                dmc.Button("json", variant="filled", id='dl_json'),
+                                                dmc.Button("parquet", variant="filled", id='dl_parquet'),
+                                            ],
+                                        )
+                                    ]
+                                )
+                            ],
+                        ),
+                        dmc.HoverCard(
+                            children=[
+                                dmc.HoverCardTarget(
+                                    children=dmc.ActionIcon(
+                                        DashIconify(
+                                            icon="uil:info-circle",
+                                            width=24,
+                                        ),
+                                        id="info-icon",
+                                        variant="light",
+                                        color="blue",
+                                        size="lg",
+                                        n_clicks=0,
+                                    ),
+                                ),
+                                dmc.HoverCardDropdown(
+                                    dmc.Text("View page information"),
+                                )
+                            ],
+                        ),
+                    ],
+                ),
+            ),
+        ]
     ),
     dmc.Group([
+        html.Div([
+            dmc.Text(
+                "Dot Size",
+                size="sm",
+                align="left",
+            ),
+            dmc.Slider(
+                id=size_slider_id,
+                min=1,
+                max=20,
+                step=1,
+                value=6,
+                marks=[
+                    {"value": i, "label": f"{i}"}
+                    for i in (1, 10, 20)
+                ],
+                persistence=True
+            )
+        ]),
         html.Div([
             dmc.Text(
                 "Opacity",
@@ -161,32 +264,47 @@ layout = html.Div([
         variant="dotted",
         style={"margin-top": "10px"}
     ),
-    dmc.Grid([
-        dmc.Col(html.Div([
-            dmc.Title('About', order=2),
-            dmc.Text(
-                "UMAP is a method of projecting high-dimensional data onto fewer dimensions. "
-                "The axes themselves have no precise meaning, other than defining the distance "
-                "between the data points."
-            ),
-            dmc.Anchor('[details]', href='https://pair-code.github.io/understanding-umap/', target="_blank"), # target="_blank" opens link in a new tab
-        ]), span=4),
-        dmc.Col(html.Div([
-            dmc.Title('Download Data', order=2),
-            dmc.Text('Download the data in the current plot. Select a format below.'),
-            dmc.ButtonGroup([
-                dmc.Button("csv", variant="filled", id='dl_csv'),
-                dmc.Button("excel", variant="filled", id='dl_xls'),
-                dmc.Button("json", variant="filled", id='dl_json'),
-                dmc.Button("parquet", variant="filled", id='dl_parquet'),
-            ]),
-            dcc.Download(id=download_dataframe_id),
-        ]), span=4),
-        dmc.Col(html.Div([
-            components.FigureDownloader(graph_id),
-        ]), span=4),
-    ], gutter="xl"),
+    dbc.Offcanvas(
+        id="page-info",
+        is_open=False,
+        placement="bottom",
+        children=dmc.Grid(
+            children=[
+                dmc.Col(
+                    span=4,
+                    children=[
+                        dmc.Title(PAGE_TITLE, order=2),
+                    ],
+                ),
+                dmc.Divider(
+                    variant="dotted",
+                    orientation="vertical"
+                ),
+                dmc.Col(
+                    span="auto",
+                    children=[
+                        dmc.Text(
+                            "UMAP is a method of projecting high-dimensional data onto fewer dimensions. "
+                            "The axes themselves have no precise meaning, other than defining the distance "
+                            "between the data points. ",
+                            span=True,
+                        ),
+                        dmc.Anchor('[details]', href='https://pair-code.github.io/understanding-umap/', target="_blank"), # target="_blank" opens link in a new tab
+                    ]
+                ),
+            ]
+        ),
+    ),
 ])
+
+@callback(
+    Output("page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("page-info", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
 
 @callback(
     Output(plot_data_id, "data"),
@@ -299,6 +417,15 @@ def update_figure(
         hover_data=["file", "site", "dddn", "timestamp"],
         height=PLOT_HEIGHT,
     )
+
+    # fig.update_layout(
+    #     title=dict(
+    #         text=PAGE_TITLE,
+    #         x=0.5,
+    #         y=0.97,
+    #         font=dict(size=24),
+    #     )
+    # )
 
     fig.update_traces(
         marker=dict(size=dot_size)

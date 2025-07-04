@@ -51,14 +51,15 @@ def FigureDownloader(
         return render_fig_as_image_file(fig,rqst['trigger'],f"{plot_name.strip('-graph')}_{dataset}_plot")
 
     return html.Div([
-        dmc.Title('Save Image', order=2),
-        dmc.Text('Download the current plot. Select a format below.'),
-        dmc.ButtonGroup([
-            dmc.Button("JPG", variant="filled", id='dl_jpg'),
-            dmc.Button("PNG", variant="filled", id='dl_png'),
-            dmc.Button("SVG", variant="filled", id='dl_svg'),
-            dmc.Button("PDF", variant="filled", id='dl_pdf'),
-        ]),
         dcc.Store(id=f'rqst-plot-{plot_name}'),
         dcc.Download(id=f'download-plot-{plot_name}'),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Button("JPG", variant="filled", id='dl_jpg'),
+                dmc.Button("PNG", variant="filled", id='dl_png'),
+                dmc.Button("SVG", variant="filled", id='dl_svg'),
+                dmc.Button("PDF", variant="filled", id='dl_pdf'),
+            ]
+        ),
     ])
