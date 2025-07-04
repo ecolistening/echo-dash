@@ -6,3 +6,8 @@ from .symbol_select import *
 from .sound_sample_modal import *
 from .footer import *
 from .figure_downloader import *
+from .nav_bar import *
+from .menu import *
+from .dataset_select import *
+from .feature_select import *
+from .date_picker import *

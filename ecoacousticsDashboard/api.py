@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import bigtree as bt
 import functools
 import pandas as pd
 import numpy as np
@@ -6,24 +9,57 @@ from io import StringIO
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
+from config import root_dir
+from datasets.dataset_loader import DatasetLoader
+from datasets.dataset import Dataset
+from datasets.decorator import DatasetDecorator
 from utils import list2tuple, hashify
+from utils.filter import filter_data
 from utils.umap import umap_data
-from utils.data import dataset_loader as DATASETS
-from utils.data import Dataset, DatasetDecorator
-from utils.data import filter_data
 
-# DATASETS = DatasetLoader(root_dir)
+DATASETS = DatasetLoader(root_dir)
+
+def fetch_datasets():
+    return [dataset.dataset_name for dataset in DATASETS]
+
 def fetch_dataset(
     dataset_name: str
 ) -> Dataset:
     dataset = DATASETS.get_dataset(dataset_name)
     return dataset
 
+def set_current_dataset(
+    dataset_name: str,
+) -> str:
+    return dataset_name
+
 def fetch_dataset_config(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = fetch_dataset(dataset_name)
-    return dataset.config
+    return {
+        section: dict(dataset.config.items(section))
+        for section in dataset.config.sections()
+    }
+
+def set_dataset_config(
+    dataset_name: str,
+    site_labels: List[str] = [],
+) -> Dict[str, Any]:
+    dataset = DATASETS.get_dataset(dataset_name)
+    for i, label in enumerate(site_labels):
+        dataset.config.set("Site Hierarchy", f"sitelevel_{i + 1}", label)
+    dataset.save_config()
+    return {
+        section: dict(dataset.config.items(section))
+        for section in dataset.config.sections()
+    }
+
+def fetch_sites_tree(
+    dataset_name: str,
+):
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.sites_tree
 
 def fetch_dataset_categories(
     dataset_name: str
@@ -35,7 +71,13 @@ def fetch_dataset_dropdown_options(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
-    return DatasetDecorator(dataset).category_orders()
+    return DatasetDecorator(dataset).drop_down_select_options()
+
+def fetch_dataset_categorical_dropdown_options(
+    dataset_name: str
+) -> Dict[str, Any]:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return DatasetDecorator(dataset).categorical_drop_down_select_options()
 
 def fetch_files(
     dataset_name: str,
@@ -59,6 +101,13 @@ def fetch_files(
     ).drop_duplicates()
     logger.debug(f"Applying filters {filters}")
     return filter_data(data, **filters)
+
+def fetch_locations(
+    dataset_name: str,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
+    return dataset.locations
 
 @functools.lru_cache(maxsize=10)
 def fetch_acoustic_features(
@@ -175,27 +224,41 @@ def dispatch(
     **payload: Dict[str, Any],
 ) -> Any:
     try:
-        logger.debug(f"Sending {end_point}")
         func = API[end_point]
+        logger.debug(f"Sending {end_point}")
         return func(**payload)
     except Exception as e:
         logger.warning(f"{end_point} failed")
         logger.error(e)
         return default
 
+FETCH_DATASETS = "fetch_datasets"
 FETCH_DATASET = "fetch_dataset"
+SET_CURRENT_DATASET = "set_current_dataset"
 FETCH_DATASET_CONFIG = "fetch_dataset_config"
+SET_DATASET_CONFIG = "set_dataset_config"
+FETCH_DATASET_SITES_TREE = "fetch_dataset_sites_tree"
+FETCH_DATASET_DROPDOWN_OPTIONS = "fetch_dataset_dropdown_options"
+FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS = "fetch_dataset_categorical_dropdown_options"
 FETCH_FILES = "fetch_files"
+FETCH_LOCATIONS = "fetch_locations"
 FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
 FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
 SEND_DATA_FOR_DOWNLOAD = "send_data_for_download"
 
 API = {
+    FETCH_DATASETS: fetch_datasets,
     FETCH_DATASET: fetch_dataset,
+    SET_CURRENT_DATASET: set_current_dataset,
     FETCH_DATASET_CONFIG: fetch_dataset_config,
+    SET_DATASET_CONFIG: set_dataset_config,
+    FETCH_DATASET_SITES_TREE: fetch_sites_tree,
     FETCH_DATASET_CATEGORIES: fetch_dataset_categories,
+    FETCH_DATASET_DROPDOWN_OPTIONS: fetch_dataset_dropdown_options,
+    FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS: fetch_dataset_categorical_dropdown_options,
     FETCH_FILES: fetch_files,
+    FETCH_LOCATIONS: fetch_locations,
     FETCH_ACOUSTIC_FEATURES: fetch_acoustic_features,
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
     SEND_DATA_FOR_DOWNLOAD: send_download_data,

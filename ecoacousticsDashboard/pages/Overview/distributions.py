@@ -1,72 +1,208 @@
-# Import packages
-
 import dash
 import dash_mantine_components as dmc
 import plotly.express as px
+import plotly.graph_objs as go
+
 from dash import html, ctx, dcc, callback, Output, State, Input, ALL
+from dash_iconify import DashIconify
 from loguru import logger
 
+import components
+from api import (
+    dispatch,
+    FETCH_ACOUSTIC_FEATURES,
+    FETCH_DATASET_CATEGORIES,
+)
+from utils import list2tuple
 from utils.content import get_tabs
-from utils.data import dataset_loader, filter_data, DatasetDecorator
-from utils.plot_filter_menu import get_filter_drop_down
-from utils.save_plot_fig import get_save_plot
 
-PAGENAME = 'distributions'
-PAGETITLE = 'Soundscape Descriptor Distributions'
+PAGE_NAME = 'distributions'
+PAGE_TITLE = 'Soundscape Descriptor Distributions'
 PLOTHEIGHT = 800
-dash.register_page(__name__, title=PAGETITLE, name='Distributions')
 
-colour_select, row_facet_select, col_facet_select = \
-    get_filter_drop_down(PAGENAME, colour_by_cat=True, include_symbol= False,
-    colour_default='location', row_facet_default='location', col_facet_default='dddn')
-
-normalised_tickbox = dmc.Chip('Normalised', value='normalised', checked=False, persistence=True,
-                              id='normalised-tickbox')
-
-filter_group = dmc.Group(children=[colour_select,row_facet_select,col_facet_select,normalised_tickbox])
-
-appendix = dmc.Grid(
-    children=[
-        dmc.Col(get_tabs(PAGENAME), span=8),
-        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
-    ],
-    gutter="xl",
+dash.register_page(
+    __name__,
+    title=PAGE_TITLE,
+    name='Distributions'
 )
 
+graph_id = f"{PAGE_NAME}-graph"
+colour_select_id = f"{PAGE_NAME}-colour-facet-select"
+row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
+col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
+norm_tickbox_id = f"{PAGE_NAME}-normalised-tickbox"
+
 layout = html.Div([
-    dmc.Title(PAGETITLE, order=1),
-    dmc.Divider(variant='dotted'),
-    filter_group,
-    dcc.Loading(
-        dcc.Graph(id=f'{PAGENAME}-graph'),
+    dmc.Group(
+        grow=True,
+        style={"margin-bottom": "0.5em"},
+        children=[
+            components.ColourSelect(
+                id=colour_select_id,
+                categorical=True,
+                default="location",
+            ),
+            components.RowFacetSelect(
+                id=row_facet_select_id,
+                default="location",
+            ),
+            components.ColumnFacetSelect(
+                id=col_facet_select_id,
+                default="dddn",
+            ),
+            html.Div(
+                style={
+                    "padding": "1rem",
+                    "display": "flex",
+                    "align-content": "center",
+                    "justify-content": "right",
+                },
+                children=dmc.Group(
+                    grow=True,
+                    children=[
+                        dmc.HoverCard(
+                            children=[
+                                dmc.HoverCardTarget(
+                                    children=dmc.ActionIcon(
+                                        DashIconify(
+                                            icon="uil:image-download",
+                                            width=24,
+                                        ),
+                                        id="image-download-icon",
+                                        variant="light",
+                                        color="blue",
+                                        size="lg",
+                                        n_clicks=0,
+                                    ),
+                                ),
+                                dmc.HoverCardDropdown(
+                                    children=[
+                                        dmc.Text("Download image as..."),
+                                        components.FigureDownloader(graph_id),
+                                    ]
+                                )
+                            ],
+                        ),
+                        dmc.HoverCard(
+                            children=[
+                                dmc.HoverCardTarget(
+                                    children=dmc.ActionIcon(
+                                        DashIconify(
+                                            icon="uil:file-download-alt",
+                                            width=24,
+                                        ),
+                                        id="export-data-icon",
+                                        variant="light",
+                                        color="blue",
+                                        size="lg",
+                                        n_clicks=0,
+                                    ),
+                                ),
+                                dmc.HoverCardDropdown(
+                                    children=[
+                                        dmc.Text("Export filtered data as..."),
+                                        dmc.Group(
+                                            grow=True,
+                                            children=[
+                                                dmc.Button("csv", variant="filled", id='dl_csv'),
+                                                dmc.Button("excel", variant="filled", id='dl_xls'),
+                                                dmc.Button("json", variant="filled", id='dl_json'),
+                                                dmc.Button("parquet", variant="filled", id='dl_parquet'),
+                                            ],
+                                        )
+                                    ]
+                                )
+                            ],
+                        ),
+                        dmc.HoverCard(
+                            children=[
+                                dmc.HoverCardTarget(
+                                    children=dmc.ActionIcon(
+                                        DashIconify(
+                                            icon="uil:info-circle",
+                                            width=24,
+                                        ),
+                                        id="info-icon",
+                                        variant="light",
+                                        color="blue",
+                                        size="lg",
+                                        n_clicks=0,
+                                    ),
+                                ),
+                                dmc.HoverCardDropdown(
+                                    dmc.Text("View page information"),
+                                )
+                            ],
+                        ),
+                    ],
+                ),
+            ),
+        ]
     ),
-    drilldown_file_div := html.Div(),
-    appendix,
+    dmc.Group([
+        html.Div([
+            dmc.Chip(
+                'Normalised',
+                id=norm_tickbox_id,
+                value='normalised',
+                checked=False,
+                persistence=True,
+            )
+        ]),
+    ], grow=True),
+    dcc.Loading(
+        dcc.Graph(id=f'{PAGE_NAME}-graph'),
+    ),
+    dmc.Grid(
+        children=[
+            dmc.Col(get_tabs(PAGE_NAME), span=8),
+        ],
+        gutter="xl",
+    ),
 ])
 
 
 # Add controls to build the interaction
 @callback(
-    Output(f'{PAGENAME}-graph', component_property='figure'),
-
-    # Covered by menu filter
-    State('dataset-select', component_property='value'),
-    Input('date-picker', component_property='value'),
+    Output(f'{PAGE_NAME}-graph', 'figure'),
+    State('dataset-select', 'value'),
+    Input('date-picker', 'value'),
     Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-    Input('feature-dropdown', component_property='value'),
-
-    Input(colour_select, component_property='value'),
-    Input(row_facet_select, component_property='value'),
-    Input(col_facet_select, component_property='value'),
-    Input(normalised_tickbox, component_property='checked'),
+    Input('feature-dropdown', 'value'),
+    Input(colour_select_id, 'value'),
+    Input(row_facet_select_id, 'value'),
+    Input(col_facet_select_id, 'value'),
+    Input(norm_tickbox_id, 'checked'),
 
     prevent_initial_call=True,
 )
-def update_graph(dataset_name, dates, locations, feature, colour_by, row_facet, col_facet, normalised):  # , time_agg, outliers, colour_locations, ):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {row_facet=} {col_facet=} {normalised=}")
+def update_graph(
+    dataset_name,
+    dates,
+    locations,
+    feature,
+    colour_by,
+    row_facet,
+    col_facet,
+    normalised
+) -> go.Figure:
+    logger.debug(
+        f"Trigger ID={ctx.triggered_id}: "
+        f"{dataset_name=} dates:{len(dates)} locations:{len(locations)} "
+        f"{feature=} {colour_by=} {row_facet=} {col_facet=} {normalised=}"
+    )
 
-    dataset = dataset_loader.get_dataset(dataset_name)
-    data = filter_data(dataset.acoustic_features, dates=dates, feature=feature, locations=locations)
+    data = dispatch(
+        FETCH_ACOUSTIC_FEATURES,
+        dataset_name=dataset_name,
+        dates=list2tuple(dates),
+        locations=list2tuple(locations),
+        feature=feature,
+    )
+    category_orders = dispatch(
+        FETCH_DATASET_CATEGORIES,
+        dataset_name=dataset_name,
+    )
 
     fig = px.histogram(
         data, x='value', marginal='rug', opacity=0.75, height=PLOTHEIGHT,
@@ -74,11 +210,11 @@ def update_graph(dataset_name, dates, locations, feature, colour_by, row_facet, 
         facet_row=row_facet,
         facet_col=col_facet,
         histnorm='percent' if normalised else None,
-        category_orders=DatasetDecorator(dataset).category_orders(),
+        category_orders=category_orders,
     )
 
     # Add centered title
-    fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",
+    fig.update_layout(title={'text':f"{PAGE_TITLE} ({feature})",
                              'x':0.5,
                              'y':0.97,
                              'font':{'size':24}

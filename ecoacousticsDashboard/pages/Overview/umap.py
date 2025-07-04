@@ -4,6 +4,7 @@ import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objs as go
 
 from dash import html, dcc, callback, Output, Input, ALL, MATCH, ctx, State, no_update
 from dash_iconify import DashIconify
@@ -91,6 +92,7 @@ layout = html.Div([
     dcc.Store(id=plot_data_id),
     dcc.Store(id=category_orders_id),
     dcc.Store(id=sidebar_file_data_id),
+    dcc.Download(id=download_dataframe_id),
     # dmc.Title(PAGE_TITLE, order=1),
     # dmc.Divider(variant="dotted"),
     dmc.Group(
@@ -117,7 +119,6 @@ layout = html.Div([
                 style={
                     "padding": "1rem",
                     "display": "flex",
-                    # "flex-wrap": "wrap",
                     "align-content": "center",
                     "justify-content": "right",
                 },
@@ -408,7 +409,7 @@ def update_figure(
     dot_size: int,
     json_data: str | None = None,
     category_orders: List[str] = [],
-) -> Tuple[Any, ...]:
+) -> go.Figure:
     """
     Second callback in the initial execution chain.
 
@@ -441,14 +442,15 @@ def update_figure(
         height=PLOT_HEIGHT,
     )
 
-    # fig.update_layout(
-    #     title=dict(
-    #         text=PAGE_TITLE,
-    #         x=0.5,
-    #         y=0.97,
-    #         font=dict(size=24),
-    #     )
-    # )
+    fig.update_layout(
+        height=PLOT_HEIGHT,
+        title=dict(
+            text=PAGE_TITLE,
+            x=0.5,
+            y=1.0,
+            font=dict(size=24),
+        )
+    )
 
     fig.update_traces(
         marker=dict(size=dot_size)
