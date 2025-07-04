@@ -34,22 +34,29 @@ def FileSelectionSidebar(
     span: int = 4,
 ) -> dmc.Col:
     """
-    A toggleable sidebar alongside a graph. Provides a paginated list of files and
-    a button to add to a global filter to adjust the data currently in view (and for export)
-    """
-    filter_store = dcc.Store(id="filter-store")
-    filter_button_id = "filter-button"
+    Listen to the 'selectedData' callback on the plot and toggle a sidebar to appear alongside a graph.
+    Displays:
 
-    files_pagination_id = "files-pagination"
-    files_count_id = "files-count"
+    - Buttons to filter the data by include / disclude filtering. For more details on how this works, see FILTER.md
+    - A paginated list of samples (i.e. files) displayed in an accordion.
+    - Each accordion item panel contains the ability to playback the audio file
+    """
+    files_pagination_id = "selection-sidebar-files-pagination"
+    files_count_id = "selection-sidebar-files-count"
     files_accordion_id = "selection-sidebar-files-accordion"
+    file_data_id = "selection-sidebar-file-data"
+    filter_include_button_id = "selection-sidebar-filter-include-button"
+    filter_disclude_button_id = "selection-sidebar-filter-disclude-button"
+
+    style_hidden = dict(display="none")
+    style_visible = dict(display="block")
 
     @callback(
         Output(graph_container_id, "span"),
         Output(sidebar_id, "span"),
         Output(sidebar_id, "style"),
         Output(data_store_id, "data"),
-        Output(files_count_id, "children"),
+        Output(files_count_id, "children", allow_duplicate=True),
         Output(files_pagination_id, "total"),
         State(dataset_id, "value"),
         Input(graph_id, "selectedData"),
@@ -58,12 +65,12 @@ def FileSelectionSidebar(
     def toggle_selection_sidebar(
         dataset_name: str,
         selected_data: Dict[str, Any],
-    ) -> Tuple[bool, str, html.Div, str]:
+    ) -> Tuple[int, int, Dict[str, str], str, str, int]:
         if selected_data is None or len((points := selected_data['points'])) == 0:
             return (
                 graph_container_span := 12,
                 sidebar_span := 0,
-                sidebar_style := {"display": "none"},
+                sidebar_style := style_hidden,
                 selected_data_json := "",
                 selected_text := "",
                 total_pages := 1,
@@ -81,17 +88,22 @@ def FileSelectionSidebar(
             ],
         )
 
+        total = len(data)
+        start = 1
+        end = min(total, PAGE_LIMIT * start)
+
         return (
             graph_container_span := 12 - span,
             sidebar_span := span,
-            sidebar_style := {"display": "block"},
+            sidebar_style := style_visible,
             selected_data_json := data.to_json(date_format="iso", orient="table"),
-            selected_text := f"{len(data)} selected...",
-            total_pages := (len(data) + PAGE_LIMIT - 1) // PAGE_LIMIT,
+            selected_text := f"Showing {start} - {end} / {total}",
+            total_pages := (total + PAGE_LIMIT - 1) // PAGE_LIMIT,
         )
 
     @callback(
         Output(files_accordion_id, "children"),
+        Output(files_count_id, "children", allow_duplicate=True),
         State(data_store_id, "data"),
         Input(files_pagination_id, "page"),
         Input(files_pagination_id, "total"),
@@ -103,7 +115,10 @@ def FileSelectionSidebar(
         total_pages: int,
     ) -> html.Div:
         if json_data == "" or json_data is None:
-            return html.Div()
+            return (
+                accordion := html.Div(),
+                selected_text := "",
+            )
 
         data = pd.read_json(StringIO(json_data), orient="table")
         page_data = data.iloc[(current_page - 1):(current_page - 1) + PAGE_LIMIT]
@@ -113,14 +128,14 @@ def FileSelectionSidebar(
             f"{current_page=} selected={len(page_data)}"
         )
 
-        return html.Div([
+        accordion = html.Div([
             dmc.AccordionItem(
                 value=row["file_id"],
                 children=[
                     dmc.AccordionControl(row["file_name"]),
                     dmc.AccordionPanel(
                         html.Div(
-                            id={"type": "file-content", "index": row["file_id"]},
+                            id={"type": file_data_id, "index": row["file_id"]},
                             children=[],
                         )
                     )
@@ -129,11 +144,18 @@ def FileSelectionSidebar(
             for _, row in page_data.iterrows()
         ])
 
+        total = len(data)
+        start = PAGE_LIMIT * (current_page - 1) + 1
+        end = min(total, PAGE_LIMIT * current_page)
+        selected_text = f"Showing {start} - {end} / {total}",
+
+        return accordion, selected_text
+
     @callback(
-        Output({"type": "file-content", "index": MATCH}, "children"),
+        Output({"type": file_data_id, "index": MATCH}, "children"),
         State(dataset_id, "value"),
         State(data_store_id, "data"),
-        State({"type": "file-content", "index": MATCH}, "id"),
+        State({"type": file_data_id, "index": MATCH}, "id"),
         Input(files_accordion_id, "value"),
         prevent_initial_call=True,
     )
@@ -161,52 +183,87 @@ def FileSelectionSidebar(
         ])
 
     @callback(
-        Output(filter_store, "data"),
-        # State(data_store_id, "data"),
-        Input(filter_button_id, "n_clicks"),
+        Output(filter_include_button_id, "n_clicks"),
+        Input(filter_include_button_id, "n_clicks"),
         prevent_initial_call=True,
     )
-    def filter_file_selection(
-        # selected_data: str,
+    def include_file_selection(
         n_clicks: int,
     ) -> str:
-        # selected_data = pd.read_json(StringIO(selected_data), orient="table")
-        file_ids = [1] # selected_data["file_id"]
-        logger.debug(f"Trigger ID={ctx.triggered_id}: filtering {file_ids=}")
-        return file_ids
+        # TODO: include filter means adding all other file_ids to the store
+        logger.debug("clicked", n_clicks)
+        return n_clicks
+
+    @callback(
+        Output(filter_disclude_button_id, "n_clicks"),
+        Input(filter_disclude_button_id, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def disclude_file_selection(
+        n_clicks: int,
+    ) -> str:
+        # TODO: disclude filter means adding these file_ids to the store
+        logger.debug("clicked", n_clicks)
+        return n_clicks
 
     return dmc.Col(
         id=sidebar_id,
         span=0,
-        style={"display": "none"},
-        children=html.Div([
-            dmc.Title(
-                id=files_count_id,
-                order=2
-            ),
-            dmc.ButtonGroup([
-                dmc.Button(
-                    id=filter_button_id,
-                    variant="light",
-                    color="red",
-                    children="Filter",
-                    n_clicks=0,
+        style=style_hidden,
+        children=dmc.Stack(
+            style={"margin-top": "1rem"},
+            children=[
+                dmc.Group(
+                    grow=True,
+                    children=[
+                        dmc.Button(
+                            "Filter Selected",
+                            id=filter_disclude_button_id,
+                            variant="light",
+                            color="red",
+                            n_clicks=0,
+                        ),
+                        dmc.Button(
+                            "Filter Remaining",
+                            id=filter_include_button_id,
+                            variant="light",
+                            color="red",
+                            n_clicks=0,
+                        ),
+                    ]
                 ),
-            ]),
-            dmc.Pagination(
-                id=files_pagination_id,
-                size="sm",
-                color="indigo",
-                total=1,
-                page=1,
-                siblings=1,
-                boundaries=1,
-                mt=20,
-            ),
-            dmc.Accordion(
-                id=files_accordion_id,
-                value=[],
-                chevronPosition="right",
-            )
-        ]),
+                dmc.Group(
+                    grow=True,
+                    children=[
+                        dmc.Text(
+                            id=files_count_id,
+                            size="sm",
+                        ),
+                    ],
+                ),
+                dmc.Group(
+                    grow=True,
+                    children=[
+                        dmc.Pagination(
+                            id=files_pagination_id,
+                            grow=True,
+                            total=1,
+                            page=1,
+                            size="sm",
+                            color="indigo",
+                        ),
+                    ],
+                ),
+                dmc.Group(
+                    grow=True,
+                    children=[
+                        dmc.Accordion(
+                            id=files_accordion_id,
+                            value=[],
+                            chevronPosition="right",
+                        ),
+                    ],
+                ),
+            ],
+        ),
     )

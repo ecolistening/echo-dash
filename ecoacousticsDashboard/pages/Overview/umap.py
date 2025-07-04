@@ -38,6 +38,29 @@ dash.register_page(
     name=PAGE_NAME,
 )
 
+# Filter Methodology
+# Approach 1:
+# 1. A global filter stores a list of file_ids, an include list.
+#    so this should be initialised to be the complete file list for the dataset
+# 2. On each page, based on the file list, we fetch the actual data and a graph is rendered based on the selection
+# 3. The global filter can be reset to all files via a reset button, or rescoped in the filters menu
+#   - A single reset is easy to implement, just re-fetch all file data and reset the store
+#   - Changing filters means storing the filter operation to be re-run, so building a composite query
+#   - This is more challenging. We'd need some kind of smart filter parser since all the tables are stored separately
+
+# Approach 2:
+# 1. A global filter store is empty, a disclude list
+# 2. Data is selected based on those that should be omitted, i.e. file_id not in file_ids
+# 3. Resetting the global filter is simply emptying the store so all data points are fetched
+# 4. Resetting a particular part of the store, for example date, requires:
+#   - Checking those in the disclude list are within the new boundaries set **PROBLEM**: how do you know the source of where something was filtered? For example, suppose I select some points in UMAP, then apply a date filter, then change the dates, how do I know files were filtered by UMAP or by the date filter, if the dates overlapped?
+#   - Adding to the disclude list those within that boundary
+
+# Approach 3:
+# 1. Each filter operation e.g. date, UMAP, weather, has its own unique store which contains a disclude list of file_ids
+# 2. When updating a particular filter, simply change the omitted ids in the list.
+# 3. Data is fetched by composing together all file_ids in the store, removing duplicates, and executing the query to fetch those that are not in the list
+
 # global filters
 dataset_select_id = "dataset-select"
 date_picker_id = "date-picker"
