@@ -59,9 +59,7 @@ def FileSelectionSidebar(
         dataset_name: str,
         selected_data: Dict[str, Any],
     ) -> Tuple[bool, str, html.Div, str]:
-        logger.debug(f"Trigger ID={ctx.triggered_id}: {selected_data=} {dataset_name=}")
-
-        if selected_data is None or len(selected_data['points']) == 0:
+        if selected_data is None or len((points := selected_data['points'])) == 0:
             return (
                 graph_container_span := 12,
                 sidebar_span := 0,
@@ -70,13 +68,16 @@ def FileSelectionSidebar(
                 selected_text := "",
                 total_pages := 1,
             )
-
+        logger.debug(
+            f"Trigger ID={ctx.triggered_id}: "
+            f"selected={len(points)} {dataset_name=}"
+        )
         data = dispatch(
             FETCH_FILES,
             dataset_name=dataset_name,
             file_ids=[
-                point["hovertext"]
-                for point in selected_data["points"]
+                point["hovertext"] # file_id should be the hover text
+                for point in points
             ],
         )
 
@@ -101,12 +102,16 @@ def FileSelectionSidebar(
         current_page: int,
         total_pages: int,
     ) -> html.Div:
-        logger.debug(f"Trigger ID={ctx.triggered_id}: {current_page=} {json_data=}")
         if json_data == "" or json_data is None:
             return html.Div()
 
         data = pd.read_json(StringIO(json_data), orient="table")
         page_data = data.iloc[(current_page - 1):(current_page - 1) + PAGE_LIMIT]
+
+        logger.debug(
+            f"Trigger ID={ctx.triggered_id}: "
+            f"{current_page=} selected={len(page_data)}"
+        )
 
         return html.Div([
             dmc.AccordionItem(
