@@ -1,8 +1,14 @@
 import base64
+import hashlib
 
 from dash import dcc
 from loguru import logger
 from typing import Any, List
+
+def hashify(s: str):
+    h = hashlib.new("sha256")
+    h.update(s.encode("utf-8"))
+    return h.hexdigest()
 
 def dedup(l: List[Any]) -> List[Any]:
     return list(dict.fromkeys(l))

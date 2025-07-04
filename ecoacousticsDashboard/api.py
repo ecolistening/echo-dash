@@ -6,14 +6,13 @@ from io import StringIO
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-from utils import list2tuple
+from utils import list2tuple, hashify
 from utils.umap import umap_data
 from utils.data import dataset_loader as DATASETS
 from utils.data import Dataset, DatasetDecorator
 from utils.data import filter_data
 
 # DATASETS = DatasetLoader(root_dir)
-
 def fetch_dataset(
     dataset_name: str
 ) -> Dataset:
@@ -80,7 +79,12 @@ def fetch_acoustic_features_umap(
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     logger.debug(f"Fetch acoustic features for dataset={dataset_name}")
     dataset = DATASETS.get_dataset(dataset_name)
-    if (umap_path := (dataset.path / "umap.parquet")).exists():
+    # ensure umap directory exists
+    (dataset.path / "umap").mkdir(exist_ok=True, parents=True)
+    # hash to get the umap id
+    umap_id = hashify(str(tuple([dataset_name] + list(filters.items()))))
+    # load from disk if its present
+    if (umap_path := (dataset.path / "umap" / f"{umap_id}.parquet")).exists():
         logger.debug(f"Loading UMAP from {umap_path}")
         return pd.read_parquet(umap_path)
     data = dataset.acoustic_features
@@ -97,6 +101,7 @@ def fetch_acoustic_features_umap(
     proj = umap_data(sample)
     logger.debug(f"UMAP complete")
     logger.debug(f"Persisting UMAP to {umap_path}")
+    # persist so we don't need to recompute
     proj.to_parquet(umap_path)
     return proj
 
