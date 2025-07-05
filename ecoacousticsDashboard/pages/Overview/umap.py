@@ -23,7 +23,6 @@ from api import (
     FETCH_ACOUSTIC_FEATURES,
     FETCH_ACOUSTIC_FEATURES_UMAP,
     FETCH_DATASET_CATEGORIES,
-    SEND_DATA_FOR_DOWNLOAD,
 )
 import components
 
@@ -65,7 +64,7 @@ dash.register_page(
 # global filters
 dataset_select_id = "dataset-select"
 date_picker_id = "date-picker"
-locations_hierarchy_id = {"type": "checklist-locations-hierarchy", "index": ALL}
+locations_hierarchy_id = "checklist-locations-hierarchy"
 
 # plot params
 graph_id = f"{PAGE_NAME}-graph"
@@ -79,25 +78,18 @@ sample_slider_id = f"{PAGE_NAME}-plot-options-sample"
 size_slider_id = f"{PAGE_NAME}-size-slider"
 category_orders_id = f"{PAGE_NAME}-category-orders"
 
-# export params
-download_dataframe_id = "download-dataframe"
-
 # sidebar params
 toggle_sidebar_id = f"{PAGE_NAME}-toggle-sidebar"
-sidebar_audio_id = f"{PAGE_NAME}-sidebar-audio"
 sidebar_file_data_id = f"{PAGE_NAME}-sidebar-file-data"
-sidebar_file_content_id = f"{PAGE_NAME}-sidebar-file-content"
 
 layout = html.Div([
     dcc.Store(id=plot_data_id),
     dcc.Store(id=category_orders_id),
     dcc.Store(id=sidebar_file_data_id),
-    dcc.Download(id=download_dataframe_id),
-    # dmc.Title(PAGE_TITLE, order=1),
-    # dmc.Divider(variant="dotted"),
-    dmc.Group(
-        grow=True,
-        style={"margin-bottom": "0.5em"},
+    components.TopBar(
+        dataset_id=dataset_select_id,
+        graph_id=graph_id,
+        plot_data_id=plot_data_id,
         children=[
             components.ColourSelect(
                 id=colour_select_id,
@@ -115,94 +107,7 @@ layout = html.Div([
                 id=col_facet_select_id,
                 default=None,
             ),
-            html.Div(
-                style={
-                    "padding": "1rem",
-                    "display": "flex",
-                    "align-content": "center",
-                    "justify-content": "right",
-                },
-                children=dmc.Group(
-                    grow=True,
-                    children=[
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:image-download",
-                                            width=24,
-                                        ),
-                                        id="image-download-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    children=[
-                                        dmc.Text("Download image as..."),
-                                        components.FigureDownloader(graph_id),
-                                    ]
-                                )
-                            ],
-                        ),
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:file-download-alt",
-                                            width=24,
-                                        ),
-                                        id="export-data-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    children=[
-                                        dmc.Text("Export filtered data as..."),
-                                        dmc.Group(
-                                            grow=True,
-                                            children=[
-                                                dmc.Button("csv", variant="filled", id='dl_csv'),
-                                                dmc.Button("excel", variant="filled", id='dl_xls'),
-                                                dmc.Button("json", variant="filled", id='dl_json'),
-                                                dmc.Button("parquet", variant="filled", id='dl_parquet'),
-                                            ],
-                                        )
-                                    ]
-                                )
-                            ],
-                        ),
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:info-circle",
-                                            width=24,
-                                        ),
-                                        id="info-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    dmc.Text("View page information"),
-                                )
-                            ],
-                        ),
-                    ],
-                ),
-            ),
-        ]
+        ],
     ),
     dmc.Group([
         html.Div([
@@ -322,15 +227,6 @@ layout = html.Div([
 ])
 
 @callback(
-    Output("page-info", "is_open"),
-    Input("info-icon", "n_clicks"),
-    State("page-info", "is_open"),
-    prevent_initial_call=True,
-)
-def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-    return not is_open
-
-@callback(
     Output(plot_data_id, "data"),
     Output(category_orders_id, "data"),
     Output(sample_slider_id, "max"),
@@ -338,7 +234,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Output(sample_slider_id, "marks"),
     Input(dataset_select_id, "value"),
     Input(date_picker_id, "value"),
-    Input(locations_hierarchy_id, "value"),
+    Input({"type": locations_hierarchy_id, "index": ALL}, "value"),
 )
 def update_umap_data_store(
     dataset_name: str,
@@ -447,7 +343,7 @@ def update_figure(
         title=dict(
             text=PAGE_TITLE,
             x=0.5,
-            y=1.0,
+            y=0.97,
             font=dict(size=24),
         )
     )
@@ -457,29 +353,3 @@ def update_figure(
     )
 
     return fig
-
-@callback(
-    Output(download_dataframe_id, "data"),
-    State(dataset_select_id, "value"),
-    State(plot_data_id, "data"),
-    Input("dl_csv", "n_clicks"),
-    Input("dl_xls", "n_clicks"),
-    Input("dl_json", "n_clicks"),
-    Input("dl_parquet", "n_clicks"),
-    prevent_initial_call=True,
-)
-def download_data(
-    dataset_name: str,
-    json_data: Dict[str, Any],
-) -> Dict[str, Any]:
-    logger.debug(
-        f"Trigger ID={ctx.triggered_id}:"
-        f"dataset={dataset_name} json data ({len(json_data)}B)"
-    )
-    return dispatch(
-        SEND_DATA_FOR_DOWNLOAD,
-        dataset_name=dataset_name,
-        json_data=json_data,
-        dl_type=ctx.triggered_id,
-    )
-

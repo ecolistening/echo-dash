@@ -1,9 +1,11 @@
 import dash
+import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, ctx, dcc, callback, Output, State, Input, ALL
+from dash import html, ctx, dcc, callback
+from dash import Output, State, Input, ALL
 from dash_iconify import DashIconify
 from loguru import logger
 
@@ -23,8 +25,13 @@ PLOTHEIGHT = 800
 dash.register_page(
     __name__,
     title=PAGE_TITLE,
-    name='Distributions'
+    name='Distributions',
 )
+
+dataset_select_id = "dataset-select"
+date_picker_id = "date-picker"
+feature_select_id = "feature-dropdown"
+locations_hierarchy_id = "checklist-locations-hierarchy"
 
 graph_id = f"{PAGE_NAME}-graph"
 colour_select_id = f"{PAGE_NAME}-colour-facet-select"
@@ -33,9 +40,9 @@ col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
 norm_tickbox_id = f"{PAGE_NAME}-normalised-tickbox"
 
 layout = html.Div([
-    dmc.Group(
-        grow=True,
-        style={"margin-bottom": "0.5em"},
+    components.TopBar(
+        dataset_id=dataset_select_id,
+        graph_id=graph_id,
         children=[
             components.ColourSelect(
                 id=colour_select_id,
@@ -49,93 +56,6 @@ layout = html.Div([
             components.ColumnFacetSelect(
                 id=col_facet_select_id,
                 default="dddn",
-            ),
-            html.Div(
-                style={
-                    "padding": "1rem",
-                    "display": "flex",
-                    "align-content": "center",
-                    "justify-content": "right",
-                },
-                children=dmc.Group(
-                    grow=True,
-                    children=[
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:image-download",
-                                            width=24,
-                                        ),
-                                        id="image-download-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    children=[
-                                        dmc.Text("Download image as..."),
-                                        components.FigureDownloader(graph_id),
-                                    ]
-                                )
-                            ],
-                        ),
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:file-download-alt",
-                                            width=24,
-                                        ),
-                                        id="export-data-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    children=[
-                                        dmc.Text("Export filtered data as..."),
-                                        dmc.Group(
-                                            grow=True,
-                                            children=[
-                                                dmc.Button("csv", variant="filled", id='dl_csv'),
-                                                dmc.Button("excel", variant="filled", id='dl_xls'),
-                                                dmc.Button("json", variant="filled", id='dl_json'),
-                                                dmc.Button("parquet", variant="filled", id='dl_parquet'),
-                                            ],
-                                        )
-                                    ]
-                                )
-                            ],
-                        ),
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:info-circle",
-                                            width=24,
-                                        ),
-                                        id="info-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    dmc.Text("View page information"),
-                                )
-                            ],
-                        ),
-                    ],
-                ),
             ),
         ]
     ),
@@ -151,29 +71,30 @@ layout = html.Div([
         ]),
     ], grow=True),
     dcc.Loading(
-        dcc.Graph(id=f'{PAGE_NAME}-graph'),
+        dcc.Graph(
+            id=graph_id
+        ),
     ),
-    dmc.Grid(
-        children=[
-            dmc.Col(get_tabs(PAGE_NAME), span=8),
-        ],
-        gutter="xl",
+    dbc.Offcanvas(
+        id="page-info",
+        is_open=False,
+        placement="bottom",
+        children=components.Footer(PAGE_NAME),
     ),
 ])
 
 
 # Add controls to build the interaction
 @callback(
-    Output(f'{PAGE_NAME}-graph', 'figure'),
-    State('dataset-select', 'value'),
-    Input('date-picker', 'value'),
-    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-    Input('feature-dropdown', 'value'),
+    Output(graph_id, 'figure'),
+    State(dataset_select_id, 'value'),
+    Input(date_picker_id, 'value'),
+    Input({'type': locations_hierarchy_id, 'index': ALL}, 'value'),
+    Input(feature_select_id, 'value'),
     Input(colour_select_id, 'value'),
     Input(row_facet_select_id, 'value'),
     Input(col_facet_select_id, 'value'),
     Input(norm_tickbox_id, 'checked'),
-
     prevent_initial_call=True,
 )
 def update_graph(
@@ -213,11 +134,13 @@ def update_graph(
         category_orders=category_orders,
     )
 
-    # Add centered title
-    fig.update_layout(title={'text':f"{PAGE_TITLE} ({feature})",
-                             'x':0.5,
-                             'y':0.97,
-                             'font':{'size':24}
-                             })
+    fig.update_layout(
+        title={
+            'text':f"{PAGE_TITLE} ({feature})",
+            'x':0.5,
+            'y':0.97,
+            'font':{'size':24}
+        }
+    )
 
     return fig

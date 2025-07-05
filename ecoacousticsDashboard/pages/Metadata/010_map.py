@@ -1,4 +1,5 @@
 import dash
+import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import numpy as np
 import pandas as pd
@@ -26,104 +27,20 @@ date_picker_id = "date-picker"
 graph_id = f"{PAGE_NAME}-graph"
 
 layout = html.Div([
-    dmc.Group(
-        grow=True,
-        style={"margin-bottom": "0.5em"},
-        children=[
-            html.Div(
-                style={
-                    "padding": "1rem",
-                    "display": "flex",
-                    "align-content": "center",
-                    "justify-content": "right",
-                },
-                children=dmc.Group(
-                    grow=True,
-                    children=[
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:image-download",
-                                            width=24,
-                                        ),
-                                        id="image-download-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    children=[
-                                        dmc.Text("Download image as..."),
-                                        components.FigureDownloader(graph_id),
-                                    ]
-                                )
-                            ],
-                        ),
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:file-download-alt",
-                                            width=24,
-                                        ),
-                                        id="export-data-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    children=[
-                                        dmc.Text("Export filtered data as..."),
-                                        dmc.Group(
-                                            grow=True,
-                                            children=[
-                                                dmc.Button("csv", variant="filled", id='dl_csv'),
-                                                dmc.Button("excel", variant="filled", id='dl_xls'),
-                                                dmc.Button("json", variant="filled", id='dl_json'),
-                                                dmc.Button("parquet", variant="filled", id='dl_parquet'),
-                                            ],
-                                        )
-                                    ]
-                                )
-                            ],
-                        ),
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:info-circle",
-                                            width=24,
-                                        ),
-                                        id="info-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    dmc.Text("View page information"),
-                                )
-                            ],
-                        ),
-                    ],
-                ),
-            ),
-        ],
+    components.TopBar(
+        dataset_id=dataset_select_id,
+        graph_id=graph_id,
     ),
     dmc.Divider(variant='dotted'),
     dcc.Loading(
         dcc.Graph(id=graph_id),
     ),
-    components.Footer(PAGE_NAME),
+    dbc.Offcanvas(
+        id="page-info",
+        is_open=False,
+        placement="bottom",
+        children=components.Footer(PAGE_NAME),
+    ),
 ])
 
 @callback(

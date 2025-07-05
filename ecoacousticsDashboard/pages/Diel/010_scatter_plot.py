@@ -1,18 +1,23 @@
 import dash
+import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import plotly.express as px
 import plotly.graph_objects as go
 
-from dash import html, ctx, dcc, callback, Output, Input, State, ALL
+from dash import html, ctx, dcc, callback
+from dash import Output, Input, State, ALL
+from dash_iconify import DashIconify
 from loguru import logger
 from typing import List
 
-from utils.content import get_tabs
-from utils.data import dataset_loader, filter_data, DatasetDecorator
-from utils.save_plot_fig import get_save_plot
-
-from utils import sketch
 import components
+from api import (
+    dispatch,
+    FETCH_ACOUSTIC_FEATURES,
+    FETCH_DATASET_CATEGORIES,
+)
+from utils import list2tuple
+from utils import sketch
 
 PAGE_NAME = 'scatter-plot'
 PAGE_TITLE = 'Acoustic Descriptor by Time of Day'
@@ -62,11 +67,9 @@ col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
 size_slider_id = f'{PAGE_NAME}-plot-size'
 
 layout = html.Div([
-    html.Div(
-        [html.H1(PAGE_TITLE)],
-    ),
-    html.Hr(),
-    dmc.Group(
+    components.TopBar(
+        dataset_id=dataset_select_id,
+        graph_id=graph_id,
         children=[
             dmc.Select(
                 id=plot_type_select_id,
@@ -81,11 +84,9 @@ layout = html.Div([
                 style=dict(width=200),
                 persistence=True,
             ),
-            # FIXME: for polar plots
             components.ColourSelect(
                 id=colour_select_id,
                 default="month",
-                categorical=True,
             ),
             components.SymbolSelect(
                 id=symbol_select_id,
@@ -93,28 +94,54 @@ layout = html.Div([
             ),
             components.RowFacetSelect(
                 id=row_facet_select_id,
-                default="sitelevel_1",
+                default=None,
             ),
             components.ColumnFacetSelect(
                 id=col_facet_select_id,
                 default=None,
             ),
-            components.SizeSlider(
-                id=size_slider_id,
-                default=3,
-            )
         ],
-        grow=True
     ),
+    dmc.Grid([
+        dmc.Col(
+            span=4,
+            children=[
+                dmc.Text(
+                    "Dot Size",
+                    size="sm",
+                    align="left",
+                ),
+                dmc.Slider(
+                    id=size_slider_id,
+                    min=1,
+                    max=20,
+                    step=1,
+                    value=6,
+                    marks=[
+                        {"value": i, "label": f"{i}"}
+                        for i in (1, 10, 20)
+                    ],
+                    persistence=True
+                )
+            ]
+        ),
+    ]),
     dmc.Divider(variant='dotted'),
-    dcc.Graph(id=graph_id),
-    components.Footer(
-        PAGE_NAME,
+    dcc.Loading(
+        dcc.Graph(id=graph_id),
     ),
-    components.SoundSampleModal(
-        PAGE_NAME,
+    dbc.Offcanvas(
+        id="page-info",
+        is_open=False,
+        placement="bottom",
+        children=components.Footer(
+            PAGE_NAME,
+        ),
     ),
-    drilldown_file_div := html.Div(),
+    # FIXME
+    # components.SoundSampleModal(
+    #     PAGE_NAME,
+    # ),
 ])
 
 @callback(
@@ -148,11 +175,17 @@ def update_figure(
         f"{plot_type=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}"
     )
 
-    dataset = dataset_loader.get_dataset(dataset_name)
-    data = filter_data(dataset.acoustic_features, dates=dates, locations=locations, feature=feature)
-
-    data = data.assign(month=data.timestamp.dt.month, hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
-                       minute=data.timestamp.dt.minute)
+    data = dispatch(
+        FETCH_ACOUSTIC_FEATURES,
+        dataset_name=dataset_name,
+        dates=list2tuple(dates),
+        locations=list2tuple(locations),
+        feature=feature,
+    )
+    category_orders = dispatch(
+        FETCH_DATASET_CATEGORIES,
+        dataset_name=dataset_name,
+    )
 
     plot = plot_types[plot_type]
     plot_kwargs = plot_type_kwargs[plot_type]
@@ -164,7 +197,7 @@ def update_figure(
         # symbol=symbol_by,
         facet_row=row_facet,
         facet_col=col_facet,
-        category_orders=DatasetDecorator(dataset).category_orders()
+        category_orders=category_orders,
     )
 
     # Select sample for audio modal

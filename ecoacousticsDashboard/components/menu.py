@@ -31,10 +31,15 @@ def Menu():
                 href=page["relative_path"],
             )
             children[pages[p][0]].children.append(link)
-
-    logger.info(children)
-    return_list = [children["home"], children["Overview"], children["Metadata"],]
     # Put groups in desired order. Adjust file name to sort individual pages within groups alphabetically
-    # for group in ('home','Metadata','Overview','Diel','Seasonal'):
-        # return_list.append(children[group])
-    return html.Div(return_list)
+    menu = []
+    order = (
+        'home',
+        'Metadata',
+        'Overview',
+        'Diel',
+        'Seasonal',
+    )
+    for group in order:
+        menu.append(children[group])
+    return html.Div(menu)

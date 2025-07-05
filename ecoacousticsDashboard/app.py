@@ -42,6 +42,7 @@ def create_dash_app() -> dash.Dash:
     )
 
     from callbacks import dataset_callbacks
+    from callbacks import page_callbacks
 
     app.layout = dmc.MantineProvider(
         theme=THEME,

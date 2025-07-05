@@ -154,36 +154,6 @@ def fetch_acoustic_features_umap(
     proj.to_parquet(umap_path)
     return proj
 
-def send_download_data(
-    dataset_name,
-    json_data: str,
-    dl_type: str
-) -> Dict[str, Any]:
-    data = pd.read_json(StringIO(json_data), orient='table')
-    if dl_type == 'dl_csv':
-        return dcc.send_data_frame(
-            data.to_csv,
-            f'{dataset_name}.csv'
-        )
-    elif dl_type == 'dl_xls':
-        return dcc.send_data_frame(
-            data.to_excel,
-            f'{dataset_name}.xlsx',
-            sheet_name="Sheet_name_1"
-        )
-    elif dl_type == 'dl_json':
-        return dcc.send_data_frame(
-            data.to_json,
-            f'{dataset_name}.json'
-        )
-    elif dl_type == 'dl_parquet':
-        return dcc.send_data_frame(
-            data.to_parquet,
-            f'{dataset_name}.parquet'
-        )
-    else:
-        raise KeyError(f"Unsupported output data type: '{dl_type}'")
-
 def setup():
     """
     Sets up the LRU cache for UMAP
@@ -245,7 +215,6 @@ FETCH_LOCATIONS = "fetch_locations"
 FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
 FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
-SEND_DATA_FOR_DOWNLOAD = "send_data_for_download"
 
 API = {
     FETCH_DATASETS: fetch_datasets,
@@ -261,5 +230,4 @@ API = {
     FETCH_LOCATIONS: fetch_locations,
     FETCH_ACOUSTIC_FEATURES: fetch_acoustic_features,
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
-    SEND_DATA_FOR_DOWNLOAD: send_download_data,
 }
