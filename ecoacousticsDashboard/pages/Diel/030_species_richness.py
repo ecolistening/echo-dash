@@ -151,7 +151,7 @@
 #             dmc.Text(
 #                 children="Detection Threshold",
 #                 size="sm",
-#                 align="right",
+#                 ta="right",
 #             ),
 #             dmc.Slider(
 #                 id=threshold_slider_id,

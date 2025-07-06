@@ -2,7 +2,7 @@ import dash_mantine_components as dmc
 
 from dash import ctx, callback, Output, Input, State, html
 from loguru import logger
-from typing import Any, Dict
+from typing import Any, Dict, Tuple, List
 
 from api import (
     dispatch,
@@ -17,7 +17,8 @@ DEFAULT_SELECT_OPTIONS = dict(
 
 def SymbolSelect(
     id: str,
-    default: str = None,
+    default: str = "",
+    data: List[Dict[str, str]] = [],
     style: Dict[str, Any] = dict(width=200),
 ) -> dmc.Select:
     dataset_select_id = "dataset-select"
@@ -26,6 +27,7 @@ def SymbolSelect(
         id=id,
         label="Symbolise by",
         value=default,
+        data=[],
         style=style,
         **DEFAULT_SELECT_OPTIONS,
     )

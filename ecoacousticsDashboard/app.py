@@ -12,12 +12,9 @@ import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 
-from dash import Dash, dcc
+from dash import Dash, dcc, ctx
 from dash import Output, Input, callback
-
-import components
-# from menu.filter import filters
-from store import stores as global_store
+from typing import Any, Dict, List
 
 THEME = {
     "fontFamily": "'Inter', sans-serif",
@@ -33,7 +30,6 @@ def create_dash_app() -> dash.Dash:
     app = dash.Dash(
         __name__,
         use_pages=True,
-        # suppress_callback_exceptions=True,
         external_stylesheets=[
             dbc.themes.LITERA,
             dbc.icons.BOOTSTRAP,
@@ -41,28 +37,39 @@ def create_dash_app() -> dash.Dash:
         ]
     )
 
-    from callbacks import dataset_callbacks
-    from callbacks import page_callbacks
+    import components
+    from store import global_store
 
     app.layout = dmc.MantineProvider(
         theme=THEME,
-        inherit=True,
-        withGlobalStyles=True,
+        withGlobalClasses=True,
         children=dmc.AppShell(
             children=[
                 *global_store,
-                dash.page_container,
-                components.FilterMenu(),
+                components.NavBar(),
+                dmc.AppShellMain([
+                    # components.FilterMenu(),
+                    dash.page_container,
+                ]),
+                dcc.Interval(
+                    id="load-datasets",
+                    interval=100,
+                    max_intervals=1
+                ),
             ],
-            navbar=components.NavBar(),
         ),
     )
+
+    from callbacks import nav_bar_callbacks
+    from callbacks import dataset_config_callbacks
+    from callbacks import page_callbacks
+    from callbacks import graph_param_callbacks
 
     return app
 
 if __name__ == '__main__':
     logger.info("Start server..")
     app = create_dash_app()
-    app.run_server(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0', debug=True)
     app.enable_dev_tools(dev_tools_ui=True, dev_tools_serve_dev_bundles=True)
     logger.info("Server shutdown.")

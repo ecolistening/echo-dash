@@ -32,7 +32,7 @@ def FileSelectionSidebar(
     sidebar_id: str,
     data_store_id: str,
     span: int = 4,
-) -> dmc.Col:
+) -> dmc.GridCol:
     """
     Listen to the 'selectedData' callback on the plot and toggle a sidebar to appear alongside a graph.
     Displays:
@@ -105,7 +105,7 @@ def FileSelectionSidebar(
         Output(files_accordion_id, "children"),
         Output(files_count_id, "children", allow_duplicate=True),
         State(data_store_id, "data"),
-        Input(files_pagination_id, "page"),
+        Input(files_pagination_id, "value"),
         Input(files_pagination_id, "total"),
         prevent_initial_call=True,
     )
@@ -206,7 +206,7 @@ def FileSelectionSidebar(
         logger.debug("clicked", n_clicks)
         return n_clicks
 
-    return dmc.Col(
+    return dmc.GridCol(
         id=sidebar_id,
         span=0,
         style=style_hidden,
@@ -246,9 +246,8 @@ def FileSelectionSidebar(
                     children=[
                         dmc.Pagination(
                             id=files_pagination_id,
-                            grow=True,
                             total=1,
-                            page=1,
+                            value=1,
                             size="sm",
                             color="indigo",
                         ),
@@ -259,8 +258,9 @@ def FileSelectionSidebar(
                     children=[
                         dmc.Accordion(
                             id=files_accordion_id,
-                            value=[],
                             chevronPosition="right",
+                            value=[],
+                            children=[],
                         ),
                     ],
                 ),

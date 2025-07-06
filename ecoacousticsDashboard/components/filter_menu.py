@@ -19,11 +19,10 @@ def FilterMenu(
         id="filter-menu",
         placement="top",
         is_open=False,
-        style={"padding": "0"},
         children=[
             dmc.Grid(
                 children=[
-                    dmc.Col(
+                    dmc.GridCol(
                         span=4,
                         children=[
                             dmc.Accordion(

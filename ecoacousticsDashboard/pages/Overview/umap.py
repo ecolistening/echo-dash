@@ -114,7 +114,7 @@ layout = html.Div([
             dmc.Text(
                 "Dot Size",
                 size="sm",
-                align="left",
+                ta="left",
             ),
             dmc.Slider(
                 id=size_slider_id,
@@ -133,7 +133,7 @@ layout = html.Div([
             dmc.Text(
                 "Opacity",
                 size='sm',
-                align="left",
+                ta="left",
             ),
             dmc.Slider(
                 id=opacity_slider_id,
@@ -152,7 +152,7 @@ layout = html.Div([
             dmc.Text(
                 "Sample Size",
                 size="sm",
-                align="left",
+                ta="left",
             ),
             dmc.Slider(
                 id=sample_slider_id,
@@ -171,7 +171,7 @@ layout = html.Div([
     # the file selection sidebar changes the span of the
     # sibling column span to make itself visible
     dmc.Grid([
-        dmc.Col(
+        dmc.GridCol(
             id="graph-container",
             span=12,
             children=[
@@ -199,7 +199,7 @@ layout = html.Div([
         placement="bottom",
         children=dmc.Grid(
             children=[
-                dmc.Col(
+                dmc.GridCol(
                     span=4,
                     children=[
                         dmc.Title(PAGE_TITLE, order=2),
@@ -209,7 +209,7 @@ layout = html.Div([
                     variant="dotted",
                     orientation="vertical"
                 ),
-                dmc.Col(
+                dmc.GridCol(
                     span="auto",
                     children=[
                         dmc.Text(

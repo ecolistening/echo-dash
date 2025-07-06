@@ -103,13 +103,13 @@ layout = html.Div([
         ],
     ),
     dmc.Grid([
-        dmc.Col(
+        dmc.GridCol(
             span=4,
             children=[
                 dmc.Text(
                     "Dot Size",
                     size="sm",
-                    align="left",
+                    ta="left",
                 ),
                 dmc.Slider(
                     id=size_slider_id,

@@ -26,7 +26,7 @@ def RowFacetSelect(
     select = dmc.Select(
         id=id,
         label="Facet Rows by",
-        value=default,
+        value="location",
         style=style,
         **DEFAULT_SELECT_OPTIONS,
     )
@@ -62,7 +62,7 @@ def ColumnFacetSelect(
     select = dmc.Select(
         id=id,
         label="Facet Columns by",
-        value=default,
+        value="location",
         style=style,
         **DEFAULT_SELECT_OPTIONS,
     )

@@ -52,10 +52,10 @@ def Footer(
 ) -> dmc.Grid:
     return dmc.Grid(
         children=[
-            dmc.Col([
+            dmc.GridCol([
                 Tabs(PAGE_NAME, **kwargs),
             ], span=8),
-            dmc.Col([
+            dmc.GridCol([
                 get_save_plot(f"{PAGE_NAME}-graph")
             ], span=4),
         ],

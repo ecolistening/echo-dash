@@ -2,7 +2,7 @@ import dash_mantine_components as dmc
 
 from dash import ctx, callback, Output, Input, State, html
 from loguru import logger
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, List
 
 from api import (
     dispatch,
@@ -18,7 +18,8 @@ DEFAULT_SELECT_OPTIONS = dict(
 
 def ColourSelect(
     id: str,
-    default=None,
+    default: str = "",
+    data: List[Dict[str, str]] = [],
     style: Dict[str, Any] = dict(width=200),
     categorical: bool = False,
 ) -> dmc.Select:
@@ -28,6 +29,7 @@ def ColourSelect(
         id=id,
         label="Colour by",
         value=default,
+        data=[],
         style=style,
         **DEFAULT_SELECT_OPTIONS
     )

@@ -8,8 +8,5 @@ from .footer import *
 from .figure_downloader import *
 from .nav_bar import *
 from .menu import *
-from .dataset_select import *
-from .feature_select import *
-from .date_picker import *
 from .top_bar import *
 from .filter_menu import *
