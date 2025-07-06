@@ -78,6 +78,28 @@ def TopBar(
                                     dmc.HoverCardTarget(
                                         children=dmc.ActionIcon(
                                             DashIconify(
+                                                icon="uil:filter",
+                                                width=24,
+                                            ),
+                                            id="toggle-filter-menu",
+                                            variant="light",
+                                            color="blue",
+                                            size="lg",
+                                            n_clicks=0,
+                                        ),
+                                    ),
+                                    dmc.HoverCardDropdown(
+                                        children=[
+                                            dmc.Text("View filters"),
+                                        ]
+                                    )
+                                ],
+                            ),
+                            dmc.HoverCard(
+                                children=[
+                                    dmc.HoverCardTarget(
+                                        children=dmc.ActionIcon(
+                                            DashIconify(
                                                 icon="uil:image-download",
                                                 width=24,
                                             ),

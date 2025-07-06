@@ -52,6 +52,7 @@ def create_dash_app() -> dash.Dash:
             children=[
                 *global_store,
                 dash.page_container,
+                components.FilterMenu(),
             ],
             navbar=components.NavBar(),
         ),

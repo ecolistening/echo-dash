@@ -9,3 +9,12 @@ from dash import Output, Input, State, ALL
 )
 def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
+
+@callback(
+    Output("filter-menu", "is_open"),
+    Input("toggle-filter-menu", "n_clicks"),
+    State("filter-menu", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_filter_menu(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
