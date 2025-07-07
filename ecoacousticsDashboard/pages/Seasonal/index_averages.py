@@ -17,6 +17,8 @@ from api import (
     FETCH_DATASET_CATEGORIES,
 )
 from components.dataset_options_select import DatasetOptionsSelect
+from components.controls_panel import ControlsPanel
+from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
 from utils import list2tuple
 
@@ -40,41 +42,56 @@ windows_options = [
 ]
 
 layout = html.Div([
-    dmc.Group(
-        grow=True,
-        children=[
-            time_aggregation := dmc.SegmentedControl(
-                id="index-averages-time-aggregation",
-                data=[
-                    {"value": opt["frequency"], "label": opt["description"]}
-                    for opt in windows_options
-                ],
-                value=windows_options[3]["frequency"],
-                persistence=True,
-            ),
-            # colours_tickbox := dmc.Chip(
-            #     'Colour by Recorder',
-            #     value='colour',
-            #     checked=True,
-            #     persistence=True,
-            #     id='colour-locations'
-            # ),
-            # outliers_tickbox := dmc.Chip(
-            #     'Outliers',
-            #     value='outlier',
-            #     checked=True,
-            #     persistence=True,
-            #     id='outliers-tickbox'
-            # )
-            # separate_plots_tickbox := dmc.Chip(
-            #     'Plot per Recorder',
-            #     value='subplots',
-            #     checked=False,
-            #     persistence=True,
-            #     id='separate-plots'
-            # )
-        ],
-    ),
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                time_aggregation := dmc.SegmentedControl(
+                    id="index-averages-time-aggregation",
+                    data=[
+                        {"value": opt["frequency"], "label": opt["description"]}
+                        for opt in windows_options
+                    ],
+                    value=windows_options[3]["frequency"],
+                    persistence=True,
+                ),
+                # colours_tickbox := dmc.Chip(
+                #     'Colour by Recorder',
+                #     value='colour',
+                #     checked=True,
+                #     persistence=True,
+                #     id='colour-locations'
+                # ),
+                # outliers_tickbox := dmc.Chip(
+                #     'Outliers',
+                #     value='outlier',
+                #     checked=True,
+                #     persistence=True,
+                #     id='outliers-tickbox'
+                # )
+                # separate_plots_tickbox := dmc.Chip(
+                #     'Plot per Recorder',
+                #     value='subplots',
+                #     checked=False,
+                #     persistence=True,
+                #     id='separate-plots'
+                # )
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="index-averages-graph",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ]),
     dcc.Loading(
         dcc.Graph(id="index-averages-graph"),
     ),

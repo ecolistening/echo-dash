@@ -21,7 +21,9 @@ from api import (
     FETCH_DATASET_DROPDOWN_OPTIONS,
 )
 from components.dataset_options_select import DatasetOptionsSelect
+from components.controls_panel import ControlsPanel
 from components.file_selection_sidebar import FileSelectionSidebar
+from components.figure_download_widget import FigureDownloadWidget
 
 from utils import list2tuple
 
@@ -60,81 +62,99 @@ dash.register_page(
 
 layout = html.Div([
     dcc.Store(id="umap-data"),
-    dmc.Group(
-        grow=True,
-        children=[
-            DatasetOptionsSelect(
-                id="umap-colour-select",
-                label="Colour by"
-            ),
-            DatasetOptionsSelect(
-                id="umap-symbol-select",
-                label="Symbol by"
-            ),
-            DatasetOptionsSelect(
-                id="umap-facet-row-select",
-                label="Facet rows by"
-            ),
-            DatasetOptionsSelect(
-                id="umap-facet-column-select",
-                label="Facet columns by"
-            ),
-        ],
-    ),
-    dmc.Group([
-        html.Div([
-            dmc.Text(
-                "Dot Size",
-                size="sm",
-                ta="left",
-            ),
-            dmc.Slider(
-                id="umap-size-slider",
-                min=1,
-                max=20,
-                step=1,
-                value=6,
-                marks=[
-                    {"value": i, "label": f"{i}"}
-                    for i in (1, 10, 20)
-                ],
-                persistence=True
-            )
-        ]),
-        html.Div([
-            dmc.Text(
-                "Opacity",
-                size='sm',
-                ta="left",
-            ),
-            dmc.Slider(
-                id="umap-opacity-slider",
-                min=0,
-                max=100,
-                step=5,
-                value=50,
-                marks=[
-                    dict(value=i, label=f"{i}%")
-                    for i in np.linspace(0, 100, 5, endpoint=True, dtype=int)
-                ],
-                persistence=True,
-            )
-        ]),
-        html.Div([
-            dmc.Text(
-                "Sample Size",
-                size="sm",
-                ta="left",
-            ),
-            dmc.Slider(
-                id=f"umap-sample-slider",
-                persistence=True,
-                min=1,
-                value=None,
-                step=1,
-            )
-        ]),
-    ], grow=True),
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                DatasetOptionsSelect(
+                    id="umap-colour-select",
+                    label="Colour by"
+                ),
+                DatasetOptionsSelect(
+                    id="umap-symbol-select",
+                    label="Symbol by"
+                ),
+                DatasetOptionsSelect(
+                    id="umap-facet-row-select",
+                    label="Facet rows by"
+                ),
+                DatasetOptionsSelect(
+                    id="umap-facet-column-select",
+                    label="Facet columns by"
+                ),
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="umap-graph",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Dot Size",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="umap-size-slider",
+                        min=1,
+                        max=20,
+                        step=1,
+                        value=6,
+                        marks=[
+                            {"value": i, "label": f"{i}"}
+                            for i in (1, 10, 20)
+                        ],
+                        persistence=True
+                    )
+                ]),
+                dmc.Stack([
+                    dmc.Text(
+                        "Opacity",
+                        size='sm',
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="umap-opacity-slider",
+                        min=0,
+                        max=100,
+                        step=5,
+                        value=50,
+                        marks=[
+                            dict(value=i, label=f"{i}%")
+                            for i in np.linspace(0, 100, 5, endpoint=True, dtype=int)
+                        ],
+                        persistence=True,
+                    )
+                ]),
+                dmc.Stack([
+                    dmc.Text(
+                        "Sample Size",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id=f"umap-sample-slider",
+                        persistence=True,
+                        min=1,
+                        value=None,
+                        step=1,
+                    )
+                ]),
+            ]
+        ),
+    ]),
     dmc.Divider(
         variant="dotted",
         style={"margin-top": "30px"}

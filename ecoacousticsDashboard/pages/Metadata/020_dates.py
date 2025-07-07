@@ -16,6 +16,8 @@ from api import (
     dispatch,
     FETCH_FILES,
 )
+from components.figure_download_widget import FigureDownloadWidget
+from components.controls_panel import ControlsPanel
 from components.footer import Footer
 from utils import list2tuple
 
@@ -25,6 +27,26 @@ PLOT_HEIGHT = 800
 dash.register_page(__name__, title=PAGE_TITLE, name='Dates')
 
 layout = html.Div([
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="dates-graph",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ]),
     dcc.Loading(
         dcc.Graph(id="dates-graph"),
     ),

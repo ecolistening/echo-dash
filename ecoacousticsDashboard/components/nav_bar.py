@@ -8,7 +8,7 @@ from dash_iconify import DashIconify
 from loguru import logger
 from typing import Any, List, Dict
 
-import components
+from components.menu import Menu
 
 def NavBar():
     return dmc.AppShellNavbar(
@@ -18,7 +18,7 @@ def NavBar():
         children=dmc.ScrollArea(
             dmc.Stack(
                 children=[
-                    components.Menu(),
+                    Menu(),
                     dmc.Divider(),
                     dmc.Title("Data", order=3),
                     dmc.Select(

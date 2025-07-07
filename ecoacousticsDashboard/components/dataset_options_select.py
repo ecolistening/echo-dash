@@ -22,12 +22,11 @@ DEFAULT_SELECT_OPTIONS = dict(
 
 def DatasetOptionsSelect(
     id: str,
-    label: str,
     categorical: bool = False,
     **kwargs: Any,
 ) -> dmc.Select:
-    default_select_options = DEFAULT_SELECT_OPTIONS.copy()
-    select_options = default_select_options.update(kwargs)
+    select_options = DEFAULT_SELECT_OPTIONS.copy()
+    select_options.update(kwargs)
 
     @callback(
         Output(id, "data"),
@@ -39,4 +38,4 @@ def DatasetOptionsSelect(
         params = dict(dataset_name=dataset_name)
         return dispatch(action, **params)
 
-    return dmc.Select(id=id, label=label, **DEFAULT_SELECT_OPTIONS)
+    return dmc.Select(id=id, **select_options)

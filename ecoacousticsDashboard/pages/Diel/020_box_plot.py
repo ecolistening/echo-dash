@@ -15,11 +15,13 @@ from api import (
     FETCH_DATASET_CATEGORIES,
 )
 from components.dataset_options_select import DatasetOptionsSelect
+from components.controls_panel import ControlsPanel
+from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
 from utils import list2tuple
 import components
 
-PAGE_NAME = "box-plot"
+PAGE_NAME = "index-box-plot"
 PAGE_TITLE = "Box Plot of Acoustic Descriptor by Time of Day"
 
 dash.register_page(
@@ -31,48 +33,80 @@ dash.register_page(
 PLOT_HEIGHT = 800
 
 layout = html.Div([
-    dmc.Group(
-        grow=True,
-        children=[
-            DatasetOptionsSelect(
-                id="box-colour-select",
-                label="Colour by"
-            ),
-            DatasetOptionsSelect(
-                id="box-facet-row-select",
-                label="Facet rows by"
-            ),
-            DatasetOptionsSelect(
-                id="box-facet-column-select",
-                label="Facet columns by"
-            ),
-            dmc.SegmentedControl(
-                id="box-time-aggregation",
-                data=[
-                    {"value": "time", "label": "15 minutes"},
-                    {"value": "hour", "label": "1 hour"},
-                    {"value": "dddn", "label": "Dawn-Day-Dusk-Night"}
-                ],
-                value="dddn",
-                persistence=True
-            ),
-            dmc.Chip(
-                "Outliers",
-                id="box-outliers-tickbox",
-                value="outlier",
-                checked=True,
-                persistence=True,
-            ),
-        ],
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                DatasetOptionsSelect(
+                    id="index-box-colour-select",
+                    label="Colour by"
+                ),
+                DatasetOptionsSelect(
+                    id="index-box-facet-row-select",
+                    label="Facet rows by"
+                ),
+                DatasetOptionsSelect(
+                    id="index-box-facet-column-select",
+                    label="Facet columns by"
+                ),
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="index-box-graph",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        dmc.Group(
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Group by Time",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.SegmentedControl(
+                        id="index-box-time-aggregation",
+                        data=[
+                            {"value": "time", "label": "15 minutes"},
+                            {"value": "hour", "label": "1 hour"},
+                            {"value": "dddn", "label": "Dawn-Day-Dusk-Night"}
+                        ],
+                        value="dddn",
+                        persistence=True
+                    ),
+                ]),
+                dmc.Stack([
+                    dmc.Chip(
+                        "Outliers",
+                        id="index-box-outliers-tickbox",
+                        value="outlier",
+                        checked=True,
+                        persistence=True,
+                    ),
+                ]),
+            ],
+        ),
+    ]),
+    dmc.Divider(
+        variant="dotted",
+        style={"margin-top": "30px"}
     ),
     dcc.Loading(
-        dcc.Graph(id="box-graph"),
+        dcc.Graph(id="index-box-graph"),
     ),
     dbc.Offcanvas(
-        id="box-page-info",
+        id="index-box-page-info",
         is_open=False,
         placement="bottom",
-        children=Footer("box"),
+        children=Footer("index-box"),
     ),
     # FIXME
     # components.SoundSampleModal(
@@ -81,9 +115,9 @@ layout = html.Div([
 ])
 
 @callback(
-    Output("box-page-info", "is_open"),
+    Output("index-box-page-info", "is_open"),
     Input("info-icon", "n_clicks"),
-    State("box-page-info", "is_open"),
+    State("index-box-page-info", "is_open"),
     prevent_initial_call=True,
 )
 def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
@@ -91,16 +125,16 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 
 
 @callback(
-    Output("box-graph", "figure"),
+    Output("index-box-graph", "figure"),
     State("dataset-select", "value"),
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("feature-dropdown", "value"),
-    Input("box-time-aggregation", "value"),
-    Input("box-outliers-tickbox", "checked"),
-    Input("box-colour-select", "value"),
-    Input("box-facet-row-select", "value"),
-    Input("box-facet-column-select", "value"),
+    Input("index-box-time-aggregation", "value"),
+    Input("index-box-outliers-tickbox", "checked"),
+    Input("index-box-colour-select", "value"),
+    Input("index-box-facet-row-select", "value"),
+    Input("index-box-facet-column-select", "value"),
 )
 def update_graph(
     dataset_name: str,

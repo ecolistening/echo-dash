@@ -55,9 +55,5 @@ def Footer(
             dmc.GridCol([
                 Tabs(PAGE_NAME, **kwargs),
             ], span=8),
-            dmc.GridCol([
-                get_save_plot(f"{PAGE_NAME}-graph")
-            ], span=4),
         ],
-        gutter="xl",
     )

@@ -37,29 +37,6 @@ def HoverIcons():
                     dmc.HoverCardTarget(
                         children=dmc.ActionIcon(
                             DashIconify(
-                                icon="uil:image-download",
-                                width=24,
-                            ),
-                            id="image-download-icon",
-                            variant="light",
-                            color="blue",
-                            size="lg",
-                            n_clicks=0,
-                        ),
-                    ),
-                    dmc.HoverCardDropdown(
-                        children=[
-                            dmc.Text("Download image as..."),
-                            # FigureDownloader(page_name),
-                        ]
-                    )
-                ],
-            ),
-            dmc.HoverCard(
-                children=[
-                    dmc.HoverCardTarget(
-                        children=dmc.ActionIcon(
-                            DashIconify(
                                 icon="uil:file-download-alt",
                                 width=24,
                             ),

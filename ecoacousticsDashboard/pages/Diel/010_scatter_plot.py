@@ -16,11 +16,13 @@ from api import (
     FETCH_DATASET_CATEGORIES,
 )
 from components.dataset_options_select import DatasetOptionsSelect
+from components.controls_panel import ControlsPanel
+from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
 from utils import list2tuple
 from utils import sketch
 
-PAGE_NAME = 'scatter-plot'
+PAGE_NAME = 'index-scatter'
 PAGE_TITLE = 'Acoustic Descriptor by Time of Day'
 
 dash.register_page(
@@ -31,60 +33,52 @@ dash.register_page(
 
 PLOT_HEIGHT = 800
 
-# setup plot type selector
-plot_types = {
-    "Scatter": px.scatter,
-    "Scatter Polar": sketch.scatter_polar,
-}
-plot_type_kwargs = {
-    "Scatter": dict(
-        # mode="markers",
-        # marker=dict(size=6, opacity=1.0),
-        # fill="toself",
-    ),
-    "Scatter Polar": dict(
-        r='value',
-        theta='hour',
-        # # TODO: implement marker style and colour in custom polar facet grid plot
-        mode="markers",
-        marker=dict(size=6, opacity=1.0),
-        # fill="toself",
-    ),
-}
-
 layout = html.Div([
-    dmc.Group(
-        grow=True,
-        children=[
-            DatasetOptionsSelect(
-                id="scatter-colour-select",
-                label="Colour by"
-            ),
-            DatasetOptionsSelect(
-                id="scatter-symbol-select",
-                label="Symbol by"
-            ),
-            DatasetOptionsSelect(
-                id="scatter-facet-row-select",
-                label="Facet rows by"
-            ),
-            DatasetOptionsSelect(
-                id="scatter-facet-column-select",
-                label="Facet columns by"
-            ),
-        ],
-    ),
-    dmc.Grid([
-        dmc.GridCol(
-            span=4,
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
             children=[
+                DatasetOptionsSelect(
+                    id="index-scatter-colour-select",
+                    label="Colour by",
+                ),
+                DatasetOptionsSelect(
+                    id="index-scatter-symbol-select",
+                    label="Symbol by"
+                ),
+                DatasetOptionsSelect(
+                    id="index-scatter-facet-row-select",
+                    label="Facet rows by"
+                ),
+                DatasetOptionsSelect(
+                    id="index-scatter-facet-column-select",
+                    label="Facet columns by"
+                ),
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="index-scatter-graph",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        dmc.Group(
+            grow=True,
+            children=dmc.Stack([
                 dmc.Text(
                     "Dot Size",
                     size="sm",
                     ta="left",
                 ),
                 dmc.Slider(
-                    id="scatter-size-slider",
+                    id="index-scatter-size-slider",
                     min=1,
                     max=20,
                     step=1,
@@ -95,41 +89,44 @@ layout = html.Div([
                     ],
                     persistence=True
                 )
-            ]
+            ]),
         ),
     ]),
-    dmc.Divider(variant='dotted'),
+    dmc.Divider(
+        variant="dotted",
+        style={"margin-top": "30px"}
+    ),
     dcc.Loading(
-        dcc.Graph(id=f"scatter-graph"),
+        dcc.Graph(id=f"index-scatter-graph"),
     ),
     dbc.Offcanvas(
-        id="scatter-page-info",
+        id="index-scatter-page-info",
         is_open=False,
         placement="bottom",
-        children=Footer("scatter"),
+        children=Footer("index-scatter"),
     ),
 ])
 
 @callback(
-    Output("scatter-page-info", "is_open"),
+    Output("index-scatter-page-info", "is_open"),
     Input("info-icon", "n_clicks"),
-    State("scatter-page-info", "is_open"),
+    State("index-scatter-page-info", "is_open"),
     prevent_initial_call=True,
 )
 def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
 
 @callback(
-    Output("scatter-graph", "figure"),
+    Output("index-scatter-graph", "figure"),
     State("dataset-select", "value"),
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("feature-dropdown", "value"),
-    Input("scatter-size-slider", "value"),
-    Input("scatter-colour-select", "value"),
-    Input("scatter-symbol-select", "value"),
-    Input("scatter-facet-row-select", "value"),
-    Input("scatter-facet-column-select", "value"),
+    Input("index-scatter-size-slider", "value"),
+    Input("index-scatter-colour-select", "value"),
+    Input("index-scatter-symbol-select", "value"),
+    Input("index-scatter-facet-row-select", "value"),
+    Input("index-scatter-facet-column-select", "value"),
 )
 def draw_figure(
     dataset_name: str,
@@ -182,7 +179,7 @@ def draw_figure(
         }
     )
 
-    # Adjust size of scatter dots
+    # Adjust size of index-scatter dots
     fig.update_traces(marker=dict(size=dot_size))
 
     return fig

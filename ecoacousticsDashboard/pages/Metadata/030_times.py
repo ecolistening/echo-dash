@@ -17,6 +17,8 @@ from api import (
     FETCH_DATASET_CATEGORIES,
 )
 from components.dataset_options_select import DatasetOptionsSelect
+from components.controls_panel import ControlsPanel
+from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
 from utils import list2tuple
 from utils.content import get_tabs
@@ -32,48 +34,63 @@ dash.register_page(
 )
 
 layout = html.Div([
-    dmc.Group(
-        grow=True,
-        children=[
-            DatasetOptionsSelect(
-                id="times-colour-select",
-                label="Colour by"
-            ),
-            DatasetOptionsSelect(
-                id="times-symbol-select",
-                label="Symbol by"
-            ),
-            DatasetOptionsSelect(
-                id="times-facet-row-select",
-                label="Facet rows by"
-            ),
-            DatasetOptionsSelect(
-                id="times-facet-column-select",
-                label="Facet columns by"
-            ),
-        ],
-    ),
-    dmc.Grid([
-        dmc.GridCol(
-            span=4,
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
             children=[
-                dmc.Text(
-                    "Dot Size",
-                    size="sm",
-                    ta="left",
+                DatasetOptionsSelect(
+                    id="times-colour-select",
+                    label="Colour by"
                 ),
-                dmc.Slider(
-                    id="times-size-slider",
-                    min=1,
-                    max=20,
-                    step=1,
-                    value=4,
-                    marks=[
-                        {"value": i, "label": f"{i}"}
-                        for i in (1, 10, 20)
+                DatasetOptionsSelect(
+                    id="times-symbol-select",
+                    label="Symbol by"
+                ),
+                DatasetOptionsSelect(
+                    id="times-facet-row-select",
+                    label="Facet rows by"
+                ),
+                DatasetOptionsSelect(
+                    id="times-facet-column-select",
+                    label="Facet columns by"
+                ),
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="times-graph",
+                        ),
                     ],
-                    persistence=True
-                )
+                ),
+            ],
+        ),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Dot Size",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="times-size-slider",
+                        min=1,
+                        max=20,
+                        step=1,
+                        value=4,
+                        marks=[
+                            {"value": i, "label": f"{i}"}
+                            for i in (1, 10, 20)
+                        ],
+                        persistence=True
+                    )
+                ]),
             ],
         ),
     ]),

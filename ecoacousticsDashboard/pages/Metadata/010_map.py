@@ -13,9 +13,9 @@ from loguru import logger
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_LOCATIONS
+from components.controls_panel import ControlsPanel
+from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
-from utils.content import get_tabs
-from utils.save_plot_fig import get_save_plot
 
 PAGE_NAME = 'map'
 PAGE_TITLE = 'Location Map'
@@ -28,6 +28,26 @@ dash.register_page(
 )
 
 layout = html.Div([
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="map-graph",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ]),
     dcc.Loading(
         dcc.Graph(id="map-graph"),
     ),

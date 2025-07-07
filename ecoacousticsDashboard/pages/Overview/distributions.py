@@ -16,6 +16,8 @@ from api import (
     FETCH_DATASET_CATEGORIES,
 )
 from components.dataset_options_select import DatasetOptionsSelect
+from components.controls_panel import ControlsPanel
+from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
 from utils import list2tuple
 from utils.content import get_tabs
@@ -31,34 +33,47 @@ dash.register_page(
 )
 
 layout = html.Div([
-    dmc.Group(
-        grow=True,
-        children=[
-            DatasetOptionsSelect(
-                id="distributions-colour-select",
-                label="Colour by"
-            ),
-            DatasetOptionsSelect(
-                id="distributions-facet-row-select",
-                label="Facet rows by"
-            ),
-            DatasetOptionsSelect(
-                id="distributions-facet-column-select",
-                label="Facet columns by"
-            ),
-        ],
-    ),
-    dmc.Group([
-        html.Div([
-            dmc.Chip(
-                'Normalised',
-                id="distributions-normalised-tickbox",
-                value='normalised',
-                checked=False,
-                persistence=True,
-            )
-        ]),
-    ], grow=True),
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                DatasetOptionsSelect(
+                    id="distributions-colour-select",
+                    label="Colour by"
+                ),
+                DatasetOptionsSelect(
+                    id="distributions-facet-row-select",
+                    label="Facet rows by"
+                ),
+                DatasetOptionsSelect(
+                    id="distributions-facet-column-select",
+                    label="Facet columns by"
+                ),
+                html.Div([
+                    dmc.Chip(
+                        'Normalised',
+                        id="distributions-normalised-tickbox",
+                        value='normalised',
+                        checked=False,
+                        persistence=True,
+                    )
+                ]),
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="distributions-graph",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ]),
     dcc.Loading(
         dcc.Graph(
             id="distributions-graph"
@@ -68,7 +83,7 @@ layout = html.Div([
         id="distributions-page-info",
         is_open=False,
         placement="bottom",
-        children=Footer(PAGE_NAME),
+        children=Footer("distributions"),
     ),
 ])
 
