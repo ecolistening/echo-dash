@@ -155,10 +155,6 @@ layout = html.Div([
             ]
         ),
     ]),
-    dmc.Divider(
-        variant="dotted",
-        style={"margin-top": "30px"}
-    ),
     # Note: this is slightly hacky but it works
     # the file selection sidebar changes the span of the
     # sibling column span to make itself visible

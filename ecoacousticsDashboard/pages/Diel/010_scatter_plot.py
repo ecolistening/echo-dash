@@ -92,10 +92,6 @@ layout = html.Div([
             ]),
         ),
     ]),
-    dmc.Divider(
-        variant="dotted",
-        style={"margin-top": "30px"}
-    ),
     dcc.Loading(
         dcc.Graph(id=f"index-scatter-graph"),
     ),

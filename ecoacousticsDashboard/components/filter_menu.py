@@ -15,6 +15,15 @@ def FilterMenu(
     min_date: dt.date = dt.date(1970, 1, 1),
     max_date: dt.date = dt.date.today(),
 ) -> dbc.Offcanvas:
+    @callback(
+        Output("filter-menu", "is_open"),
+        Input("toggle-filter-menu", "n_clicks"),
+        State("filter-menu", "is_open"),
+        prevent_initial_call=True,
+    )
+    def toggle_filter_menu(n_clicks: int, is_open: bool) -> bool:
+        return not is_open
+
     return dmc.Group(
         id="filter-menu",
         grow=True,

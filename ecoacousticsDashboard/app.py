@@ -61,30 +61,33 @@ def create_dash_app() -> dash.Dash:
             children=[
                 *global_store,
                 dmc.AppShellHeader(
-                    children=dmc.Grid(
-                        style={"padding": "1rem 0.5rem 1rem 0.5rem"},
-                        children=[
-                            dmc.GridCol(
-                                span=6,
-                                children=dmc.Group(
-                                    justify="flex-start",
-                                    children=[
-                                        dmc.Burger(
-                                            id="burger",
-                                            size="sm",
-                                            opened=True,
-                                        ),
-                                        # dmc.Image(src=logo, h=40),
-                                        dmc.Title("EchoDash", c="blue"),
-                                    ]
+                    children=[
+                        dmc.Grid(
+                            style={"padding": "1rem 0.5rem 1rem 0.5rem"},
+                            children=[
+                                dmc.GridCol(
+                                    span=6,
+                                    children=dmc.Group(
+                                        justify="flex-start",
+                                        children=[
+                                            dmc.Burger(
+                                                id="burger",
+                                                size="sm",
+                                                opened=True,
+                                            ),
+                                            # dmc.Image(src=logo, h=40),
+                                            dmc.Title("EchoDash", c="blue"),
+                                        ]
+                                    ),
                                 ),
-                            ),
-                            dmc.GridCol(
-                                span=6,
-                                children=HoverIcons()
-                            )
-                        ]
-                    ),
+                                dmc.GridCol(
+                                    span=6,
+                                    children=HoverIcons()
+                                )
+                            ]
+                        ),
+                        FilterMenu(),
+                    ]
                 ),
                 NavBar(),
                 dmc.AppShellMain([
@@ -101,7 +104,6 @@ def create_dash_app() -> dash.Dash:
 
     from callbacks import nav_bar_callbacks
     from callbacks import dataset_config_callbacks
-    from callbacks import page_callbacks
 
     return app
 
