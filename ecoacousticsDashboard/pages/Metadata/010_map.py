@@ -12,40 +12,39 @@ from dash_iconify import DashIconify
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-import components
 from api import dispatch, FETCH_LOCATIONS
+from components.top_bar import TopBar
+from components.footer import Footer
 from utils.content import get_tabs
 from utils.save_plot_fig import get_save_plot
 
 PAGE_NAME = 'map'
 PAGE_TITLE = 'Location Map'
 PLOT_HEIGHT = 800
-dash.register_page(__name__, title=PAGE_TITLE, name='Map')
 
-dataset_select_id = "dataset-select"
-date_picker_id = "date-picker"
-graph_id = f"{PAGE_NAME}-graph"
+dash.register_page(
+    __name__,
+    title=PAGE_TITLE,
+    name='Map'
+)
 
 layout = html.Div([
-    components.TopBar(
-        dataset_id=dataset_select_id,
-        graph_id=graph_id,
-    ),
+    TopBar("map"),
     dmc.Divider(variant='dotted'),
     dcc.Loading(
-        dcc.Graph(id=graph_id),
+        dcc.Graph(id="map-graph"),
     ),
     dbc.Offcanvas(
         id="page-info",
         is_open=False,
         placement="bottom",
-        children=components.Footer(PAGE_NAME),
+        children=Footer("map"),
     ),
 ])
 
 @callback(
-    Output(graph_id, "figure"),
-    Input(dataset_select_id, "value"),
+    Output(f"map-graph", "figure"),
+    Input("dataset-select", "value"),
 )
 def update_graph(dataset_name):
     logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=}")

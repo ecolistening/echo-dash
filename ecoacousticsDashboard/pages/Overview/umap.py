@@ -24,7 +24,8 @@ from api import (
     FETCH_ACOUSTIC_FEATURES_UMAP,
     FETCH_DATASET_CATEGORIES,
 )
-import components
+from components.top_bar import TopBar
+from components.file_selection_sidebar import FileSelectionSidebar
 
 from utils import list2tuple
 
@@ -61,52 +62,40 @@ dash.register_page(
 # 2. When updating a particular filter, simply change the omitted ids in the list.
 # 3. Data is fetched by composing together all file_ids in the store, removing duplicates, and executing the query to fetch those that are not in the list
 
-# global filters
-dataset_select_id = "dataset-select"
-date_picker_id = "date-picker"
-locations_hierarchy_id = "checklist-locations-hierarchy"
-
 # plot params
-graph_id = f"{PAGE_NAME}-graph"
-plot_data_id = f"{PAGE_NAME}-plot-data"
-colour_select_id = f"{PAGE_NAME}-colour-facet-select"
-symbol_select_id = f"{PAGE_NAME}-symbol-facet-select"
-row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
-col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
-opacity_slider_id = f"{PAGE_NAME}-plot-options-opacity"
-sample_slider_id = f"{PAGE_NAME}-plot-options-sample"
-size_slider_id = f"{PAGE_NAME}-size-slider"
-category_orders_id = f"{PAGE_NAME}-category-orders"
+colour_select_id = f"umap-colour-facet-select"
+symbol_select_id = f"umap-symbol-facet-select"
+row_facet_select_id = f"umap-row-facet-select"
+col_facet_select_id = f"umap-col-facet-select"
+opacity_slider_id = f"umap-plot-options-opacity"
+size_slider_id = f"umap-size-slider"
+category_orders_id = f"umap-category-orders"
 
 # sidebar params
-toggle_sidebar_id = f"{PAGE_NAME}-toggle-sidebar"
-sidebar_file_data_id = f"{PAGE_NAME}-sidebar-file-data"
+toggle_sidebar_id = f"umap-toggle-sidebar"
+sidebar_file_data_id = f"umap-sidebar-file-data"
 
 layout = html.Div([
-    dcc.Store(id=plot_data_id),
     dcc.Store(id=category_orders_id),
-    dcc.Store(id=sidebar_file_data_id),
-    components.TopBar(
-        dataset_id=dataset_select_id,
-        graph_id=graph_id,
-        plot_data_id=plot_data_id,
+    TopBar(
+        PAGE_NAME,
         children=[
-            components.ColourSelect(
-                id=colour_select_id,
-                default=None,
-            ),
-            components.SymbolSelect(
-                id=symbol_select_id,
-                default=None,
-            ),
-            components.RowFacetSelect(
-                id=row_facet_select_id,
-                default=None,
-            ),
-            components.ColumnFacetSelect(
-                id=col_facet_select_id,
-                default=None,
-            ),
+            # components.ColourSelect(
+            #     id=colour_select_id,
+            #     default=None,
+            # ),
+            # components.SymbolSelect(
+            #     id=symbol_select_id,
+            #     default=None,
+            # ),
+            # components.RowFacetSelect(
+            #     id=row_facet_select_id,
+            #     default=None,
+            # ),
+            # components.ColumnFacetSelect(
+            #     id=col_facet_select_id,
+            #     default=None,
+            # ),
         ],
     ),
     dmc.Group([
@@ -155,7 +144,7 @@ layout = html.Div([
                 ta="left",
             ),
             dmc.Slider(
-                id=sample_slider_id,
+                id=f"umap-sample-slider",
                 persistence=True,
                 min=1,
                 value=None,
@@ -176,18 +165,11 @@ layout = html.Div([
             span=12,
             children=[
                 dcc.Loading([
-                    dcc.Graph(id=graph_id),
+                    dcc.Graph(id=f"umap-graph"),
                 ]),
             ],
         ),
-        components.FileSelectionSidebar(
-            dataset_id=dataset_select_id,
-            graph_id=graph_id,
-            graph_container_id="graph-container",
-            sidebar_id=toggle_sidebar_id,
-            data_store_id=sidebar_file_data_id,
-            span=4,
-        ),
+        FileSelectionSidebar(span=4),
     ]),
     dmc.Divider(
         variant="dotted",
@@ -227,29 +209,18 @@ layout = html.Div([
 ])
 
 @callback(
-    Output(plot_data_id, "data"),
-    Output(category_orders_id, "data"),
-    Output(sample_slider_id, "max"),
-    Output(sample_slider_id, "value"),
-    Output(sample_slider_id, "marks"),
-    Input(dataset_select_id, "value"),
-    Input(date_picker_id, "value"),
-    Input({"type": locations_hierarchy_id, "index": ALL}, "value"),
+    Output(f"umap-sample-slider", "max"),
+    Output(f"umap-sample-slider", "value"),
+    Output(f"umap-sample-slider", "marks"),
+    Input("dataset-select", "value"),
+    Input("date-picker", "value"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
 )
-def update_umap_data_store(
+def init_slider(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
 ) -> str:
-    """
-    First callback in the initial execution chain.
-
-    - Fetches UMAP projection from API and caches client-side
-    - Fetches the category orders from API and caches client-side
-    - Resets the slider range, ticks and sample size to be the maximum (as per cached UMAP)
-
-    This is a joint action since separating these events independently triggers multiple redraw events
-    """
     # FIXME: to support Kilpis we need to fix this so its the total number of instances, i.e. file_segment_id
     # ideally this should be constructed in soundade during the index files stage
     files = dispatch(
@@ -261,77 +232,63 @@ def update_umap_data_store(
     )
     max_samples = len(files)
     sample_size = max_samples # min(1000, max_samples)
+    ticks = [
+        dict(value=i, label=f"{i}")
+        for i in np.linspace(1, max_samples, 5, endpoint=True, dtype=int)
+    ]
+    return max_samples, sample_size, ticks
+
+@callback(
+    Output(f"umap-graph", "figure"),
+    Input("dataset-select", "value"),
+    Input("date-picker", "value"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    Input(f"umap-sample-slider", "value"),
+    Input(f"umap-sample-slider", "max"),
+    # Input(colour_select_id, "value"),
+    # Input(symbol_select_id, "value"),
+    # Input(row_facet_select_id, "value"),
+    # Input(col_facet_select_id, "value"),
+    Input(opacity_slider_id, "value"),
+    Input(size_slider_id, "value"),
+    Input(category_orders_id, "data"),
+    prevent_initial_call=True,
+)
+def draw_figure(
+    dataset_name: str,
+    dates: List[str],
+    locations: List[str],
+    sample_size: int,
+    max_samples: int,
+    # colour_by: str,
+    # symbol_by: str,
+    # row_facet: str,
+    # col_facet: str,
+    opacity: int,
+    dot_size: int,
+    category_orders: List[str] = [],
+) -> go.Figure:
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES_UMAP,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
         locations=list2tuple(locations),
-        sample_size=max_samples,
+        sample_size=max_samples, # ensures we subsample rather than re-run UMAP
     )
     category_orders = dispatch(
         FETCH_DATASET_CATEGORIES,
         dataset_name=dataset_name,
     )
-    json_data = data.to_json(
-        date_format="iso",
-        orient="table",
-    )
-    ticks = [
-        dict(value=i, label=f"{i}")
-        for i in np.linspace(1, max_samples, 5, endpoint=True, dtype=int)
-    ]
-    return json_data, category_orders, max_samples, sample_size, ticks
-
-@callback(
-    Output(graph_id, "figure"),
-    Input(sample_slider_id, "value"),
-    Input(colour_select_id, "value"),
-    Input(symbol_select_id, "value"),
-    Input(row_facet_select_id, "value"),
-    Input(col_facet_select_id, "value"),
-    Input(opacity_slider_id, "value"),
-    Input(size_slider_id, "value"),
-    Input(plot_data_id, "data"),
-    Input(category_orders_id, "data"),
-    prevent_initial_call=True,
-)
-def update_figure(
-    sample_size: int,
-    colour_by: str,
-    symbol_by: str,
-    row_facet: str,
-    col_facet: str,
-    opacity: int,
-    dot_size: int,
-    json_data: str | None = None,
-    category_orders: List[str] = [],
-) -> go.Figure:
-    """
-    Second callback in the initial execution chain.
-
-    - Subsamples from the browser-side UMAP data (stored as JSON)
-    - Fetches the cached category orders
-    - Renders the figure
-    """
-    logger.debug(
-        f"Trigger ID={ctx.triggered_id}: "
-        f"{sample_size=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=} {dot_size=}"
-    )
-
-    data = pd.read_json(
-        StringIO(json_data),
-        orient="table",
-    ).sample(sample_size)
 
     fig = px.scatter(
-        data,
+        data.sample(sample_size),
         x="UMAP Dim 1",
         y="UMAP Dim 2",
         opacity=opacity / 100.0,
-        color=colour_by,
-        symbol=symbol_by,
-        facet_row=row_facet,
-        facet_col=col_facet,
+        # color=colour_by,
+        # symbol=symbol_by,
+        # facet_row=row_facet,
+        # facet_col=col_facet,
         category_orders=category_orders,
         hover_name="file_id",
         hover_data=["file", "site", "dddn", "timestamp"],

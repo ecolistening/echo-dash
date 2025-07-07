@@ -9,12 +9,13 @@ from dash import Output, State, Input, ALL
 from dash_iconify import DashIconify
 from loguru import logger
 
-import components
 from api import (
     dispatch,
     FETCH_ACOUSTIC_FEATURES,
     FETCH_DATASET_CATEGORIES,
 )
+from components.top_bar import TopBar
+from components.footer import Footer
 from utils import list2tuple
 from utils.content import get_tabs
 
@@ -28,42 +29,34 @@ dash.register_page(
     name='Distributions',
 )
 
-dataset_select_id = "dataset-select"
-date_picker_id = "date-picker"
-feature_select_id = "feature-dropdown"
-locations_hierarchy_id = "checklist-locations-hierarchy"
-
-graph_id = f"{PAGE_NAME}-graph"
 colour_select_id = f"{PAGE_NAME}-colour-facet-select"
 row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
 col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
-norm_tickbox_id = f"{PAGE_NAME}-normalised-tickbox"
 
 layout = html.Div([
-    components.TopBar(
-        dataset_id=dataset_select_id,
-        graph_id=graph_id,
+    TopBar(
+        PAGE_NAME,
         children=[
-            components.ColourSelect(
-                id=colour_select_id,
-                categorical=True,
-                default="location",
-            ),
-            components.RowFacetSelect(
-                id=row_facet_select_id,
-                default="location",
-            ),
-            components.ColumnFacetSelect(
-                id=col_facet_select_id,
-                default="dddn",
-            ),
+            # components.ColourSelect(
+            #     id=colour_select_id,
+            #     categorical=True,
+            #     default="location",
+            # ),
+            # components.RowFacetSelect(
+            #     id=row_facet_select_id,
+            #     default="location",
+            # ),
+            # components.ColumnFacetSelect(
+            #     id=col_facet_select_id,
+            #     default="dddn",
+            # ),
         ]
     ),
     dmc.Group([
         html.Div([
             dmc.Chip(
                 'Normalised',
-                id=norm_tickbox_id,
+                id=f"{PAGE_NAME}-normalised-tickbox",
                 value='normalised',
                 checked=False,
                 persistence=True,
@@ -72,46 +65,45 @@ layout = html.Div([
     ], grow=True),
     dcc.Loading(
         dcc.Graph(
-            id=graph_id
+            id=f"{PAGE_NAME}-graph"
         ),
     ),
     dbc.Offcanvas(
         id="page-info",
         is_open=False,
         placement="bottom",
-        children=components.Footer(PAGE_NAME),
+        children=Footer(PAGE_NAME),
     ),
 ])
 
 
-# Add controls to build the interaction
 @callback(
-    Output(graph_id, 'figure'),
-    State(dataset_select_id, 'value'),
-    Input(date_picker_id, 'value'),
-    Input({'type': locations_hierarchy_id, 'index': ALL}, 'value'),
-    Input(feature_select_id, 'value'),
-    Input(colour_select_id, 'value'),
-    Input(row_facet_select_id, 'value'),
-    Input(col_facet_select_id, 'value'),
-    Input(norm_tickbox_id, 'checked'),
-    prevent_initial_call=True,
+    Output(f"{PAGE_NAME}-graph", 'figure'),
+    State("dataset-select", 'value'),
+    Input("date-picker", 'value'),
+    Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
+    Input("feature-dropdown", 'value'),
+    # Input(colour_select_id, 'value'),
+    # Input(row_facet_select_id, 'value'),
+    # Input(col_facet_select_id, 'value'),
+    Input(f"{PAGE_NAME}-normalised-tickbox", 'checked'),
+    # prevent_initial_call=True,
 )
 def update_graph(
     dataset_name,
     dates,
     locations,
     feature,
-    colour_by,
-    row_facet,
-    col_facet,
+    # colour_by,
+    # row_facet,
+    # col_facet,
     normalised
 ) -> go.Figure:
-    logger.debug(
-        f"Trigger ID={ctx.triggered_id}: "
-        f"{dataset_name=} dates:{len(dates)} locations:{len(locations)} "
-        f"{feature=} {colour_by=} {row_facet=} {col_facet=} {normalised=}"
-    )
+    # logger.debug(
+    #     f"Trigger ID={ctx.triggered_id}: "
+    #     f"{dataset_name=} dates:{len(dates)} locations:{len(locations)} "
+    #     f"{feature=} {colour_by=} {row_facet=} {col_facet=} {normalised=}"
+    # )
 
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
@@ -126,10 +118,14 @@ def update_graph(
     )
 
     fig = px.histogram(
-        data, x='value', marginal='rug', opacity=0.75, height=PLOTHEIGHT,
-        color=colour_by,
-        facet_row=row_facet,
-        facet_col=col_facet,
+        data,
+        x='value',
+        marginal='rug',
+        opacity=0.75,
+        height=PLOTHEIGHT,
+        # color=colour_by,
+        # facet_row=row_facet,
+        # facet_col=col_facet,
         histnorm='percent' if normalised else None,
         category_orders=category_orders,
     )

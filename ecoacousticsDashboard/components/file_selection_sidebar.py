@@ -26,40 +26,85 @@ from utils.webhost import AudioAPI
 PAGE_LIMIT = 10
 
 def FileSelectionSidebar(
-    dataset_id: str,
-    graph_id: str,
-    graph_container_id: str,
-    sidebar_id: str,
-    data_store_id: str,
-    span: int = 4,
+    span: int = 4
 ) -> dmc.GridCol:
-    """
-    Listen to the 'selectedData' callback on the plot and toggle a sidebar to appear alongside a graph.
-    Displays:
-
-    - Buttons to filter the data by include / disclude filtering. For more details on how this works, see FILTER.md
-    - A paginated list of samples (i.e. files) displayed in an accordion.
-    - Each accordion item panel contains the ability to playback the audio file
-    """
-    files_pagination_id = "selection-sidebar-files-pagination"
-    files_count_id = "selection-sidebar-files-count"
-    files_accordion_id = "selection-sidebar-files-accordion"
-    file_data_id = "selection-sidebar-file-data"
-    filter_include_button_id = "selection-sidebar-filter-include-button"
-    filter_disclude_button_id = "selection-sidebar-filter-disclude-button"
-
     style_hidden = dict(display="none")
     style_visible = dict(display="block")
 
+    component = dmc.GridCol(
+        id=f"umap-toggle-sidebar",
+        span=0,
+        style=style_hidden,
+        children=html.Div([
+            dcc.Store(id="umap-sidebar-file-data"),
+            dmc.Stack(
+                style={"margin-top": "1rem"},
+                children=[
+                    dmc.Group(
+                        grow=True,
+                        children=[
+                            dmc.Button(
+                                "Filter Selected",
+                                id="selection-sidebar-filter-disclude-button",
+                                variant="light",
+                                color="red",
+                                n_clicks=0,
+                            ),
+                            dmc.Button(
+                                "Filter Remaining",
+                                id="selection-sidebar-filter-include-button",
+                                variant="light",
+                                color="red",
+                                n_clicks=0,
+                            ),
+                        ]
+                    ),
+                    dmc.Group(
+                        grow=True,
+                        children=[
+                            dmc.Text(
+                                id="selection-sidebar-files-count",
+                                size="sm",
+                            ),
+                        ],
+                    ),
+                    dmc.Group(
+                        grow=True,
+                        children=[
+                            dmc.Pagination(
+                                id="selection-sidebar-files-pagination",
+                                total=1,
+                                value=1,
+                                size="sm",
+                                color="indigo",
+                            ),
+                        ],
+                    ),
+                    dmc.Group(
+                        grow=True,
+                        children=[
+                            dmc.Accordion(
+                                id="selection-sidebar-files-accordion",
+                                chevronPosition="right",
+                                value=[],
+                                children=[],
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ]),
+    )
+
     @callback(
-        Output(graph_container_id, "span"),
-        Output(sidebar_id, "span"),
-        Output(sidebar_id, "style"),
-        Output(data_store_id, "data"),
-        Output(files_count_id, "children", allow_duplicate=True),
-        Output(files_pagination_id, "total"),
-        State(dataset_id, "value"),
-        Input(graph_id, "selectedData"),
+        Output("graph-container", "span"),
+        Output("umap-toggle-sidebar", "span"),
+        Output("umap-toggle-sidebar", "style"),
+        Output("umap-sidebar-file-data", "data"),
+        Output("selection-sidebar-files-count", "children", allow_duplicate=True),
+        Output("selection-sidebar-files-pagination", "total"),
+        State("dataset-select", "value"),
+        Input("umap-graph", "selectedData"),
         prevent_initial_call=True,
     )
     def toggle_selection_sidebar(
@@ -102,11 +147,11 @@ def FileSelectionSidebar(
         )
 
     @callback(
-        Output(files_accordion_id, "children"),
-        Output(files_count_id, "children", allow_duplicate=True),
-        State(data_store_id, "data"),
-        Input(files_pagination_id, "value"),
-        Input(files_pagination_id, "total"),
+        Output("selection-sidebar-files-accordion", "children"),
+        Output("selection-sidebar-files-count", "children", allow_duplicate=True),
+        State("umap-sidebar-file-data", "data"),
+        Input("selection-sidebar-files-pagination", "value"),
+        Input("selection-sidebar-files-pagination", "total"),
         prevent_initial_call=True,
     )
     def change_page(
@@ -135,7 +180,7 @@ def FileSelectionSidebar(
                     dmc.AccordionControl(row["file_name"]),
                     dmc.AccordionPanel(
                         html.Div(
-                            id={"type": file_data_id, "index": row["file_id"]},
+                            id={"type": "selection-sidebar-file-data", "index": row["file_id"]},
                             children=[],
                         )
                     )
@@ -152,11 +197,11 @@ def FileSelectionSidebar(
         return accordion, selected_text
 
     @callback(
-        Output({"type": file_data_id, "index": MATCH}, "children"),
-        State(dataset_id, "value"),
-        State(data_store_id, "data"),
-        State({"type": file_data_id, "index": MATCH}, "id"),
-        Input(files_accordion_id, "value"),
+        Output({"type": "selection-sidebar-file-data", "index": MATCH}, "children"),
+        State("dataset-select", "value"),
+        State("umap-sidebar-file-data", "data"),
+        State({"type": "selection-sidebar-file-data", "index": MATCH}, "id"),
+        Input("selection-sidebar-files-accordion", "value"),
         prevent_initial_call=True,
     )
     def toggle_file_panel(
@@ -183,8 +228,8 @@ def FileSelectionSidebar(
         ])
 
     @callback(
-        Output(filter_include_button_id, "n_clicks"),
-        Input(filter_include_button_id, "n_clicks"),
+        Output("selection-sidebar-filter-include-button", "n_clicks"),
+        Input("selection-sidebar-filter-include-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def include_file_selection(
@@ -195,8 +240,8 @@ def FileSelectionSidebar(
         return n_clicks
 
     @callback(
-        Output(filter_disclude_button_id, "n_clicks"),
-        Input(filter_disclude_button_id, "n_clicks"),
+        Output("selection-sidebar-filter-disclude-button", "n_clicks"),
+        Input("selection-sidebar-filter-disclude-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def disclude_file_selection(
@@ -206,64 +251,4 @@ def FileSelectionSidebar(
         logger.debug("clicked", n_clicks)
         return n_clicks
 
-    return dmc.GridCol(
-        id=sidebar_id,
-        span=0,
-        style=style_hidden,
-        children=dmc.Stack(
-            style={"margin-top": "1rem"},
-            children=[
-                dmc.Group(
-                    grow=True,
-                    children=[
-                        dmc.Button(
-                            "Filter Selected",
-                            id=filter_disclude_button_id,
-                            variant="light",
-                            color="red",
-                            n_clicks=0,
-                        ),
-                        dmc.Button(
-                            "Filter Remaining",
-                            id=filter_include_button_id,
-                            variant="light",
-                            color="red",
-                            n_clicks=0,
-                        ),
-                    ]
-                ),
-                dmc.Group(
-                    grow=True,
-                    children=[
-                        dmc.Text(
-                            id=files_count_id,
-                            size="sm",
-                        ),
-                    ],
-                ),
-                dmc.Group(
-                    grow=True,
-                    children=[
-                        dmc.Pagination(
-                            id=files_pagination_id,
-                            total=1,
-                            value=1,
-                            size="sm",
-                            color="indigo",
-                        ),
-                    ],
-                ),
-                dmc.Group(
-                    grow=True,
-                    children=[
-                        dmc.Accordion(
-                            id=files_accordion_id,
-                            chevronPosition="right",
-                            value=[],
-                            children=[],
-                        ),
-                    ],
-                ),
-            ],
-        ),
-    )
+    return component

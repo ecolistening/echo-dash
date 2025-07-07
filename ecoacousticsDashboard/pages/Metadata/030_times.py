@@ -3,6 +3,7 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objs as go
 
 from dash import html, ctx, dcc, callback
 from dash import Output, Input, State, ALL
@@ -10,12 +11,13 @@ from dash_iconify import DashIconify
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-import components
 from api import (
     dispatch,
     FETCH_FILES,
     FETCH_DATASET_CATEGORIES,
 )
+from components.top_bar import TopBar
+from components.footer import Footer
 from utils import list2tuple
 from utils.content import get_tabs
 
@@ -29,35 +31,28 @@ dash.register_page(
     name='Times'
 )
 
-dataset_select_id = "dataset-select"
-date_picker_id = "date-picker"
-locations_hierarchy_id = "checklist-locations-hierarchy"
-
-graph_id = f"{PAGE_NAME}-graph"
-colour_select_id = f"{PAGE_NAME}-colour-select"
-symbol_select_id = f"{PAGE_NAME}-symbol-select"
-row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
-col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
-size_slider_id = f"{PAGE_NAME}-size-slider"
+colour_select_id = f"times-colour-select"
+symbol_select_id = f"times-symbol-select"
+row_facet_select_id = f"times-row-facet-select"
+col_facet_select_id = f"times-col-facet-select"
 
 layout = html.Div([
-    components.TopBar(
-        dataset_id=dataset_select_id,
-        graph_id=graph_id,
+    TopBar(
+        PAGE_NAME,
         children=[
-            components.ColourSelect(
-                id=colour_select_id,
-                default="location",
-            ),
-            components.SymbolSelect(
-                id=symbol_select_id,
-            ),
-            components.RowFacetSelect(
-                id=row_facet_select_id,
-            ),
-            components.ColumnFacetSelect(
-                id=col_facet_select_id,
-            ),
+            # components.ColourSelect(
+            #     id=colour_select_id,
+            #     default="location",
+            # ),
+            # components.SymbolSelect(
+            #     id=symbol_select_id,
+            # ),
+            # components.RowFacetSelect(
+            #     id=row_facet_select_id,
+            # ),
+            # components.ColumnFacetSelect(
+            #     id=col_facet_select_id,
+            # ),
         ],
     ),
     dmc.Grid([
@@ -70,7 +65,7 @@ layout = html.Div([
                     ta="left",
                 ),
                 dmc.Slider(
-                    id=size_slider_id,
+                    id=f"times-size-slider",
                     min=1,
                     max=20,
                     step=1,
@@ -85,52 +80,50 @@ layout = html.Div([
         ),
     ]),
     dcc.Loading(
-        dcc.Graph(id=graph_id),
+        dcc.Graph(id=f"times-graph"),
     ),
     dbc.Offcanvas(
         id="page-info",
         is_open=False,
         placement="bottom",
-        children=components.Footer(PAGE_NAME),
+        children=Footer("times"),
     ),
     # TODO: fixme
     # get_modal_sound_sample(PAGE_NAME),
 ])
 
 @callback(
-    Output(graph_id, "figure"),
-    State(dataset_select_id, "value"),
-    Input(date_picker_id, "value"),
-    Input({"type": locations_hierarchy_id, "index": ALL}, "value"),
-    Input(colour_select_id, "value"),
-    Input(symbol_select_id, "value"),
-    Input(row_facet_select_id, "value"),
-    Input(col_facet_select_id, "value"),
-    Input(size_slider_id, "value"),
-    prevent_initial_call=True,
+    Output(f"times-graph", "figure"),
+    Input("dataset-select", "value"),
+    Input("date-picker", "value"),
+    Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
+    # Input(colour_select_id, "value"),
+    # Input(symbol_select_id, "value"),
+    # Input(row_facet_select_id, "value"),
+    # Input(col_facet_select_id, "value"),
+    Input(f"times-size-slider", "value"),
+    # prevent_initial_call=True,
 )
-def update_graph(
+def draw_figure(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
-    colour_by: str,
-    symbol_by: str,
-    row_facet: str,
-    col_facet: str,
+    # colour_by: str,
+    # symbol_by: str,
+    # row_facet: str,
+    # col_facet: str,
     dot_size: int
-):
-    logger.debug(
-        f"Trigger ID={ctx.triggered_id}: "
-        f"{dataset_name=} dates:{len(dates)} locations:{len(locations)} "
-        f"{colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}"
-    )
-
-    data = dispatch(
-        FETCH_FILES,
+) -> go.Figure:
+    triggered_id = ctx.triggered_id
+    action = FETCH_FILES
+    params = dict(
         dataset_name=dataset_name,
         dates=list2tuple(dates),
-        locations=list2tuple(locations),
+        locations=list2tuple(locations)
     )
+    logger.debug(f"{triggered_id=} {action=} {params=}")
+    data = dispatch(action, **params)
+
     category_orders = dispatch(
         FETCH_DATASET_CATEGORIES,
         dataset_name=dataset_name,
@@ -143,10 +136,10 @@ def update_graph(
         opacity=0.25,
         hover_name="file_name",
         hover_data=["file_path"],
-        color=colour_by,
-        symbol=symbol_by,
-        facet_row=row_facet,
-        facet_col=col_facet,
+        # color=colour_by,
+        # symbol=symbol_by,
+        # facet_row=row_facet,
+        # facet_col=col_facet,
         labels=dict(
             date="Date",
             hour_float="Hour"

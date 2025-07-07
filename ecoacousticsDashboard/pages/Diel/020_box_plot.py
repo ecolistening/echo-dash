@@ -14,6 +14,8 @@ from api import (
     FETCH_ACOUSTIC_FEATURES,
     FETCH_DATASET_CATEGORIES,
 )
+from components.top_bar import TopBar
+from components.footer import Footer
 from utils import list2tuple
 import components
 
@@ -28,37 +30,29 @@ dash.register_page(
 
 PLOT_HEIGHT = 800
 
-dataset_select_id = "dataset-select"
-date_picker_id = "date-picker"
-feature_select_id = "feature-dropdown"
-locations_hierarchy_id = "checklist-locations-hierarchy"
-graph_id = f"{PAGE_NAME}-graph"
 colour_select_id = f"{PAGE_NAME}-colour-select"
 row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
 col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
-time_aggregation_id = f"{PAGE_NAME}-time-aggregation"
-outliers_tickbox_id = f"{PAGE_NAME}-outliers-tickbox"
 
 layout = html.Div([
-    components.TopBar(
-        dataset_id=dataset_select_id,
-        graph_id=graph_id,
+    TopBar(
+        PAGE_NAME,
         children=[
-            components.ColourSelect(
-                id=colour_select_id,
-                default="recorder",
-                categorical=True,
-            ),
-            components.RowFacetSelect(
-                id=row_facet_select_id,
-                default=None,
-            ),
-            components.ColumnFacetSelect(
-                id=col_facet_select_id,
-                default=None,
-            ),
+            # components.ColourSelect(
+            #     id=colour_select_id,
+            #     default="recorder",
+            #     categorical=True,
+            # ),
+            # components.RowFacetSelect(
+            #     id=row_facet_select_id,
+            #     default=None,
+            # ),
+            # components.ColumnFacetSelect(
+            #     id=col_facet_select_id,
+            #     default=None,
+            # ),
             dmc.SegmentedControl(
-                id=time_aggregation_id,
+                id=f"{PAGE_NAME}-time-aggregation",
                 data=[
                     {"value": "time", "label": "15 minutes"},
                     {"value": "hour", "label": "1 hour"},
@@ -69,7 +63,7 @@ layout = html.Div([
             ),
             dmc.Chip(
                 "Outliers",
-                id=outliers_tickbox_id,
+                id=f"{PAGE_NAME}-outliers-tickbox",
                 value="outlier",
                 checked=True,
                 persistence=True,
@@ -77,13 +71,13 @@ layout = html.Div([
         ],
     ),
     dcc.Loading(
-        dcc.Graph(id=graph_id),
+        dcc.Graph(id=f"{PAGE_NAME}-graph"),
     ),
     dbc.Offcanvas(
         id="page-info",
         is_open=False,
         placement="bottom",
-        children=components.Footer(PAGE_NAME),
+        children=Footer(PAGE_NAME),
     ),
     # FIXME
     # components.SoundSampleModal(
@@ -92,34 +86,34 @@ layout = html.Div([
 ])
 
 @callback(
-    Output(graph_id, "figure"),
-    State(dataset_select_id, "value"),
-    Input(date_picker_id, "value"),
-    Input({"type": locations_hierarchy_id, "index": ALL}, "value"),
-    Input(feature_select_id, "value"),
-    Input(colour_select_id, "value"),
-    Input(row_facet_select_id, "value"),
-    Input(col_facet_select_id, "value"),
-    Input(time_aggregation_id, "value"),
-    Input(outliers_tickbox_id, "checked"),
-    prevent_initial_call=True,
+    Output(f"{PAGE_NAME}-graph", "figure"),
+    State("dataset-select", "value"),
+    Input("date-picker", "value"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    Input("feature-dropdown", "value"),
+    # Input(colour_select_id, "value"),
+    # Input(row_facet_select_id, "value"),
+    # Input(col_facet_select_id, "value"),
+    Input(f"{PAGE_NAME}-time-aggregation", "value"),
+    Input(f"{PAGE_NAME}-outliers-tickbox", "checked"),
+    # prevent_initial_call=True,
 )
 def update_graph(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
     feature: str,
-    colour_by: str,
-    row_facet: str,
-    col_facet: str,
+    # colour_by: str,
+    # row_facet: str,
+    # col_facet: str,
     time_agg: str,
     outliers: bool,
 ) -> go.Figure:
-    logger.debug(
-        f"Trigger ID={ctx.triggered_id}: {dataset_name=} "
-        f"dates:{len(dates)} locations:{len(locations)} "
-        f"{feature=} {colour_by=} {row_facet=} {col_facet=} {time_agg=} {outliers=}"
-    )
+    # logger.debug(
+    #     f"Trigger ID={ctx.triggered_id}: {dataset_name=} "
+    #     f"dates:{len(dates)} locations:{len(locations)} "
+    #     f"{feature=} {colour_by=} {row_facet=} {col_facet=} {time_agg=} {outliers=}"
+    # )
 
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
@@ -147,10 +141,10 @@ def update_graph(
         hover_name='file',
         hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
         height=PLOT_HEIGHT,
-        color=colour_by,
-        facet_row=row_facet,
-        facet_col=col_facet,
-        facet_col_wrap=4,
+        # color=colour_by,
+        # facet_row=row_facet,
+        # facet_col=col_facet,
+        # facet_col_wrap=4,
         points='outliers' if outliers else False,
         category_orders=category_orders,
     )

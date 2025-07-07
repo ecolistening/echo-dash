@@ -11,12 +11,13 @@ from dash_iconify import DashIconify
 from loguru import logger
 from typing import List, Tuple
 
-import components
 from api import (
     dispatch,
     FETCH_ACOUSTIC_FEATURES,
     FETCH_DATASET_CATEGORIES,
 )
+from components.top_bar import TopBar
+from components.footer import Footer
 from utils import list2tuple
 
 PAGE_NAME = "idx-averages"
@@ -29,16 +30,6 @@ dash.register_page(
     name="Averages"
 )
 
-# global selectors
-dataset_select_id = "dataset-select"
-feature_select_id = "feature-dropdown"
-locations_hierarchy_id = "checklist-locations-hierarchy"
-date_picker_id = "date-picker"
-
-# page-specific selectors
-graph_id = f"{PAGE_NAME}-graph"
-time_aggregation_id = f"{PAGE_NAME}-time-aggregation"
-
 windows_options = [
     { "description": "1 day", "frequency": "1D" },
     { "description": "1 week", "frequency": "1W" },
@@ -49,12 +40,11 @@ windows_options = [
 ]
 
 layout = html.Div([
-    components.TopBar(
-        dataset_id=dataset_select_id,
-        graph_id=graph_id,
+    TopBar(
+        PAGE_NAME,
         children=[
             time_aggregation := dmc.SegmentedControl(
-                id=time_aggregation_id,
+                id=f"{PAGE_NAME}-time-aggregation",
                 data=[
                     {"value": opt["frequency"], "label": opt["description"]}
                     for opt in windows_options
@@ -92,18 +82,18 @@ layout = html.Div([
         id="page-info",
         is_open=False,
         placement="bottom",
-        children=components.Footer(PAGE_NAME),
+        children=Footer(PAGE_NAME),
     ),
 ])
 
 
 @callback(
-    Output(graph_id, "figure"),
-    Input(dataset_select_id, "value"),
-    Input(date_picker_id, "value"),
-    Input({"type": locations_hierarchy_id, "index": ALL}, "value"),
-    Input(feature_select_id, "value"),
-    Input(time_aggregation_id, "value"),
+    Output(f"{PAGE_NAME}-graph", "figure"),
+    Input("dataset-select", "value"),
+    Input("date-picker", "value"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    Input("feature-dropdown", "value"),
+    Input(f"{PAGE_NAME}-time-aggregation", "value"),
     # Input(outliers_tickbox, "checked"),
     # Input(colours_tickbox, "checked"),
     # Input(separate_plots_tickbox, "checked"),
@@ -118,11 +108,11 @@ def update_graph(
     # colour_locations,
     # separate_plots,
 ) -> go.Figure:
-    logger.debug(
-        f"Trigger ID={ctx.triggered_id}: "
-        f"{dataset_name=} dates:{len(dates)} locations:{len(locations)} "
-        f"{feature_name=} {time_agg=}"
-    )
+    # logger.debug(
+    #     f"Trigger ID={ctx.triggered_id}: "
+    #     f"{dataset_name=} dates:{len(dates)} locations:{len(locations)} "
+    #     f"{feature_name=} {time_agg=}"
+    # )
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,

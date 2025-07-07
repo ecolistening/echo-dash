@@ -10,12 +10,13 @@ from dash_iconify import DashIconify
 from loguru import logger
 from typing import List
 
-import components
 from api import (
     dispatch,
     FETCH_ACOUSTIC_FEATURES,
     FETCH_DATASET_CATEGORIES,
 )
+from components.top_bar import TopBar
+from components.footer import Footer
 from utils import list2tuple
 from utils import sketch
 
@@ -55,21 +56,16 @@ plot_type_kwargs = {
     ),
 }
 
-dataset_select_id = "dataset-select"
-date_picker_id = "date-picker"
-feature_select_id = "feature-dropdown"
-graph_id = f"{PAGE_NAME}-graph"
 plot_type_select_id = f"{PAGE_NAME}-plot-type-select"
-colour_select_id = f"{PAGE_NAME}-colour-select"
-symbol_select_id = f"{PAGE_NAME}-symbol-select"
-row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
-col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
+# colour_select_id = f"{PAGE_NAME}-colour-select"
+# symbol_select_id = f"{PAGE_NAME}-symbol-select"
+# row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
+# col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
 size_slider_id = f'{PAGE_NAME}-plot-size'
 
 layout = html.Div([
-    components.TopBar(
-        dataset_id=dataset_select_id,
-        graph_id=graph_id,
+    TopBar(
+        PAGE_NAME,
         children=[
             dmc.Select(
                 id=plot_type_select_id,
@@ -84,22 +80,22 @@ layout = html.Div([
                 style=dict(width=200),
                 persistence=True,
             ),
-            components.ColourSelect(
-                id=colour_select_id,
-                default="month",
-            ),
-            components.SymbolSelect(
-                id=symbol_select_id,
-                default=None,
-            ),
-            components.RowFacetSelect(
-                id=row_facet_select_id,
-                default=None,
-            ),
-            components.ColumnFacetSelect(
-                id=col_facet_select_id,
-                default=None,
-            ),
+            # components.ColourSelect(
+            #     id=colour_select_id,
+            #     default="month",
+            # ),
+            # components.SymbolSelect(
+            #     id=symbol_select_id,
+            #     default=None,
+            # ),
+            # components.RowFacetSelect(
+            #     id=row_facet_select_id,
+            #     default=None,
+            # ),
+            # components.ColumnFacetSelect(
+            #     id=col_facet_select_id,
+            #     default=None,
+            # ),
         ],
     ),
     dmc.Grid([
@@ -128,15 +124,13 @@ layout = html.Div([
     ]),
     dmc.Divider(variant='dotted'),
     dcc.Loading(
-        dcc.Graph(id=graph_id),
+        dcc.Graph(id=f"{PAGE_NAME}-graph"),
     ),
     dbc.Offcanvas(
         id="page-info",
         is_open=False,
         placement="bottom",
-        children=components.Footer(
-            PAGE_NAME,
-        ),
+        children=Footer(PAGE_NAME),
     ),
     # FIXME
     # components.SoundSampleModal(
@@ -145,16 +139,16 @@ layout = html.Div([
 ])
 
 @callback(
-    Output(graph_id, "figure"),
-    State(dataset_select_id, "value"),
-    Input(date_picker_id, component_property='value'),
+    Output(f"{PAGE_NAME}-graph", "figure"),
+    State("dataset-select", "value"),
+    Input("date-picker", component_property='value'),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input(feature_select_id, "value"),
+    Input("feature-dropdown", "value"),
     Input(plot_type_select_id, "value"),
-    Input(colour_select_id, "value"),
-    Input(symbol_select_id, "value"),
-    Input(row_facet_select_id, "value"),
-    Input(col_facet_select_id, "value"),
+    # Input(colour_select_id, "value"),
+    # Input(symbol_select_id, "value"),
+    # Input(row_facet_select_id, "value"),
+    # Input(col_facet_select_id, "value"),
     Input(size_slider_id, "value"),
 )
 def update_figure(
@@ -163,17 +157,17 @@ def update_figure(
     locations: List[str],
     feature: str,
     plot_type: str,
-    colour_by: str,
-    symbol_by: str,
-    row_facet: str,
-    col_facet: str,
+    # colour_by: str,
+    # symbol_by: str,
+    # row_facet: str,
+    # col_facet: str,
     dot_size: int,
 ) -> go.Figure:
-    logger.debug(
-        f"Trigger ID={ctx.triggered_id}: {dataset_name=} "
-        f"num_dates={len(dates)} num_locations={len(locations)} {feature=} "
-        f"{plot_type=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}"
-    )
+    # logger.debug(
+    #     f"Trigger ID={ctx.triggered_id}: {dataset_name=} "
+    #     f"num_dates={len(dates)} num_locations={len(locations)} {feature=} "
+    #     f"{plot_type=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}"
+    # )
 
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
@@ -193,10 +187,10 @@ def update_figure(
         data,
         **plot_kwargs,
         opacity=0.5,
-        color=colour_by,
+        # color=colour_by,
         # symbol=symbol_by,
-        facet_row=row_facet,
-        facet_col=col_facet,
+        # facet_row=row_facet,
+        # facet_col=col_facet,
         category_orders=category_orders,
     )
 

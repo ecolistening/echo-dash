@@ -37,7 +37,8 @@ def create_dash_app() -> dash.Dash:
         ]
     )
 
-    import components
+    from components.nav_bar import NavBar
+    from components.filter_menu import FilterMenu
     from store import global_store
 
     app.layout = dmc.MantineProvider(
@@ -46,9 +47,9 @@ def create_dash_app() -> dash.Dash:
         children=dmc.AppShell(
             children=[
                 *global_store,
-                components.NavBar(),
+                NavBar(),
+                FilterMenu(),
                 dmc.AppShellMain([
-                    # components.FilterMenu(),
                     dash.page_container,
                 ]),
                 dcc.Interval(
@@ -63,7 +64,7 @@ def create_dash_app() -> dash.Dash:
     from callbacks import nav_bar_callbacks
     from callbacks import dataset_config_callbacks
     from callbacks import page_callbacks
-    from callbacks import graph_param_callbacks
+    # from callbacks import graph_param_callbacks
 
     return app
 

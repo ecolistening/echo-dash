@@ -15,10 +15,10 @@ def FilterMenu(
     min_date: dt.date = dt.date(1970, 1, 1),
     max_date: dt.date = dt.date.today(),
 ) -> dbc.Offcanvas:
-    return dbc.Offcanvas(
+    return dmc.Group(
         id="filter-menu",
-        placement="top",
-        is_open=False,
+        grow=True,
+        style={"display": "none"},
         children=[
             dmc.Grid(
                 children=[
@@ -33,15 +33,15 @@ def FilterMenu(
                                     dmc.AccordionItem(
                                         value="dates-filter",
                                         children=[
-                                            dmc.AccordionControl("Date Range"),
-                                            dmc.AccordionPanel([
-                                                dmc.DatePicker(
-                                                    id="date-picker",
-                                                    minDate=min_date,
-                                                    maxDate=max_date,
-                                                    value=[min_date, max_date],
-                                                ),
-                                            ])
+                                            # dmc.AccordionControl("Date Range"),
+                                            # dmc.AccordionPanel([
+                                            #     dmc.DatePicker(
+                                            #         id="date-picker",
+                                            #         minDate=min_date,
+                                            #         maxDate=max_date,
+                                            #         value=[min_date, max_date],
+                                            #     ),
+                                            # ])
                                         ]
                                     )
                                 ]
