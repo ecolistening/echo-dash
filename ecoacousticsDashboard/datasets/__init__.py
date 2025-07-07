@@ -21,7 +21,7 @@ from utils import list2tuple
 from utils import query as Q
 from utils.umap import umap_data
 
-from typing import Any, Callable, Dict, List, Tuple, Iterable
+from typing import Any, Callable, Dict, List, Tuple
 
 def dedup(l: List[Any]) -> List[Any]:
     return list(dict.fromkeys(l))
@@ -45,7 +45,7 @@ class Dataset:
         self.dates
         # cache acoustic features and UMAP
         self.acoustic_features
-        # self.umap_acoustic_features
+        self.umap_acoustic_features
         # cache species and birdet predictions
         self.species
         self.birdnet_species_probs
@@ -74,43 +74,18 @@ class Dataset:
         # TODO: my own hack to ensure temporal fields are on the acoustic indices (used in options / filters)
         # we will be able to do a simple table join once finished
         data = data.merge(
-            self.files.join(self.locations, on="site_id").reset_index(),
+            self.files.join(self.locations, on="site_id"),
             left_on=["file", "site"],
             right_on=["file_name", "site_name"],
             how="left",
             suffixes=('', '_y'),
         )
-        # FIXME This is a bit of a hack. The dataset should be clean by the time it gets here.
-        # DOUBLE FIXME: Moved across Lucas's hack from the front-end, this should be fixed in this sprint
-        # the hack is in order to pivot, there should be no duplicates in the data, i.e. path / feature / value
-        # UPDATE: I believe the duplicates are not actually duplicates, but features corresponding to windows of
-        # the spectrogram, these should either be treated independently and given a unique identifier in soundade
-        # or shown as aggregate statistics (as in soundade's summary stats)
-        def dedup_acoustic_features(data):
-            num_samples = data.shape[0]
-            index = data.columns[~data.columns.isin(["feature", "value"])]
-
-            logger.debug(f"Check for duplicates..")
-            data = data.drop_duplicates(subset=[*index, "feature"], keep='first')
-            if num_samples > (remaining := data.shape[0]):
-                logger.debug(f"Removed {num_samples - remaining} duplicate samples.")
-
-            data = data.pivot(columns='feature', index=index, values='value')
-
-            num_samples = data.shape[0]
-            data = data.loc[np.isfinite(data).all(axis=1), :]
-            if num_samples > (remaining := data.shape[0]):
-                logger.debug(f"Removed {num_samples - remaining} NaN samples.")
-
-            return data.reset_index().melt(
-                id_vars=index,
-                value_vars=data.columns,
-                var_name="feature"
-            )
-
         # TODO: Several hacks left by Lucas, persist to get this view working, can be removed when switching to better structured data
         # 1. remove duplicates
-        data = dedup_acoustic_features(data)
+        num_samples = data.shape[0]
+        data = data.drop_duplicates()
+        if num_samples > data.shape[0]:
+            logger.debug(f"Removed {num_samples - data.shape[0]} duplicate samples: {data.shape=}")
         # 2. strip
         striptext = None
         if self.dataset_name == "Cairngorms":
@@ -125,6 +100,28 @@ class Dataset:
             data['location'] = data['habitat code']
             logger.debug("Updated location with habitat code")
         return data
+
+    @cached_property
+    def umap_acoustic_features(self) -> pd.DataFrame:
+        data = self.acoustic_features
+        # FIXME This is a bit of a hack. The dataset should be clean by the time it gets here.
+        # DOUBLE FIXME: Moved across Lucas's hack from the front-end, this should be fixed in this sprint
+        sample_no = data.shape[0]
+        idx_cols = list(filter(lambda a: a not in ['feature', 'value'], data.columns))
+
+        logger.debug(f"Check for duplicates..")
+        data_nodup = data.drop_duplicates(subset=idx_cols + ['feature'], keep='first')
+        if sample_no>data_nodup.shape[0]:
+            logger.debug(f"Removed {sample_no-data_nodup.shape[0]} duplicate samples.")
+
+        logger.debug(f"Select columns {idx_cols}")
+        idx_data = data_nodup.pivot(columns='feature', index=idx_cols, values='value')
+
+        sample_no = idx_data.shape[0]
+        idx_data = idx_data.loc[np.isfinite(idx_data).all(axis=1), :]
+        if sample_no>idx_data.shape[0]:
+            logger.debug(f"Removed {sample_no-idx_data.shape[0]} NaN samples.")
+        return umap_data(idx_data)
 
     # TODO: problem with caching 10M rows! so switched out the larger version...
     # a better way needs to be designed for this... our data files can get very large
@@ -359,16 +356,12 @@ class DatasetDecorator:
 
 # a simple collection of datasets
 @attrs.define
-class DatasetLoader(Iterable):
+class DatasetLoader:
     root_dir: pathlib.Path
-    datasets: List[Dataset] = attrs.field(init=False, default=list)
 
-    def __attrs_post_init__(self):
-        self.datasets = self._init_datasets(self.datasets_table)
-
-    def __iter__(self):
-        for each in self.datasets.values():
-            yield each
+    @cached_property
+    def datasets(self) -> Dict[str, Dataset]:
+        return self._init_datasets(self.datasets_table)
 
     @cached_property
     def datasets_table(self):
@@ -392,139 +385,3 @@ class DatasetLoader(Iterable):
                 logger.error(f"Unable to load dataset {dataset['dataset_name']}")
                 logger.error(e)
         return datasets
-
-
-dataset_loader = DatasetLoader(root_dir)
-dataset_loader.datasets
-
-def filter_data(
-    data: str,
-    dates: List[str] | None = None,
-    feature: str | None = None,
-    locations: List[str] | None = None,
-    sample: int | None = None
-):
-    # TODO double check this
-    # Prevent double caching of unfiltered datasets
-    # if not any((dates,feature,locations)):
-    #     logger.debug(f"No filters selected, redirect")
-    #     data = load_dataset(dataset)
-
-    # else:
-    if dates is not None: dates = list2tuple(dates)
-    if feature is not None: feature = str(feature)
-    if locations is not None: locations = list2tuple(locations)
-
-    logger.debug(f"Filter "
-                 f"dates:{len(dates) if dates is not None else None} "
-                 f"locations:{len(locations) if locations is not None else None} "
-                 f"{feature=}")
-    # FIXME remove until filter caching is sorted
-    # data = filter_data_lru(data, dates, feature, locations)
-    if dates is not None:
-        dates = [date.fromisoformat(d) for d in dates]
-        data = data[data.timestamp.dt.date.between(*dates)]
-        logger.debug(f"Selected Dates: {data.shape=}")
-
-    if feature is not None:
-        data = data[data.feature == feature]
-        logger.debug(f"Selected Features: {data.shape=}")
-
-    if locations is not None and len(locations) > 0:
-        # changed it from locations[-1] after unpacking nested list in list2tuple - Potential source for problems
-        data = data[data['site'].isin([l.strip('/') for l in locations])]
-        logger.debug(f"Seleted Locations: {data.shape=}")
-
-    # Randomly sample
-    if sample is not None:
-        sample = int(sample)
-        data = data.sample(n=sample, random_state=42)
-        logger.debug(f"Selected {sample} random samples: {data.shape=}")
-
-    return data
-
-@lru_cache(maxsize=5)
-def filter_data_lru(dataset, dates: Tuple | None = None, feature: str | None = None, locations: Tuple | None = None):
-    if dates is not None:
-        dates = [date.fromisoformat(d) for d in dates]
-        data = data[data.timestamp.dt.date.between(*dates)]
-        logger.debug(f"Selected Dates: {data.shape=}")
-
-    if feature is not None:
-        data = data[data.feature == feature]
-        logger.debug(f"Selected Features: {data.shape=}")
-
-    if locations is not None and len(locations) > 0:
-        # changed it from locations[-1] after unpacking nested list in list2tuple - Potential source for problems
-        data = data[data['site'].isin([l.strip('/') for l in locations])]
-        logger.debug(f"Seleted Locations: {data.shape=}")
-
-    return data
-
-@lru_cache(maxsize=10)
-def load_and_filter_sites_lru(dataset: str):
-    dataset = dataset_loader.get_dataset(dataset)
-    data = dataset.locations
-
-    if data is None:
-        logger.warning(f"Can't filter tree for dataset {dataset}")
-        return None
-
-    tree = bt.dataframe_to_tree(data.reset_index(drop=True), path_col='site')
-
-    return tree
-
-#@lru_cache(maxsize=3)
-def load_config_lru(dataset_name: str):
-    '''
-        Storing result in cache brings the risk that changes in the config will not be effective until reset or cache is filled.
-    '''
-    return dataset_loader.get_dataset(dataset_name).config
-
-@lru_cache(maxsize=3)
-def get_path_from_config_lru(dataset: str, section: str, option:str):
-    '''
-        Gets a path stored as 'option' in the 'section' of the config of a given 'dataset'.
-
-        Storing result in cache brings the risk that changes in the config will not be effective until reset or cache is filled.
-    '''
-    logger.debug(f"Extract path \'{option}\' from config section \'{section}\' for dataset \'{dataset}\'..")
-    
-    extract_path = None
-    config = load_config(dataset)
-    if config.has_option(section, option):
-        extract_path = config.get(section, option)
-        logger.debug(f"Extracted path \'{extract_path}\'")
-        if not os.path.isabs(extract_path):
-            extract_path = os.path.join(root_dir,dataset,extract_path)
-            logger.debug(f"Transformed path: \'{extract_path}\'")
-    else:
-        logger.debug(f"Could not find path in config.")
-        if option=='sound_file_path':
-            path_ = os.path.join(root_dir,dataset,'soundfiles')
-            if os.path.isdir(path_):
-                extract_path = path_
-                logger.debug(f"Found default path \'{extract_path}\'")
-        if option=='gdrive_sound_file_path':
-            extract_path = os.path.join("DASHBOARD_MP3",dataset,'soundfiles')
-
-    return extract_path
-
-
-# ~~~~~~~~~~~~~~~~~~~~~ #
-#                       #
-#          API          #
-#                       #
-# ~~~~~~~~~~~~~~~~~~~~~ #
-
-def load_and_filter_sites(dataset: str):
-    logger.debug(f"Load site data for {dataset=}")
-    return load_and_filter_sites_lru(str(dataset))
-
-def load_config(dataset: str):
-    logger.debug(f"Load config for {dataset=}")
-    return load_config_lru(str(dataset))
-
-def get_path_from_config(dataset: str, section: str, option:str):
-    logger.debug(f"Get path for {dataset=} {section=} {option=}")
-    # return get_path_from_config_lru(str(dataset), str(section), str(option))

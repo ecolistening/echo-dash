@@ -1,16 +1,3 @@
-"""
-This app creates a simple sidebar layout using inline style arguments and the
-dbc.Nav component.
-
-dcc.Location is used to track the current location, and a callback uses the
-current location to render the appropriate page content. The active prop of
-each NavLink is set automatically according to the current pathname. To use
-this feature you must install dash-bootstrap-components >= 0.11.0.
-
-For more details on building multi-page Dash applications, check out the Dash
-documentation: https://dash.plot.ly/urls
-"""
-
 # Setup Logging
 import os
 import sys
@@ -29,10 +16,15 @@ from dash import Dash, dcc, Output, Input, callback
 from menu.dataset import dataset_input, dataset_settings_button, settings_drawer
 from menu.filter import filters
 
-app = Dash(__name__, use_pages=True, external_stylesheets=[
-    dbc.themes.LITERA, dbc.icons.BOOTSTRAP,
-    "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;900&display=swap"
-])
+app = Dash(
+    __name__,
+    use_pages=True,
+    suppress_callback_exceptions=True,
+    external_stylesheets=[
+        dbc.themes.LITERA, dbc.icons.BOOTSTRAP,
+        "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;900&display=swap"
+    ]
+)
 
 server = app.server
 
@@ -111,7 +103,6 @@ app.layout = dmc.MantineProvider(
 )
 def update_dataset_name(dataset):
     return dataset
-
 
 if __name__ == '__main__':
     logger.info("Start server..")

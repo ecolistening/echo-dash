@@ -30,9 +30,10 @@ def ColourSelect(
     )
 
     @callback(
-        Output(select, 'data'),
-        Input(dataset_select_id, 'value'),
-        State(select, 'value'),
+        Output(select, "data"),
+        Output(select, "value"),
+        Input(dataset_select_id, "value"),
+        State(select, "value"),
     )
     def update(dataset_name: str, colour_by: str) -> Tuple[str, ...]:
         logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} {colour_by=}")
@@ -52,6 +53,6 @@ def ColourSelect(
         if colour_by not in val_options:
             colour_by = None
 
-        return options
+        return options, colour_by
 
     return select

@@ -41,23 +41,26 @@ docker compose up --build -d
 
 After an initial build (if you don't have an image already built) the app should be available at `http://localhost:8050/`.
 
-### Using virtual environments
-Create a virtual environment using your tool of choice (`virtualenv`, `venv`, `conda` etc.) and activate that virtual environment. Using `virtualenv`:
+### Using UV
+Install [Astral's UV](https://docs.astral.sh/uv/)
+
+Change to the application directory
 
 ```
-pip install virtualenv
-virtualenv ecoacousticsDashboard_env
-source ./ecoacousticsDashboard_env/bin/activate
-```
-On first run navigate to the requirements.txt file and use:
-
-```
-pip install -r requirements.txt
+cd ecoacousticsDashboard
 ```
 
-Run the dashboard with the command `python ecoacousticsDashboard/app.py`. Flask should now start on `http://localhost:8050/` and you should be able to load the app.
+Create a virtual environment and install dependencies
 
-Alternatively you can manually run the app using gunicorn using `gunicron app:server` run from the `ecoacousticsDashboard` folder.
+```
+uv venv .venv
+source ./venv/bin/activate
+uv sync
+```
+
+Run the dashboard with the command `python app.py`. Flask should now start on `http://localhost:8050/` and you should be able to load the app.
+
+Alternatively you can manually run the app using gunicorn using `gunicron app:server`.
 
 # State of Development (August 2023)
 There are a number of different plots (pages) in various states of development. The most advanced and recent is `overview > UMAP` and the structure of that page (the options menu at the top and the 'About' and 'Download' sections at the bottom) should be used as a basis for redeveloping the other pages.

@@ -1,7 +1,14 @@
-#from base64 import b64encode
+import base64
+import hashlib
+
 from dash import dcc
 from loguru import logger
 from typing import Any, List
+
+def hashify(s: str):
+    h = hashlib.new("sha256")
+    h.update(s.encode("utf-8"))
+    return h.hexdigest()
 
 def dedup(l: List[Any]) -> List[Any]:
     return list(dict.fromkeys(l))
@@ -39,3 +46,18 @@ def render_fig_as_image_file(fig,format_str:str,name:str):
     # img_b64 = f"data:image/{format};base64," + encoding
 
     return dcc.send_bytes(img_bytes, f"{name}.{format}")
+
+def audio_bytes_to_enc(
+    audio_bytes,
+    filetype
+) -> str:
+    if audio_bytes is None:
+        return ""
+    try:
+        enc = base64.b64encode(audio_bytes).decode('ascii')
+    except Exception as e:
+        enc = None
+        logger.warning(e)
+    else:
+        enc = f"data:audio/{filetype};base64," + enc
+    return enc

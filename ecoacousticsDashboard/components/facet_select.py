@@ -30,6 +30,7 @@ def RowFacetSelect(
 
     @callback(
         Output(select, "data"),
+        Output(select, "value"),
         Input(dataset_select_id, "value"),
         State(select, "value"),
     )
@@ -40,7 +41,7 @@ def RowFacetSelect(
         val_cat_options = [opt["value"] for opt in cat_options]
         if row_facet not in val_cat_options:
             row_facet = None
-        return cat_options
+        return cat_options, row_facet
 
     return select
 
@@ -62,6 +63,7 @@ def ColumnFacetSelect(
 
     @callback(
         Output(select, "data"),
+        Output(select, "value"),
         Input(dataset_select_id, "value"),
         State(select, "value"),
     )
@@ -72,6 +74,6 @@ def ColumnFacetSelect(
         val_cat_options = [opt["value"] for opt in cat_options]
         if col_facet not in val_cat_options:
             col_facet = None
-        return cat_options
+        return cat_options, col_facet
 
     return select

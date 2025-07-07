@@ -29,6 +29,7 @@ def SymbolSelect(
 
     @callback(
         Output(select, "data"),
+        Output(select, "value"),
         Input(dataset_select_id, "value"),
         State(select, "value"),
     )
@@ -39,6 +40,6 @@ def SymbolSelect(
         val_cat_options = [opt["value"] for opt in cat_options]
         if symbol_by not in val_cat_options:
             symbol_by = None
-        return cat_options
+        return cat_options, symbol_by
 
     return select
