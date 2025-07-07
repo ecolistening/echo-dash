@@ -16,7 +16,6 @@ from api import (
     dispatch,
     FETCH_FILES,
 )
-from components.top_bar import TopBar
 from components.footer import Footer
 from utils import list2tuple
 
@@ -26,17 +25,25 @@ PLOT_HEIGHT = 800
 dash.register_page(__name__, title=PAGE_TITLE, name='Dates')
 
 layout = html.Div([
-    TopBar("dates"),
     dcc.Loading(
-        dcc.Graph(id=f"dates-graph"),
+        dcc.Graph(id="dates-graph"),
     ),
     dbc.Offcanvas(
-        id="page-info",
+        id="dates-page-info",
         is_open=False,
         placement="bottom",
         children=Footer("dates"),
     ),
 ])
+
+@callback(
+    Output("dates-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("dates-page-info", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
 
 @callback(
     Output("dates-graph", "figure"),

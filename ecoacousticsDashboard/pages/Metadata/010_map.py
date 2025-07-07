@@ -7,13 +7,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from dash import html, ctx, dcc, callback
-from dash import Output, Input, ALL
+from dash import Output, Input, State, ALL
 from dash_iconify import DashIconify
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_LOCATIONS
-from components.top_bar import TopBar
 from components.footer import Footer
 from utils.content import get_tabs
 from utils.save_plot_fig import get_save_plot
@@ -29,13 +28,11 @@ dash.register_page(
 )
 
 layout = html.Div([
-    TopBar("map"),
-    dmc.Divider(variant='dotted'),
     dcc.Loading(
         dcc.Graph(id="map-graph"),
     ),
     dbc.Offcanvas(
-        id="page-info",
+        id="map-page-info",
         is_open=False,
         placement="bottom",
         children=Footer("map"),
@@ -43,7 +40,16 @@ layout = html.Div([
 ])
 
 @callback(
-    Output(f"map-graph", "figure"),
+    Output("map-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("map-page-info", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
+
+@callback(
+    Output("map-graph", "figure"),
     Input("dataset-select", "value"),
 )
 def update_graph(dataset_name):

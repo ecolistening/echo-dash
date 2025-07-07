@@ -17,6 +17,15 @@ from api import (
 )
 
 @callback(
+    Output("appshell", "navbar"),
+    Input("burger", "opened"),
+    State("appshell", "navbar"),
+)
+def navbar_is_open(opened, navbar):
+    navbar["collapsed"] = {"desktop": not opened, "mobile": not opened }
+    return navbar
+
+@callback(
     Output("dataset-select", "data"),
     Input("load-datasets", "n_intervals"),
 )

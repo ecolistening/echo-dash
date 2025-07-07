@@ -8,13 +8,14 @@ from dash import html, ctx, dcc, callback
 from dash import Output, State, Input, ALL
 from dash_iconify import DashIconify
 from loguru import logger
+from typing import Any, Dict, List, Tuple
 
 from api import (
     dispatch,
     FETCH_ACOUSTIC_FEATURES,
     FETCH_DATASET_CATEGORIES,
 )
-from components.top_bar import TopBar
+from components.dataset_options_select import DatasetOptionsSelect
 from components.footer import Footer
 from utils import list2tuple
 from utils.content import get_tabs
@@ -29,34 +30,29 @@ dash.register_page(
     name='Distributions',
 )
 
-colour_select_id = f"{PAGE_NAME}-colour-facet-select"
-row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
-col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
-
 layout = html.Div([
-    TopBar(
-        PAGE_NAME,
+    dmc.Group(
+        grow=True,
         children=[
-            # components.ColourSelect(
-            #     id=colour_select_id,
-            #     categorical=True,
-            #     default="location",
-            # ),
-            # components.RowFacetSelect(
-            #     id=row_facet_select_id,
-            #     default="location",
-            # ),
-            # components.ColumnFacetSelect(
-            #     id=col_facet_select_id,
-            #     default="dddn",
-            # ),
-        ]
+            DatasetOptionsSelect(
+                id="distributions-colour-select",
+                label="Colour by"
+            ),
+            DatasetOptionsSelect(
+                id="distributions-facet-row-select",
+                label="Facet rows by"
+            ),
+            DatasetOptionsSelect(
+                id="distributions-facet-column-select",
+                label="Facet columns by"
+            ),
+        ],
     ),
     dmc.Group([
         html.Div([
             dmc.Chip(
                 'Normalised',
-                id=f"{PAGE_NAME}-normalised-tickbox",
+                id="distributions-normalised-tickbox",
                 value='normalised',
                 checked=False,
                 persistence=True,
@@ -65,46 +61,48 @@ layout = html.Div([
     ], grow=True),
     dcc.Loading(
         dcc.Graph(
-            id=f"{PAGE_NAME}-graph"
+            id="distributions-graph"
         ),
     ),
     dbc.Offcanvas(
-        id="page-info",
+        id="distributions-page-info",
         is_open=False,
         placement="bottom",
         children=Footer(PAGE_NAME),
     ),
 ])
 
+@callback(
+    Output("distributions-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("distributions-page-info", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
+
 
 @callback(
-    Output(f"{PAGE_NAME}-graph", 'figure'),
+    Output("distributions-graph", 'figure'),
     State("dataset-select", 'value'),
     Input("date-picker", 'value'),
     Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
     Input("feature-dropdown", 'value'),
-    # Input(colour_select_id, 'value'),
-    # Input(row_facet_select_id, 'value'),
-    # Input(col_facet_select_id, 'value'),
-    Input(f"{PAGE_NAME}-normalised-tickbox", 'checked'),
-    # prevent_initial_call=True,
+    Input("distributions-colour-select", 'value'),
+    Input("distributions-facet-row-select", 'value'),
+    Input("distributions-facet-column-select", 'value'),
+    Input("distributions-normalised-tickbox", 'checked'),
 )
-def update_graph(
-    dataset_name,
-    dates,
-    locations,
-    feature,
-    # colour_by,
-    # row_facet,
-    # col_facet,
-    normalised
+def draw_figure(
+    dataset_name: str,
+    dates: List[str],
+    locations: List[str],
+    feature: str,
+    color: str,
+    facet_row: str,
+    facet_col: str,
+    normalised: bool,
 ) -> go.Figure:
-    # logger.debug(
-    #     f"Trigger ID={ctx.triggered_id}: "
-    #     f"{dataset_name=} dates:{len(dates)} locations:{len(locations)} "
-    #     f"{feature=} {colour_by=} {row_facet=} {col_facet=} {normalised=}"
-    # )
-
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
@@ -123,9 +121,9 @@ def update_graph(
         marginal='rug',
         opacity=0.75,
         height=PLOTHEIGHT,
-        # color=colour_by,
-        # facet_row=row_facet,
-        # facet_col=col_facet,
+        color=color,
+        facet_row=facet_row,
+        facet_col=facet_col,
         histnorm='percent' if normalised else None,
         category_orders=category_orders,
     )

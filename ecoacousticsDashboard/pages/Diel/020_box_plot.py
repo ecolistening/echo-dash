@@ -14,7 +14,7 @@ from api import (
     FETCH_ACOUSTIC_FEATURES,
     FETCH_DATASET_CATEGORIES,
 )
-from components.top_bar import TopBar
+from components.dataset_options_select import DatasetOptionsSelect
 from components.footer import Footer
 from utils import list2tuple
 import components
@@ -30,29 +30,24 @@ dash.register_page(
 
 PLOT_HEIGHT = 800
 
-colour_select_id = f"{PAGE_NAME}-colour-select"
-row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
-col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
-
 layout = html.Div([
-    TopBar(
-        PAGE_NAME,
+    dmc.Group(
+        grow=True,
         children=[
-            # components.ColourSelect(
-            #     id=colour_select_id,
-            #     default="recorder",
-            #     categorical=True,
-            # ),
-            # components.RowFacetSelect(
-            #     id=row_facet_select_id,
-            #     default=None,
-            # ),
-            # components.ColumnFacetSelect(
-            #     id=col_facet_select_id,
-            #     default=None,
-            # ),
+            DatasetOptionsSelect(
+                id="box-colour-select",
+                label="Colour by"
+            ),
+            DatasetOptionsSelect(
+                id="box-facet-row-select",
+                label="Facet rows by"
+            ),
+            DatasetOptionsSelect(
+                id="box-facet-column-select",
+                label="Facet columns by"
+            ),
             dmc.SegmentedControl(
-                id=f"{PAGE_NAME}-time-aggregation",
+                id="box-time-aggregation",
                 data=[
                     {"value": "time", "label": "15 minutes"},
                     {"value": "hour", "label": "1 hour"},
@@ -63,7 +58,7 @@ layout = html.Div([
             ),
             dmc.Chip(
                 "Outliers",
-                id=f"{PAGE_NAME}-outliers-tickbox",
+                id="box-outliers-tickbox",
                 value="outlier",
                 checked=True,
                 persistence=True,
@@ -71,13 +66,13 @@ layout = html.Div([
         ],
     ),
     dcc.Loading(
-        dcc.Graph(id=f"{PAGE_NAME}-graph"),
+        dcc.Graph(id="box-graph"),
     ),
     dbc.Offcanvas(
-        id="page-info",
+        id="box-page-info",
         is_open=False,
         placement="bottom",
-        children=Footer(PAGE_NAME),
+        children=Footer("box"),
     ),
     # FIXME
     # components.SoundSampleModal(
@@ -86,35 +81,38 @@ layout = html.Div([
 ])
 
 @callback(
-    Output(f"{PAGE_NAME}-graph", "figure"),
+    Output("box-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("box-page-info", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
+
+
+@callback(
+    Output("box-graph", "figure"),
     State("dataset-select", "value"),
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("feature-dropdown", "value"),
-    # Input(colour_select_id, "value"),
-    # Input(row_facet_select_id, "value"),
-    # Input(col_facet_select_id, "value"),
-    Input(f"{PAGE_NAME}-time-aggregation", "value"),
-    Input(f"{PAGE_NAME}-outliers-tickbox", "checked"),
-    # prevent_initial_call=True,
+    Input("box-time-aggregation", "value"),
+    Input("box-outliers-tickbox", "checked"),
+    Input("box-colour-select", "value"),
+    Input("box-facet-row-select", "value"),
+    Input("box-facet-column-select", "value"),
 )
 def update_graph(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
     feature: str,
-    # colour_by: str,
-    # row_facet: str,
-    # col_facet: str,
     time_agg: str,
     outliers: bool,
+    color: str,
+    facet_row: str,
+    facet_col: str,
 ) -> go.Figure:
-    # logger.debug(
-    #     f"Trigger ID={ctx.triggered_id}: {dataset_name=} "
-    #     f"dates:{len(dates)} locations:{len(locations)} "
-    #     f"{feature=} {colour_by=} {row_facet=} {col_facet=} {time_agg=} {outliers=}"
-    # )
-
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
@@ -141,9 +139,9 @@ def update_graph(
         hover_name='file',
         hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
         height=PLOT_HEIGHT,
-        # color=colour_by,
-        # facet_row=row_facet,
-        # facet_col=col_facet,
+        color=color,
+        facet_row=facet_row,
+        facet_col=facet_col,
         # facet_col_wrap=4,
         points='outliers' if outliers else False,
         category_orders=category_orders,

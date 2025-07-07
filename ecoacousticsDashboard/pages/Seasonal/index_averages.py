@@ -6,7 +6,7 @@ import plotly.express as px
 import plotly.graph_objs as go
 
 from dash import html, ctx, dcc, callback
-from dash import Output, Input, ALL
+from dash import Output, Input, State, ALL
 from dash_iconify import DashIconify
 from loguru import logger
 from typing import List, Tuple
@@ -16,7 +16,7 @@ from api import (
     FETCH_ACOUSTIC_FEATURES,
     FETCH_DATASET_CATEGORIES,
 )
-from components.top_bar import TopBar
+from components.dataset_options_select import DatasetOptionsSelect
 from components.footer import Footer
 from utils import list2tuple
 
@@ -40,11 +40,11 @@ windows_options = [
 ]
 
 layout = html.Div([
-    TopBar(
-        PAGE_NAME,
+    dmc.Group(
+        grow=True,
         children=[
             time_aggregation := dmc.SegmentedControl(
-                id=f"{PAGE_NAME}-time-aggregation",
+                id="index-averages-time-aggregation",
                 data=[
                     {"value": opt["frequency"], "label": opt["description"]}
                     for opt in windows_options
@@ -76,24 +76,32 @@ layout = html.Div([
         ],
     ),
     dcc.Loading(
-        dcc.Graph(id=f'{PAGE_NAME}-graph'),
+        dcc.Graph(id="index-averages-graph"),
     ),
     dbc.Offcanvas(
-        id="page-info",
+        id="index-averages-page-info",
         is_open=False,
         placement="bottom",
-        children=Footer(PAGE_NAME),
+        children=Footer("index-averages"),
     ),
 ])
 
+@callback(
+    Output("index-averages-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("index-averages-page-info", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
 
 @callback(
-    Output(f"{PAGE_NAME}-graph", "figure"),
+    Output("index-averages-graph", "figure"),
     Input("dataset-select", "value"),
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("feature-dropdown", "value"),
-    Input(f"{PAGE_NAME}-time-aggregation", "value"),
+    Input("index-averages-time-aggregation", "value"),
     # Input(outliers_tickbox, "checked"),
     # Input(colours_tickbox, "checked"),
     # Input(separate_plots_tickbox, "checked"),

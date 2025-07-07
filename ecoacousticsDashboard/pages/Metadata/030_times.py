@@ -16,7 +16,7 @@ from api import (
     FETCH_FILES,
     FETCH_DATASET_CATEGORIES,
 )
-from components.top_bar import TopBar
+from components.dataset_options_select import DatasetOptionsSelect
 from components.footer import Footer
 from utils import list2tuple
 from utils.content import get_tabs
@@ -31,28 +31,26 @@ dash.register_page(
     name='Times'
 )
 
-colour_select_id = f"times-colour-select"
-symbol_select_id = f"times-symbol-select"
-row_facet_select_id = f"times-row-facet-select"
-col_facet_select_id = f"times-col-facet-select"
-
 layout = html.Div([
-    TopBar(
-        PAGE_NAME,
+    dmc.Group(
+        grow=True,
         children=[
-            # components.ColourSelect(
-            #     id=colour_select_id,
-            #     default="location",
-            # ),
-            # components.SymbolSelect(
-            #     id=symbol_select_id,
-            # ),
-            # components.RowFacetSelect(
-            #     id=row_facet_select_id,
-            # ),
-            # components.ColumnFacetSelect(
-            #     id=col_facet_select_id,
-            # ),
+            DatasetOptionsSelect(
+                id="times-colour-select",
+                label="Colour by"
+            ),
+            DatasetOptionsSelect(
+                id="times-symbol-select",
+                label="Symbol by"
+            ),
+            DatasetOptionsSelect(
+                id="times-facet-row-select",
+                label="Facet rows by"
+            ),
+            DatasetOptionsSelect(
+                id="times-facet-column-select",
+                label="Facet columns by"
+            ),
         ],
     ),
     dmc.Grid([
@@ -65,7 +63,7 @@ layout = html.Div([
                     ta="left",
                 ),
                 dmc.Slider(
-                    id=f"times-size-slider",
+                    id="times-size-slider",
                     min=1,
                     max=20,
                     step=1,
@@ -80,10 +78,10 @@ layout = html.Div([
         ),
     ]),
     dcc.Loading(
-        dcc.Graph(id=f"times-graph"),
+        dcc.Graph(id="times-graph"),
     ),
     dbc.Offcanvas(
-        id="page-info",
+        id="times-page-info",
         is_open=False,
         placement="bottom",
         children=Footer("times"),
@@ -93,26 +91,34 @@ layout = html.Div([
 ])
 
 @callback(
-    Output(f"times-graph", "figure"),
+    Output("times-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("times-page-info", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
+
+@callback(
+    Output("times-graph", "figure"),
     Input("dataset-select", "value"),
     Input("date-picker", "value"),
     Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
-    # Input(colour_select_id, "value"),
-    # Input(symbol_select_id, "value"),
-    # Input(row_facet_select_id, "value"),
-    # Input(col_facet_select_id, "value"),
-    Input(f"times-size-slider", "value"),
-    # prevent_initial_call=True,
+    Input("times-size-slider", "value"),
+    Input("times-colour-select", "value"),
+    Input("times-symbol-select", "value"),
+    Input("times-facet-row-select", "value"),
+    Input("times-facet-column-select", "value"),
 )
 def draw_figure(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
-    # colour_by: str,
-    # symbol_by: str,
-    # row_facet: str,
-    # col_facet: str,
-    dot_size: int
+    dot_size: int,
+    color: str,
+    symbol: str,
+    facet_row: str,
+    facet_col: str,
 ) -> go.Figure:
     triggered_id = ctx.triggered_id
     action = FETCH_FILES
@@ -136,10 +142,10 @@ def draw_figure(
         opacity=0.25,
         hover_name="file_name",
         hover_data=["file_path"],
-        # color=colour_by,
-        # symbol=symbol_by,
-        # facet_row=row_facet,
-        # facet_col=col_facet,
+        color=color,
+        symbol=symbol,
+        facet_row=facet_row,
+        facet_col=facet_col,
         labels=dict(
             date="Date",
             hour_float="Hour"

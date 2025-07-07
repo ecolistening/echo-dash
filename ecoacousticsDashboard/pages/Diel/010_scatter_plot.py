@@ -15,7 +15,7 @@ from api import (
     FETCH_ACOUSTIC_FEATURES,
     FETCH_DATASET_CATEGORIES,
 )
-from components.top_bar import TopBar
+from components.dataset_options_select import DatasetOptionsSelect
 from components.footer import Footer
 from utils import list2tuple
 from utils import sketch
@@ -38,10 +38,6 @@ plot_types = {
 }
 plot_type_kwargs = {
     "Scatter": dict(
-        x='hour',
-        y='value',
-        hover_name="file",
-        hover_data=["timestamp", "path"], # Path last for sound sample modal
         # mode="markers",
         # marker=dict(size=6, opacity=1.0),
         # fill="toself",
@@ -56,46 +52,26 @@ plot_type_kwargs = {
     ),
 }
 
-plot_type_select_id = f"{PAGE_NAME}-plot-type-select"
-# colour_select_id = f"{PAGE_NAME}-colour-select"
-# symbol_select_id = f"{PAGE_NAME}-symbol-select"
-# row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
-# col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
-size_slider_id = f'{PAGE_NAME}-plot-size'
-
 layout = html.Div([
-    TopBar(
-        PAGE_NAME,
+    dmc.Group(
+        grow=True,
         children=[
-            dmc.Select(
-                id=plot_type_select_id,
-                label="Select plot type",
-                value="Scatter",
-                data=[
-                    dict(value=plot_type, label=plot_type)
-                    for plot_type in plot_types.keys()
-                ],
-                searchable=True,
-                clearable=False,
-                style=dict(width=200),
-                persistence=True,
+            DatasetOptionsSelect(
+                id="scatter-colour-select",
+                label="Colour by"
             ),
-            # components.ColourSelect(
-            #     id=colour_select_id,
-            #     default="month",
-            # ),
-            # components.SymbolSelect(
-            #     id=symbol_select_id,
-            #     default=None,
-            # ),
-            # components.RowFacetSelect(
-            #     id=row_facet_select_id,
-            #     default=None,
-            # ),
-            # components.ColumnFacetSelect(
-            #     id=col_facet_select_id,
-            #     default=None,
-            # ),
+            DatasetOptionsSelect(
+                id="scatter-symbol-select",
+                label="Symbol by"
+            ),
+            DatasetOptionsSelect(
+                id="scatter-facet-row-select",
+                label="Facet rows by"
+            ),
+            DatasetOptionsSelect(
+                id="scatter-facet-column-select",
+                label="Facet columns by"
+            ),
         ],
     ),
     dmc.Grid([
@@ -108,7 +84,7 @@ layout = html.Div([
                     ta="left",
                 ),
                 dmc.Slider(
-                    id=size_slider_id,
+                    id="scatter-size-slider",
                     min=1,
                     max=20,
                     step=1,
@@ -124,51 +100,48 @@ layout = html.Div([
     ]),
     dmc.Divider(variant='dotted'),
     dcc.Loading(
-        dcc.Graph(id=f"{PAGE_NAME}-graph"),
+        dcc.Graph(id=f"scatter-graph"),
     ),
     dbc.Offcanvas(
-        id="page-info",
+        id="scatter-page-info",
         is_open=False,
         placement="bottom",
-        children=Footer(PAGE_NAME),
+        children=Footer("scatter"),
     ),
-    # FIXME
-    # components.SoundSampleModal(
-    #     PAGE_NAME,
-    # ),
 ])
 
 @callback(
-    Output(f"{PAGE_NAME}-graph", "figure"),
+    Output("scatter-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("scatter-page-info", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
+
+@callback(
+    Output("scatter-graph", "figure"),
     State("dataset-select", "value"),
-    Input("date-picker", component_property='value'),
+    Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("feature-dropdown", "value"),
-    Input(plot_type_select_id, "value"),
-    # Input(colour_select_id, "value"),
-    # Input(symbol_select_id, "value"),
-    # Input(row_facet_select_id, "value"),
-    # Input(col_facet_select_id, "value"),
-    Input(size_slider_id, "value"),
+    Input("scatter-size-slider", "value"),
+    Input("scatter-colour-select", "value"),
+    Input("scatter-symbol-select", "value"),
+    Input("scatter-facet-row-select", "value"),
+    Input("scatter-facet-column-select", "value"),
 )
-def update_figure(
+def draw_figure(
     dataset_name: str,
     dates: List,
     locations: List[str],
     feature: str,
-    plot_type: str,
-    # colour_by: str,
-    # symbol_by: str,
-    # row_facet: str,
-    # col_facet: str,
     dot_size: int,
+    color: str,
+    symbol: str,
+    facet_row: str,
+    facet_col: str,
 ) -> go.Figure:
-    # logger.debug(
-    #     f"Trigger ID={ctx.triggered_id}: {dataset_name=} "
-    #     f"num_dates={len(dates)} num_locations={len(locations)} {feature=} "
-    #     f"{plot_type=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}"
-    # )
-
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
@@ -181,16 +154,17 @@ def update_figure(
         dataset_name=dataset_name,
     )
 
-    plot = plot_types[plot_type]
-    plot_kwargs = plot_type_kwargs[plot_type]
-    fig = plot(
+    fig = px.scatter(
         data,
-        **plot_kwargs,
+        x='hour',
+        y='value',
+        hover_name="file",
+        hover_data=["timestamp", "path"], # Path last for sound sample modal
         opacity=0.5,
-        # color=colour_by,
-        # symbol=symbol_by,
-        # facet_row=row_facet,
-        # facet_col=col_facet,
+        color=color,
+        symbol=symbol,
+        facet_row=facet_row,
+        facet_col=facet_col,
         category_orders=category_orders,
     )
 

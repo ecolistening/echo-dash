@@ -3,18 +3,19 @@ import os
 import sys
 from loguru import logger
 
-os.makedirs('log', exist_ok=True)
-logger.add("log/{time}.log", rotation="00:00", retention="90 days")
-logger.info("Setup server..")
-logger.debug(f"Python Version: {sys.version}")
-
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 
 from dash import Dash, dcc, ctx
 from dash import Output, Input, callback
+from dash_iconify import DashIconify
 from typing import Any, Dict, List
+
+os.makedirs('log', exist_ok=True)
+logger.add("log/{time}.log", rotation="00:00", retention="90 days")
+logger.info("Setup server..")
+logger.debug(f"Python Version: {sys.version}")
 
 THEME = {
     "fontFamily": "'Inter', sans-serif",
@@ -38,6 +39,7 @@ def create_dash_app() -> dash.Dash:
     )
 
     from components.nav_bar import NavBar
+    from components.hover_icons import HoverIcons
     from components.filter_menu import FilterMenu
     from store import global_store
 
@@ -45,10 +47,46 @@ def create_dash_app() -> dash.Dash:
         theme=THEME,
         withGlobalClasses=True,
         children=dmc.AppShell(
+            id="appshell",
+            navbar={
+                "width": 300,
+                "breakpoint": "sm",
+                "collapsed": {
+                    "desktop": False,
+                    "mobile": True
+                },
+            },
+            header={"height": 60, "color": "black"},
+            padding="md",
             children=[
                 *global_store,
+                dmc.AppShellHeader(
+                    children=dmc.Grid(
+                        style={"padding": "1rem 0.5rem 1rem 0.5rem"},
+                        children=[
+                            dmc.GridCol(
+                                span=6,
+                                children=dmc.Group(
+                                    justify="flex-start",
+                                    children=[
+                                        dmc.Burger(
+                                            id="burger",
+                                            size="sm",
+                                            opened=True,
+                                        ),
+                                        # dmc.Image(src=logo, h=40),
+                                        dmc.Title("EchoDash", c="blue"),
+                                    ]
+                                ),
+                            ),
+                            dmc.GridCol(
+                                span=6,
+                                children=HoverIcons()
+                            )
+                        ]
+                    ),
+                ),
                 NavBar(),
-                FilterMenu(),
                 dmc.AppShellMain([
                     dash.page_container,
                 ]),
@@ -58,13 +96,12 @@ def create_dash_app() -> dash.Dash:
                     max_intervals=1
                 ),
             ],
-        ),
+        )
     )
 
     from callbacks import nav_bar_callbacks
     from callbacks import dataset_config_callbacks
     from callbacks import page_callbacks
-    # from callbacks import graph_param_callbacks
 
     return app
 

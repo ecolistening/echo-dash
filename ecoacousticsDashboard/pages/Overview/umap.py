@@ -10,12 +10,7 @@ from dash import html, dcc, callback, Output, Input, ALL, MATCH, ctx, State, no_
 from dash_iconify import DashIconify
 from io import StringIO
 from loguru import logger
-from typing import (
-    Any,
-    Dict,
-    List,
-    Tuple,
-)
+from typing import Any, Dict, List, Tuple
 
 from api import (
     dispatch,
@@ -23,8 +18,9 @@ from api import (
     FETCH_ACOUSTIC_FEATURES,
     FETCH_ACOUSTIC_FEATURES_UMAP,
     FETCH_DATASET_CATEGORIES,
+    FETCH_DATASET_DROPDOWN_OPTIONS,
 )
-from components.top_bar import TopBar
+from components.dataset_options_select import DatasetOptionsSelect
 from components.file_selection_sidebar import FileSelectionSidebar
 
 from utils import list2tuple
@@ -62,40 +58,27 @@ dash.register_page(
 # 2. When updating a particular filter, simply change the omitted ids in the list.
 # 3. Data is fetched by composing together all file_ids in the store, removing duplicates, and executing the query to fetch those that are not in the list
 
-# plot params
-colour_select_id = f"umap-colour-facet-select"
-symbol_select_id = f"umap-symbol-facet-select"
-row_facet_select_id = f"umap-row-facet-select"
-col_facet_select_id = f"umap-col-facet-select"
-opacity_slider_id = f"umap-plot-options-opacity"
-size_slider_id = f"umap-size-slider"
-category_orders_id = f"umap-category-orders"
-
-# sidebar params
-toggle_sidebar_id = f"umap-toggle-sidebar"
-sidebar_file_data_id = f"umap-sidebar-file-data"
-
 layout = html.Div([
-    dcc.Store(id=category_orders_id),
-    TopBar(
-        PAGE_NAME,
+    dcc.Store(id="umap-data"),
+    dmc.Group(
+        grow=True,
         children=[
-            # components.ColourSelect(
-            #     id=colour_select_id,
-            #     default=None,
-            # ),
-            # components.SymbolSelect(
-            #     id=symbol_select_id,
-            #     default=None,
-            # ),
-            # components.RowFacetSelect(
-            #     id=row_facet_select_id,
-            #     default=None,
-            # ),
-            # components.ColumnFacetSelect(
-            #     id=col_facet_select_id,
-            #     default=None,
-            # ),
+            DatasetOptionsSelect(
+                id="umap-colour-select",
+                label="Colour by"
+            ),
+            DatasetOptionsSelect(
+                id="umap-symbol-select",
+                label="Symbol by"
+            ),
+            DatasetOptionsSelect(
+                id="umap-facet-row-select",
+                label="Facet rows by"
+            ),
+            DatasetOptionsSelect(
+                id="umap-facet-column-select",
+                label="Facet columns by"
+            ),
         ],
     ),
     dmc.Group([
@@ -106,7 +89,7 @@ layout = html.Div([
                 ta="left",
             ),
             dmc.Slider(
-                id=size_slider_id,
+                id="umap-size-slider",
                 min=1,
                 max=20,
                 step=1,
@@ -125,7 +108,7 @@ layout = html.Div([
                 ta="left",
             ),
             dmc.Slider(
-                id=opacity_slider_id,
+                id="umap-opacity-slider",
                 min=0,
                 max=100,
                 step=5,
@@ -176,7 +159,7 @@ layout = html.Div([
         style={"margin-top": "10px"}
     ),
     dbc.Offcanvas(
-        id="page-info",
+        id="umap-page-info",
         is_open=False,
         placement="bottom",
         children=dmc.Grid(
@@ -209,9 +192,18 @@ layout = html.Div([
 ])
 
 @callback(
-    Output(f"umap-sample-slider", "max"),
-    Output(f"umap-sample-slider", "value"),
-    Output(f"umap-sample-slider", "marks"),
+    Output("umap-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("umap-page-info", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
+
+@callback(
+    Output("umap-sample-slider", "max"),
+    Output("umap-sample-slider", "value"),
+    Output("umap-sample-slider", "marks"),
     Input("dataset-select", "value"),
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
@@ -231,7 +223,7 @@ def init_slider(
         default=[],
     )
     max_samples = len(files)
-    sample_size = max_samples # min(1000, max_samples)
+    sample_size = max_samples
     ticks = [
         dict(value=i, label=f"{i}")
         for i in np.linspace(1, max_samples, 5, endpoint=True, dtype=int)
@@ -239,19 +231,19 @@ def init_slider(
     return max_samples, sample_size, ticks
 
 @callback(
-    Output(f"umap-graph", "figure"),
+    Output("umap-graph", "figure"),
+    Output("umap-data", "data"),
     Input("dataset-select", "value"),
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input(f"umap-sample-slider", "value"),
-    Input(f"umap-sample-slider", "max"),
-    # Input(colour_select_id, "value"),
-    # Input(symbol_select_id, "value"),
-    # Input(row_facet_select_id, "value"),
-    # Input(col_facet_select_id, "value"),
-    Input(opacity_slider_id, "value"),
-    Input(size_slider_id, "value"),
-    Input(category_orders_id, "data"),
+    Input("umap-sample-slider", "value"),
+    Input("umap-sample-slider", "max"),
+    Input("umap-opacity-slider", "value"),
+    Input("umap-size-slider", "value"),
+    Input("umap-colour-select", "value"),
+    Input("umap-symbol-select", "value"),
+    Input("umap-facet-row-select", "value"),
+    Input("umap-facet-column-select", "value"),
     prevent_initial_call=True,
 )
 def draw_figure(
@@ -260,13 +252,12 @@ def draw_figure(
     locations: List[str],
     sample_size: int,
     max_samples: int,
-    # colour_by: str,
-    # symbol_by: str,
-    # row_facet: str,
-    # col_facet: str,
     opacity: int,
     dot_size: int,
-    category_orders: List[str] = [],
+    color: str,
+    symbol: str,
+    facet_row: str,
+    facet_col: str,
 ) -> go.Figure:
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES_UMAP,
@@ -285,14 +276,14 @@ def draw_figure(
         x="UMAP Dim 1",
         y="UMAP Dim 2",
         opacity=opacity / 100.0,
-        # color=colour_by,
-        # symbol=symbol_by,
-        # facet_row=row_facet,
-        # facet_col=col_facet,
         category_orders=category_orders,
         hover_name="file_id",
         hover_data=["file", "site", "dddn", "timestamp"],
         height=PLOT_HEIGHT,
+        color=color,
+        symbol=symbol,
+        facet_row=facet_row,
+        facet_col=facet_col,
     )
 
     fig.update_layout(
@@ -309,4 +300,4 @@ def draw_figure(
         marker=dict(size=dot_size)
     )
 
-    return fig
+    return fig, data.to_json(date_format="iso", orient="table")

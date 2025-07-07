@@ -7,6 +7,7 @@ from dash import callback, dcc, html, ctx
 from dash import Output, Input, State
 from dash import MATCH
 from dash import exceptions
+from dash_iconify import DashIconify
 from io import StringIO
 from loguru import logger
 from typing import (
@@ -40,22 +41,46 @@ def FileSelectionSidebar(
             dmc.Stack(
                 style={"margin-top": "1rem"},
                 children=[
-                    dmc.Group(
-                        grow=True,
+                    dmc.Grid(
+                        style={"margin": "0 1rem 0 1rem"},
                         children=[
-                            dmc.Button(
-                                "Filter Selected",
-                                id="selection-sidebar-filter-disclude-button",
-                                variant="light",
-                                color="red",
-                                n_clicks=0,
+                            dmc.GridCol(
+                                span=5,
+                                children=dmc.Button(
+                                    "Filter Selected",
+                                    id="selection-sidebar-filter-disclude-button",
+                                    variant="light",
+                                    color="red",
+                                    n_clicks=0,
+                                ),
                             ),
-                            dmc.Button(
-                                "Filter Remaining",
-                                id="selection-sidebar-filter-include-button",
-                                variant="light",
-                                color="red",
-                                n_clicks=0,
+                            dmc.GridCol(
+                                span=5,
+                                children=dmc.Button(
+                                    "Filter Remaining",
+                                    id="selection-sidebar-filter-include-button",
+                                    variant="light",
+                                    color="red",
+                                    n_clicks=0,
+                                ),
+                            ),
+                            dmc.GridCol(
+                                span=1,
+                                children=[],
+                            ),
+                            dmc.GridCol(
+                                span=1,
+                                children=dmc.ActionIcon(
+                                    DashIconify(
+                                        icon="system-uicons:cross",
+                                        width=24,
+                                    ),
+                                    id="umap-close-sidebar",
+                                    variant="light",
+                                    color="blue",
+                                    size="lg",
+                                    n_clicks=0,
+                                ),
                             ),
                         ]
                     ),
@@ -97,9 +122,23 @@ def FileSelectionSidebar(
     )
 
     @callback(
-        Output("graph-container", "span"),
-        Output("umap-toggle-sidebar", "span"),
-        Output("umap-toggle-sidebar", "style"),
+        Output("graph-container", "span", allow_duplicate=True),
+        Output("umap-toggle-sidebar", "span", allow_duplicate=True),
+        Output("umap-toggle-sidebar", "style", allow_duplicate=True),
+        Input("umap-close-sidebar", "n_clicks"),
+        prevent_initial_call=True
+    )
+    def close_selection_sidebar(n_clicks: int):
+        return (
+            graph_container_span := 12,
+            sidebar_span := 0,
+            sidebar_style := style_hidden,
+        )
+
+    @callback(
+        Output("graph-container", "span", allow_duplicate=True),
+        Output("umap-toggle-sidebar", "span", allow_duplicate=True),
+        Output("umap-toggle-sidebar", "style", allow_duplicate=True),
         Output("umap-sidebar-file-data", "data"),
         Output("selection-sidebar-files-count", "children", allow_duplicate=True),
         Output("selection-sidebar-files-pagination", "total"),
