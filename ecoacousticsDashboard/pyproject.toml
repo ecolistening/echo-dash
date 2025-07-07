@@ -25,7 +25,7 @@ dependencies = [
     "dash-daq==0.5.0",
     "dash-html-components==2.0.0",
     "dash-iconify==0.1.2",
-    "dash-mantine-components==1.2",
+    "dash-mantine-components==2.1",
     "dash-table==5.0.0",
     "debugpy==1.6.7",
     "decorator==5.1.1",
