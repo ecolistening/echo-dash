@@ -9,6 +9,8 @@ from dash import callback, Output, Input, State, ALL, ctx
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
+from components.site_level_chip_group import SiteLevelChipGroup
+
 from api import (
     dispatch,
     FETCH_DATASETS,
@@ -18,9 +20,6 @@ from api import (
     FETCH_ACOUSTIC_FEATURES,
     FETCH_FILES,
 )
-
-def path_name(node):
-    return f'{node.sep}'.join(node.path_name.strip(node.sep).split(node.sep)[1:])
 
 def ceil(a, precision=0):
     return np.round(a + 0.5 * 10**(-precision), precision)
@@ -141,53 +140,31 @@ def update_date_range(
 )
 def update_site_level_filters(
     dataset_name: str,
-) -> dmc.Accordion:
+) -> dmc.Stack:
     trigger_id = ctx.triggered_id
     params = dict(dataset_name=dataset_name)
     logger.debug(f"{trigger_id=} {params=}")
     site_hierarchy_tree = dispatch(FETCH_DATASET_SITES_TREE, **params)
     config = dispatch(FETCH_DATASET_CONFIG, **params)
-    children = []
-    for depth in range(1, site_hierarchy_tree.max_depth):
-        nodes = bt.levelorder_iter(site_hierarchy_tree, filter_condition=lambda x: x.depth == depth + 1)
-        nodes = list(sorted(nodes, key=lambda m: m.path_name))
-        site_level_name = (
-            config
-            .get("Site Hierarchy", {})
-            .get(f"sitelevel_{depth}", f"Level {depth}/{site_hierarchy_tree.max_depth - 1}")
-        )
-        child = dmc.AccordionItem(
-            value=f"level_{depth}",
-            children=[
-                dmc.AccordionControl(site_level_name),
-                dmc.AccordionPanel(
-                    children=dmc.Group(
-                        justify="flex-start",
-                        children=dmc.ChipGroup(
-                            id={ 'type': 'checklist-locations-hierarchy', 'index': depth },
-                            multiple=True,
-                            persistence=True,
-                            value=[node.path_name for node in nodes],
-                            children=[
-                                dmc.Chip(
-                                    path_name(node),
-                                    value=node.path_name,
-                                    variant='filled',
-                                    size='xs'
-                                )
-                                for node in nodes
-                            ],
-                        ),
-                    ),
+    return dmc.Stack(
+        justify="flex-start",
+        children=[
+            SiteLevelChipGroup(
+                level_name=(
+                    config.get("Site Hierarchy", {})
+                    .get(f"sitelevel_{depth}", f"Level {depth}/{site_hierarchy_tree.max_depth - 1}"),
                 ),
-            ],
-        )
-        children.append(child)
-    return dmc.Accordion(
-        chevronPosition="right",
-        variant="separated",
-        radius="sm",
-        children=children,
+                level_depth=depth,
+                nodes=list(sorted(
+                    bt.levelorder_iter(
+                        site_hierarchy_tree,
+                        filter_condition=lambda x: x.depth == depth + 1
+                    ),
+                    key=lambda m: m.path_name
+                )),
+            )
+            for depth in range(1, site_hierarchy_tree.max_depth)
+        ],
     )
 
 # @callback(
