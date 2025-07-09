@@ -1,74 +1,105 @@
-# Import packages
-
 import dash
+import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import pandas as pd
-from dash import html, ctx, dcc, callback, Output, Input, State, ALL
+import plotly.graph_objects as go
+
+from dash import html, ctx, dcc, callback
+from dash import Output, Input, State, ALL
+from dash_iconify import DashIconify
+from io import StringIO
 from loguru import logger
 from plotly_calplot import calplot
+from typing import Any, Dict, List, Tuple
 
-from utils.content import get_tabs
-from utils.data import dataset_loader, filter_data
-from utils.save_plot_fig import get_save_plot
-
-PAGENAME = 'dates'
-PAGETITLE = 'Recording Dates'
-PLOTHEIGHT = 400
-dash.register_page(__name__, title=PAGETITLE, name='Dates')
-#
-# df = pd.read_parquet(filepath)
-# df = df.assign(date=pd.to_datetime(df.timestamp.dt.date))
-
-appendix = dmc.Grid(
-    children=[
-        dmc.Col(get_tabs(PAGENAME,feature=False), span=8),
-        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
-    ],
-    gutter="xl",
+from api import (
+    dispatch,
+    FETCH_FILES,
 )
+from components.figure_download_widget import FigureDownloadWidget
+from components.controls_panel import ControlsPanel
+from components.footer import Footer
+from utils import list2tuple
+
+PAGE_NAME = 'dates'
+PAGE_TITLE = 'Recording Dates'
+PLOT_HEIGHT = 800
+dash.register_page(__name__, title=PAGE_TITLE, name='Dates')
 
 layout = html.Div([
-    html.Div(
-        [dmc.Title(PAGETITLE, order=1)],
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="dates-graph",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ]),
+    dcc.Loading(
+        dcc.Graph(id="dates-graph"),
     ),
-    dmc.Divider(variant='dotted'),
-    dcc.Graph(id=f'{PAGENAME}-graph'),
-    appendix,
+    dbc.Offcanvas(
+        id="dates-page-info",
+        is_open=False,
+        placement="bottom",
+        children=Footer("dates"),
+    ),
 ])
 
-
-# Add controls to build the interaction
 @callback(
-    Output(f'{PAGENAME}-graph', component_property='figure'),
-    Input('dataset-select', component_property='value'),
-    Input('date-picker', component_property='value'),
-    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-    # Input('checklist-locations-hierarchy', component_property='value'),
-    # Input('checklist-locations', component_property='value'),
-
-    # Feature is not required, but helps with caching the dataset
-    State('feature-dropdown', component_property='value'),
+    Output("dates-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("dates-page-info", "is_open"),
+    prevent_initial_call=True,
 )
-def update_graph(dataset_name, dates, locations, feature):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=}")
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
 
-    dataset = dataset_loader.get_dataset(dataset_name)
-    data = filter_data(dataset.acoustic_features, dates=dates, locations=locations, feature=feature)
-
-    # FIXME
-    data = data.assign(date=pd.to_datetime(data.timestamp.dt.date))
-
+@callback(
+    Output("dates-graph", "figure"),
+    Input("dataset-select", "value"),
+    Input("date-picker", "value"),
+    Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
+)
+def draw_figure(
+    dataset_name: str,
+    dates: List[str],
+    locations: List[str],
+) -> go.Figure:
+    triggered_id = ctx.triggered_id
+    action = FETCH_FILES
+    params = dict(
+        dataset_name=dataset_name,
+        dates=list2tuple(dates),
+        locations=list2tuple(locations)
+    )
+    logger.debug(f"{triggered_id=} {action=} {params=}")
+    data = dispatch(action, **params)
     data = data.groupby('date').agg('count').reset_index()
-
-    fig = calplot(data, x='date', y='file')
-
-    # Add centered title
+    fig = calplot(
+        data,
+        x='date',
+        y='file'
+    )
     fig.update_layout(
-        height=PLOTHEIGHT,
-        title={'text':'Recording Dates',
-                             'x':0.5,
-                             'y':1.0,
-                             'font':{'size':24}
-                             })
-
+        height=PLOT_HEIGHT,
+        title=dict(
+            text=PAGE_TITLE,
+            x=0.5,
+            y=0.97,
+            font=dict(size=24),
+        )
+    )
     return fig

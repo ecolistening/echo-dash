@@ -4,17 +4,13 @@ import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objs as go
 
 from dash import html, dcc, callback, Output, Input, ALL, MATCH, ctx, State, no_update
 from dash_iconify import DashIconify
 from io import StringIO
 from loguru import logger
-from typing import (
-    Any,
-    Dict,
-    List,
-    Tuple,
-)
+from typing import Any, Dict, List, Tuple
 
 from api import (
     dispatch,
@@ -22,9 +18,12 @@ from api import (
     FETCH_ACOUSTIC_FEATURES,
     FETCH_ACOUSTIC_FEATURES_UMAP,
     FETCH_DATASET_CATEGORIES,
-    SEND_DATA_FOR_DOWNLOAD,
+    FETCH_DATASET_DROPDOWN_OPTIONS,
 )
-import components
+from components.dataset_options_select import DatasetOptionsSelect
+from components.controls_panel import ControlsPanel
+from components.file_selection_sidebar import FileSelectionSidebar
+from components.figure_download_widget import FigureDownloadWidget
 
 from utils import list2tuple
 
@@ -61,239 +60,127 @@ dash.register_page(
 # 2. When updating a particular filter, simply change the omitted ids in the list.
 # 3. Data is fetched by composing together all file_ids in the store, removing duplicates, and executing the query to fetch those that are not in the list
 
-# global filters
-dataset_select_id = "dataset-select"
-date_picker_id = "date-picker"
-locations_hierarchy_id = {"type": "checklist-locations-hierarchy", "index": ALL}
-
-# plot params
-graph_id = f"{PAGE_NAME}-graph"
-plot_data_id = f"{PAGE_NAME}-plot-data"
-colour_select_id = f"{PAGE_NAME}-colour-facet-select"
-symbol_select_id = f"{PAGE_NAME}-symbol-facet-select"
-row_facet_select_id = f"{PAGE_NAME}-row-facet-select"
-col_facet_select_id = f"{PAGE_NAME}-col-facet-select"
-opacity_slider_id = f"{PAGE_NAME}-plot-options-opacity"
-sample_slider_id = f"{PAGE_NAME}-plot-options-sample"
-size_slider_id = f"{PAGE_NAME}-size-slider"
-category_orders_id = f"{PAGE_NAME}-category-orders"
-
-# export params
-download_dataframe_id = "download-dataframe"
-
-# sidebar params
-toggle_sidebar_id = f"{PAGE_NAME}-toggle-sidebar"
-sidebar_audio_id = f"{PAGE_NAME}-sidebar-audio"
-sidebar_file_data_id = f"{PAGE_NAME}-sidebar-file-data"
-sidebar_file_content_id = f"{PAGE_NAME}-sidebar-file-content"
-
 layout = html.Div([
-    dcc.Store(id=plot_data_id),
-    dcc.Store(id=category_orders_id),
-    dcc.Store(id=sidebar_file_data_id),
-    # dmc.Title(PAGE_TITLE, order=1),
-    # dmc.Divider(variant="dotted"),
-    dmc.Group(
-        grow=True,
-        style={"margin-bottom": "0.5em"},
-        children=[
-            components.ColourSelect(
-                id=colour_select_id,
-                default=None,
-            ),
-            components.SymbolSelect(
-                id=symbol_select_id,
-                default=None,
-            ),
-            components.RowFacetSelect(
-                id=row_facet_select_id,
-                default=None,
-            ),
-            components.ColumnFacetSelect(
-                id=col_facet_select_id,
-                default=None,
-            ),
-            html.Div(
-                style={
-                    "padding": "1rem",
-                    "display": "flex",
-                    # "flex-wrap": "wrap",
-                    "align-content": "center",
-                    "justify-content": "right",
-                },
-                children=dmc.Group(
-                    grow=True,
+    dcc.Store(id="umap-data"),
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                DatasetOptionsSelect(
+                    id="umap-colour-select",
+                    label="Colour by"
+                ),
+                DatasetOptionsSelect(
+                    id="umap-symbol-select",
+                    label="Symbol by"
+                ),
+                DatasetOptionsSelect(
+                    id="umap-facet-row-select",
+                    label="Facet rows by"
+                ),
+                DatasetOptionsSelect(
+                    id="umap-facet-column-select",
+                    label="Facet columns by"
+                ),
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
                     children=[
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:image-download",
-                                            width=24,
-                                        ),
-                                        id="image-download-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    children=[
-                                        dmc.Text("Download image as..."),
-                                        components.FigureDownloader(graph_id),
-                                    ]
-                                )
-                            ],
-                        ),
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:file-download-alt",
-                                            width=24,
-                                        ),
-                                        id="export-data-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    children=[
-                                        dmc.Text("Export filtered data as..."),
-                                        dmc.Group(
-                                            grow=True,
-                                            children=[
-                                                dmc.Button("csv", variant="filled", id='dl_csv'),
-                                                dmc.Button("excel", variant="filled", id='dl_xls'),
-                                                dmc.Button("json", variant="filled", id='dl_json'),
-                                                dmc.Button("parquet", variant="filled", id='dl_parquet'),
-                                            ],
-                                        )
-                                    ]
-                                )
-                            ],
-                        ),
-                        dmc.HoverCard(
-                            children=[
-                                dmc.HoverCardTarget(
-                                    children=dmc.ActionIcon(
-                                        DashIconify(
-                                            icon="uil:info-circle",
-                                            width=24,
-                                        ),
-                                        id="info-icon",
-                                        variant="light",
-                                        color="blue",
-                                        size="lg",
-                                        n_clicks=0,
-                                    ),
-                                ),
-                                dmc.HoverCardDropdown(
-                                    dmc.Text("View page information"),
-                                )
-                            ],
+                        FigureDownloadWidget(
+                            plot_name="umap-graph",
                         ),
                     ],
                 ),
-            ),
-        ]
-    ),
-    dmc.Group([
-        html.Div([
-            dmc.Text(
-                "Dot Size",
-                size="sm",
-                align="left",
-            ),
-            dmc.Slider(
-                id=size_slider_id,
-                min=1,
-                max=20,
-                step=1,
-                value=6,
-                marks=[
-                    {"value": i, "label": f"{i}"}
-                    for i in (1, 10, 20)
-                ],
-                persistence=True
-            )
-        ]),
-        html.Div([
-            dmc.Text(
-                "Opacity",
-                size='sm',
-                align="left",
-            ),
-            dmc.Slider(
-                id=opacity_slider_id,
-                min=0,
-                max=100,
-                step=5,
-                value=50,
-                marks=[
-                    dict(value=i, label=f"{i}%")
-                    for i in np.linspace(0, 100, 5, endpoint=True, dtype=int)
-                ],
-                persistence=True,
-            )
-        ]),
-        html.Div([
-            dmc.Text(
-                "Sample Size",
-                size="sm",
-                align="left",
-            ),
-            dmc.Slider(
-                id=sample_slider_id,
-                persistence=True,
-                min=1,
-                value=None,
-                step=1,
-            )
-        ]),
-    ], grow=True),
-    dmc.Divider(
-        variant="dotted",
-        style={"margin-top": "30px"}
-    ),
+            ],
+        ),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Dot Size",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="umap-size-slider",
+                        min=1,
+                        max=20,
+                        step=1,
+                        value=6,
+                        marks=[
+                            {"value": i, "label": f"{i}"}
+                            for i in (1, 10, 20)
+                        ],
+                        persistence=True
+                    )
+                ]),
+                dmc.Stack([
+                    dmc.Text(
+                        "Opacity",
+                        size='sm',
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="umap-opacity-slider",
+                        min=0,
+                        max=100,
+                        step=5,
+                        value=50,
+                        marks=[
+                            dict(value=i, label=f"{i}%")
+                            for i in np.linspace(0, 100, 5, endpoint=True, dtype=int)
+                        ],
+                        persistence=True,
+                    )
+                ]),
+                dmc.Stack([
+                    dmc.Text(
+                        "Sample Size",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id=f"umap-sample-slider",
+                        persistence=True,
+                        min=1,
+                        value=None,
+                        step=1,
+                    )
+                ]),
+            ]
+        ),
+    ]),
     # Note: this is slightly hacky but it works
     # the file selection sidebar changes the span of the
     # sibling column span to make itself visible
     dmc.Grid([
-        dmc.Col(
+        dmc.GridCol(
             id="graph-container",
             span=12,
             children=[
                 dcc.Loading([
-                    dcc.Graph(id=graph_id),
+                    dcc.Graph(id=f"umap-graph"),
                 ]),
             ],
         ),
-        components.FileSelectionSidebar(
-            dataset_id=dataset_select_id,
-            graph_id=graph_id,
-            graph_container_id="graph-container",
-            sidebar_id=toggle_sidebar_id,
-            data_store_id=sidebar_file_data_id,
-            span=4,
-        ),
+        FileSelectionSidebar(span=4),
     ]),
     dmc.Divider(
         variant="dotted",
         style={"margin-top": "10px"}
     ),
     dbc.Offcanvas(
-        id="page-info",
+        id="umap-page-info",
         is_open=False,
         placement="bottom",
         children=dmc.Grid(
             children=[
-                dmc.Col(
+                dmc.GridCol(
                     span=4,
                     children=[
                         dmc.Title(PAGE_TITLE, order=2),
@@ -303,7 +190,7 @@ layout = html.Div([
                     variant="dotted",
                     orientation="vertical"
                 ),
-                dmc.Col(
+                dmc.GridCol(
                     span="auto",
                     children=[
                         dmc.Text(
@@ -321,38 +208,27 @@ layout = html.Div([
 ])
 
 @callback(
-    Output("page-info", "is_open"),
+    Output("umap-page-info", "is_open"),
     Input("info-icon", "n_clicks"),
-    State("page-info", "is_open"),
+    State("umap-page-info", "is_open"),
     prevent_initial_call=True,
 )
 def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
 
 @callback(
-    Output(plot_data_id, "data"),
-    Output(category_orders_id, "data"),
-    Output(sample_slider_id, "max"),
-    Output(sample_slider_id, "value"),
-    Output(sample_slider_id, "marks"),
-    Input(dataset_select_id, "value"),
-    Input(date_picker_id, "value"),
-    Input(locations_hierarchy_id, "value"),
+    Output("umap-sample-slider", "max"),
+    Output("umap-sample-slider", "value"),
+    Output("umap-sample-slider", "marks"),
+    Input("dataset-select", "value"),
+    Input("date-picker", "value"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
 )
-def update_umap_data_store(
+def init_slider(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
 ) -> str:
-    """
-    First callback in the initial execution chain.
-
-    - Fetches UMAP projection from API and caches client-side
-    - Fetches the category orders from API and caches client-side
-    - Resets the slider range, ticks and sample size to be the maximum (as per cached UMAP)
-
-    This is a joint action since separating these events independently triggers multiple redraw events
-    """
     # FIXME: to support Kilpis we need to fix this so its the total number of instances, i.e. file_segment_id
     # ideally this should be constructed in soundade during the index files stage
     files = dispatch(
@@ -363,121 +239,81 @@ def update_umap_data_store(
         default=[],
     )
     max_samples = len(files)
-    sample_size = max_samples # min(1000, max_samples)
+    sample_size = max_samples
+    ticks = [
+        dict(value=i, label=f"{i}")
+        for i in np.linspace(1, max_samples, 5, endpoint=True, dtype=int)
+    ]
+    return max_samples, sample_size, ticks
+
+@callback(
+    Output("umap-graph", "figure"),
+    Output("umap-data", "data"),
+    Input("dataset-select", "value"),
+    Input("date-picker", "value"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    Input("umap-sample-slider", "value"),
+    Input("umap-sample-slider", "max"),
+    Input("umap-opacity-slider", "value"),
+    Input("umap-size-slider", "value"),
+    Input("umap-colour-select", "value"),
+    Input("umap-symbol-select", "value"),
+    Input("umap-facet-row-select", "value"),
+    Input("umap-facet-column-select", "value"),
+    prevent_initial_call=True,
+)
+def draw_figure(
+    dataset_name: str,
+    dates: List[str],
+    locations: List[str],
+    sample_size: int,
+    max_samples: int,
+    opacity: int,
+    dot_size: int,
+    color: str,
+    symbol: str,
+    facet_row: str,
+    facet_col: str,
+) -> go.Figure:
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES_UMAP,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
         locations=list2tuple(locations),
-        sample_size=max_samples,
+        sample_size=max_samples, # ensures we subsample rather than re-run UMAP
     )
     category_orders = dispatch(
         FETCH_DATASET_CATEGORIES,
         dataset_name=dataset_name,
     )
-    json_data = data.to_json(
-        date_format="iso",
-        orient="table",
-    )
-    ticks = [
-        dict(value=i, label=f"{i}")
-        for i in np.linspace(1, max_samples, 5, endpoint=True, dtype=int)
-    ]
-    return json_data, category_orders, max_samples, sample_size, ticks
-
-@callback(
-    Output(graph_id, "figure"),
-    Input(sample_slider_id, "value"),
-    Input(colour_select_id, "value"),
-    Input(symbol_select_id, "value"),
-    Input(row_facet_select_id, "value"),
-    Input(col_facet_select_id, "value"),
-    Input(opacity_slider_id, "value"),
-    Input(size_slider_id, "value"),
-    Input(plot_data_id, "data"),
-    Input(category_orders_id, "data"),
-    prevent_initial_call=True,
-)
-def update_figure(
-    sample_size: int,
-    colour_by: str,
-    symbol_by: str,
-    row_facet: str,
-    col_facet: str,
-    opacity: int,
-    dot_size: int,
-    json_data: str | None = None,
-    category_orders: List[str] = [],
-) -> Tuple[Any, ...]:
-    """
-    Second callback in the initial execution chain.
-
-    - Subsamples from the browser-side UMAP data (stored as JSON)
-    - Fetches the cached category orders
-    - Renders the figure
-    """
-    logger.debug(
-        f"Trigger ID={ctx.triggered_id}: "
-        f"{sample_size=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {opacity=} {dot_size=}"
-    )
-
-    data = pd.read_json(
-        StringIO(json_data),
-        orient="table",
-    ).sample(sample_size)
 
     fig = px.scatter(
-        data,
+        data.sample(sample_size),
         x="UMAP Dim 1",
         y="UMAP Dim 2",
         opacity=opacity / 100.0,
-        color=colour_by,
-        symbol=symbol_by,
-        facet_row=row_facet,
-        facet_col=col_facet,
         category_orders=category_orders,
         hover_name="file_id",
         hover_data=["file", "site", "dddn", "timestamp"],
         height=PLOT_HEIGHT,
+        color=color,
+        symbol=symbol,
+        facet_row=facet_row,
+        facet_col=facet_col,
     )
 
-    # fig.update_layout(
-    #     title=dict(
-    #         text=PAGE_TITLE,
-    #         x=0.5,
-    #         y=0.97,
-    #         font=dict(size=24),
-    #     )
-    # )
+    fig.update_layout(
+        height=PLOT_HEIGHT,
+        title=dict(
+            text=PAGE_TITLE,
+            x=0.5,
+            y=0.97,
+            font=dict(size=24),
+        )
+    )
 
     fig.update_traces(
         marker=dict(size=dot_size)
     )
 
-    return fig
-
-@callback(
-    Output(download_dataframe_id, "data"),
-    State(dataset_select_id, "value"),
-    State(plot_data_id, "data"),
-    Input("dl_csv", "n_clicks"),
-    Input("dl_xls", "n_clicks"),
-    Input("dl_json", "n_clicks"),
-    Input("dl_parquet", "n_clicks"),
-    prevent_initial_call=True,
-)
-def download_data(
-    dataset_name: str,
-    json_data: Dict[str, Any],
-) -> Dict[str, Any]:
-    logger.debug(
-        f"Trigger ID={ctx.triggered_id}:"
-        f"dataset={dataset_name} json data ({len(json_data)}B)"
-    )
-    return dispatch(
-        SEND_DATA_FOR_DOWNLOAD,
-        dataset_name=dataset_name,
-        json_data=json_data,
-        dl_type=ctx.triggered_id,
-    )
-
+    return fig, data.to_json(date_format="iso", orient="table")

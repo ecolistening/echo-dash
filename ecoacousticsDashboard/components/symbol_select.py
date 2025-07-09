@@ -2,9 +2,12 @@ import dash_mantine_components as dmc
 
 from dash import ctx, callback, Output, Input, State, html
 from loguru import logger
-from typing import Any, Dict
+from typing import Any, Dict, Tuple, List
 
-from utils.data import dataset_loader, DatasetDecorator
+from api import (
+    dispatch,
+    FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS,
+)
 
 DEFAULT_SELECT_OPTIONS = dict(
     searchable=True,
@@ -14,7 +17,8 @@ DEFAULT_SELECT_OPTIONS = dict(
 
 def SymbolSelect(
     id: str,
-    default: str = None,
+    default: str = "",
+    data: List[Dict[str, str]] = [],
     style: Dict[str, Any] = dict(width=200),
 ) -> dmc.Select:
     dataset_select_id = "dataset-select"
@@ -23,6 +27,7 @@ def SymbolSelect(
         id=id,
         label="Symbolise by",
         value=default,
+        data=[],
         style=style,
         **DEFAULT_SELECT_OPTIONS,
     )
@@ -35,8 +40,10 @@ def SymbolSelect(
     )
     def update(dataset_name: str, symbol_by: str):
         logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} {symbol_by=}")
-        decorator = DatasetDecorator(dataset_loader.get_dataset(dataset_name))
-        cat_options = decorator.categorical_drop_down_select_options()
+        cat_options = dispatch(
+            FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS,
+            dataset_name=dataset_name,
+        )
         val_cat_options = [opt["value"] for opt in cat_options]
         if symbol_by not in val_cat_options:
             symbol_by = None

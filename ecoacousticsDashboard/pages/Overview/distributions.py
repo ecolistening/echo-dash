@@ -1,87 +1,155 @@
-# Import packages
-
 import dash
+import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import plotly.express as px
-from dash import html, ctx, dcc, callback, Output, State, Input, ALL
+import plotly.graph_objs as go
+
+from dash import html, ctx, dcc, callback
+from dash import Output, State, Input, ALL
+from dash_iconify import DashIconify
 from loguru import logger
+from typing import Any, Dict, List, Tuple
 
+from api import (
+    dispatch,
+    FETCH_ACOUSTIC_FEATURES,
+    FETCH_DATASET_CATEGORIES,
+)
+from components.dataset_options_select import DatasetOptionsSelect
+from components.controls_panel import ControlsPanel
+from components.figure_download_widget import FigureDownloadWidget
+from components.footer import Footer
+from utils import list2tuple
 from utils.content import get_tabs
-from utils.data import dataset_loader, filter_data, DatasetDecorator
-from utils.plot_filter_menu import get_filter_drop_down
-from utils.save_plot_fig import get_save_plot
 
-PAGENAME = 'distributions'
-PAGETITLE = 'Soundscape Descriptor Distributions'
+PAGE_NAME = 'distributions'
+PAGE_TITLE = 'Soundscape Descriptor Distributions'
 PLOTHEIGHT = 800
-dash.register_page(__name__, title=PAGETITLE, name='Distributions')
 
-colour_select, row_facet_select, col_facet_select = \
-    get_filter_drop_down(PAGENAME, colour_by_cat=True, include_symbol= False,
-    colour_default='location', row_facet_default='location', col_facet_default='dddn')
-
-normalised_tickbox = dmc.Chip('Normalised', value='normalised', checked=False, persistence=True,
-                              id='normalised-tickbox')
-
-filter_group = dmc.Group(children=[colour_select,row_facet_select,col_facet_select,normalised_tickbox])
-
-appendix = dmc.Grid(
-    children=[
-        dmc.Col(get_tabs(PAGENAME), span=8),
-        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
-    ],
-    gutter="xl",
+dash.register_page(
+    __name__,
+    title=PAGE_TITLE,
+    name='Distributions',
 )
 
 layout = html.Div([
-    dmc.Title(PAGETITLE, order=1),
-    dmc.Divider(variant='dotted'),
-    filter_group,
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                DatasetOptionsSelect(
+                    id="distributions-colour-select",
+                    label="Colour by"
+                ),
+                DatasetOptionsSelect(
+                    id="distributions-facet-row-select",
+                    label="Facet rows by"
+                ),
+                DatasetOptionsSelect(
+                    id="distributions-facet-column-select",
+                    label="Facet columns by"
+                ),
+                html.Div([
+                    dmc.Chip(
+                        'Normalised',
+                        id="distributions-normalised-tickbox",
+                        value='normalised',
+                        checked=False,
+                        persistence=True,
+                    )
+                ]),
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="distributions-graph",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ]),
     dcc.Loading(
-        dcc.Graph(id=f'{PAGENAME}-graph'),
+        dcc.Graph(
+            id="distributions-graph"
+        ),
     ),
-    drilldown_file_div := html.Div(),
-    appendix,
+    dbc.Offcanvas(
+        id="distributions-page-info",
+        is_open=False,
+        placement="bottom",
+        children=Footer("distributions"),
+    ),
 ])
 
-
-# Add controls to build the interaction
 @callback(
-    Output(f'{PAGENAME}-graph', component_property='figure'),
-
-    # Covered by menu filter
-    State('dataset-select', component_property='value'),
-    Input('date-picker', component_property='value'),
-    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-    Input('feature-dropdown', component_property='value'),
-
-    Input(colour_select, component_property='value'),
-    Input(row_facet_select, component_property='value'),
-    Input(col_facet_select, component_property='value'),
-    Input(normalised_tickbox, component_property='checked'),
-
+    Output("distributions-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("distributions-page-info", "is_open"),
     prevent_initial_call=True,
 )
-def update_graph(dataset_name, dates, locations, feature, colour_by, row_facet, col_facet, normalised):  # , time_agg, outliers, colour_locations, ):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {row_facet=} {col_facet=} {normalised=}")
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
 
-    dataset = dataset_loader.get_dataset(dataset_name)
-    data = filter_data(dataset.acoustic_features, dates=dates, feature=feature, locations=locations)
 
-    fig = px.histogram(
-        data, x='value', marginal='rug', opacity=0.75, height=PLOTHEIGHT,
-        color=colour_by,
-        facet_row=row_facet,
-        facet_col=col_facet,
-        histnorm='percent' if normalised else None,
-        category_orders=DatasetDecorator(dataset).category_orders(),
+@callback(
+    Output("distributions-graph", 'figure'),
+    State("dataset-select", 'value'),
+    Input("date-picker", 'value'),
+    Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
+    Input("feature-dropdown", 'value'),
+    Input("distributions-colour-select", 'value'),
+    Input("distributions-facet-row-select", 'value'),
+    Input("distributions-facet-column-select", 'value'),
+    Input("distributions-normalised-tickbox", 'checked'),
+)
+def draw_figure(
+    dataset_name: str,
+    dates: List[str],
+    locations: List[str],
+    feature: str,
+    color: str,
+    facet_row: str,
+    facet_col: str,
+    normalised: bool,
+) -> go.Figure:
+    data = dispatch(
+        FETCH_ACOUSTIC_FEATURES,
+        dataset_name=dataset_name,
+        dates=list2tuple(dates),
+        locations=list2tuple(locations),
+        feature=feature,
+    )
+    category_orders = dispatch(
+        FETCH_DATASET_CATEGORIES,
+        dataset_name=dataset_name,
     )
 
-    # Add centered title
-    fig.update_layout(title={'text':f"{PAGETITLE} ({feature})",
-                             'x':0.5,
-                             'y':0.97,
-                             'font':{'size':24}
-                             })
+    fig = px.histogram(
+        data,
+        x='value',
+        marginal='rug',
+        opacity=0.75,
+        height=PLOTHEIGHT,
+        color=color,
+        facet_row=facet_row,
+        facet_col=facet_col,
+        histnorm='percent' if normalised else None,
+        category_orders=category_orders,
+    )
+
+    fig.update_layout(
+        title={
+            'text':f"{PAGE_TITLE} ({feature})",
+            'x':0.5,
+            'y':0.97,
+            'font':{'size':24}
+        }
+    )
 
     return fig

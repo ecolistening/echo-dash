@@ -1,103 +1,187 @@
-# Import packages
-
 import dash
+import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import pandas as pd
 import plotly.express as px
-from dash import html, ctx, dcc, callback, Output, Input, State, ALL
+import plotly.graph_objs as go
+
+from dash import html, ctx, dcc, callback
+from dash import Output, Input, State, ALL
+from dash_iconify import DashIconify
 from loguru import logger
+from typing import Any, Dict, List, Tuple
 
+from api import (
+    dispatch,
+    FETCH_FILES,
+    FETCH_DATASET_CATEGORIES,
+)
+from components.dataset_options_select import DatasetOptionsSelect
+from components.controls_panel import ControlsPanel
+from components.figure_download_widget import FigureDownloadWidget
+from components.footer import Footer
+from utils import list2tuple
 from utils.content import get_tabs
-from utils.data import dataset_loader, filter_data, DatasetDecorator
-from utils.modal_sound_sample import get_modal_sound_sample
-from utils.plot_filter_menu import get_filter_drop_down, get_size_slider
-from utils.save_plot_fig import get_save_plot
 
-PAGENAME = 'times'
-PAGETITLE = 'Recording Times'
-PLOTHEIGHT = 800
-dash.register_page(__name__, title=PAGETITLE, name='Times')
+PAGE_NAME = 'times'
+PAGE_TITLE = 'Recording Times'
+PLOT_HEIGHT = 800
 
-colour_select, symbol_select, row_facet_select, col_facet_select = get_filter_drop_down(PAGENAME, colour_default='location')
-size_slider_text, size_slider = get_size_slider(PAGENAME)
-
-filter_group = dmc.Group(children=[colour_select,symbol_select,row_facet_select,col_facet_select,size_slider_text,size_slider,dmc.Text()],grow=True)
-
-appendix = dmc.Grid(
-    children=[
-        dmc.Col(get_tabs(PAGENAME,feature=False), span=8),
-        dmc.Col(get_save_plot(f'{PAGENAME}-graph'), span=4),
-    ],
-    gutter="xl",
+dash.register_page(
+    __name__,
+    title=PAGE_TITLE,
+    name='Times'
 )
 
-# App layout
-# app.\
 layout = html.Div([
-    html.Div(
-        [html.H1(PAGETITLE)],
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                DatasetOptionsSelect(
+                    id="times-colour-select",
+                    label="Colour by"
+                ),
+                DatasetOptionsSelect(
+                    id="times-symbol-select",
+                    label="Symbol by"
+                ),
+                DatasetOptionsSelect(
+                    id="times-facet-row-select",
+                    label="Facet rows by"
+                ),
+                DatasetOptionsSelect(
+                    id="times-facet-column-select",
+                    label="Facet columns by"
+                ),
+                html.Div(
+                    style={
+                        "padding": "1rem",
+                        "display": "flex",
+                        "align-content": "center",
+                        "justify-content": "right",
+                    },
+                    children=[
+                        FigureDownloadWidget(
+                            plot_name="times-graph",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Dot Size",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="times-size-slider",
+                        min=1,
+                        max=20,
+                        step=1,
+                        value=4,
+                        marks=[
+                            {"value": i, "label": f"{i}"}
+                            for i in (1, 10, 20)
+                        ],
+                        persistence=True
+                    )
+                ]),
+            ],
+        ),
+    ]),
+    dcc.Loading(
+        dcc.Graph(id="times-graph"),
     ),
-    html.Hr(),
-    filter_group,
-    dmc.Divider(variant='dotted'),
-    dcc.Graph(id=f'{PAGENAME}-graph'),
-    appendix,
-    get_modal_sound_sample(PAGENAME),
+    dbc.Offcanvas(
+        id="times-page-info",
+        is_open=False,
+        placement="bottom",
+        children=Footer("times"),
+    ),
+    # TODO: fixme
+    # get_modal_sound_sample(PAGE_NAME),
 ])
 
-
-# Add controls to build the interaction
 @callback(
-    Output(f'{PAGENAME}-graph', component_property='figure'),
-
-    # Covered by menu filter
-    State('dataset-select', component_property='value'),
-    Input('date-picker', component_property='value'),
-    Input({'type': 'checklist-locations-hierarchy', 'index': ALL}, 'value'),
-
-    # Feature is not required, but helps with caching the dataset
-    State('feature-dropdown', component_property='value'),
-
-    Input(colour_select, component_property='value'),
-    Input(symbol_select, component_property='value'),
-    Input(row_facet_select, component_property='value'),
-    Input(col_facet_select, component_property='value'),
-    Input(size_slider, component_property='value'),
-
+    Output("times-page-info", "is_open"),
+    Input("info-icon", "n_clicks"),
+    State("times-page-info", "is_open"),
     prevent_initial_call=True,
 )
-def update_graph(dataset_name, dates, locations, feature, colour_by, symbol_by, row_facet, col_facet, dot_size):
-    logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=} dates:{len(dates)} locations:{len(locations)} {feature=} {colour_by=} {symbol_by=} {row_facet=} {col_facet=} {dot_size=}")
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+    return not is_open
 
-    dataset = dataset_loader.get_dataset(dataset_name)
-    data = filter_data(dataset.acoustic_features, dates=dates, locations=locations, feature=feature)
+@callback(
+    Output("times-graph", "figure"),
+    Input("dataset-select", "value"),
+    Input("date-picker", "value"),
+    Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
+    Input("times-size-slider", "value"),
+    Input("times-colour-select", "value"),
+    Input("times-symbol-select", "value"),
+    Input("times-facet-row-select", "value"),
+    Input("times-facet-column-select", "value"),
+)
+def draw_figure(
+    dataset_name: str,
+    dates: List[str],
+    locations: List[str],
+    dot_size: int,
+    color: str,
+    symbol: str,
+    facet_row: str,
+    facet_col: str,
+) -> go.Figure:
+    triggered_id = ctx.triggered_id
+    action = FETCH_FILES
+    params = dict(
+        dataset_name=dataset_name,
+        dates=list2tuple(dates),
+        locations=list2tuple(locations)
+    )
+    logger.debug(f"{triggered_id=} {action=} {params=}")
+    data = dispatch(action, **params)
 
-    data = data.assign(date=data.timestamp.dt.date,
-                       hour=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0)
+    category_orders = dispatch(
+        FETCH_DATASET_CATEGORIES,
+        dataset_name=dataset_name,
+    )
 
     fig = px.scatter(
-        data, x='date', y='hour', opacity=0.25,
-        height=PLOTHEIGHT,
-        hover_name='file', hover_data=['path'], # Path last for sound sample modal
-        color=colour_by,
-        symbol=symbol_by,
-        facet_row=row_facet,
-        facet_col=col_facet,
-        category_orders=DatasetDecorator(dataset).category_orders(),
+        data,
+        x='date',
+        y='hour_float',
+        opacity=0.25,
+        hover_name="file_name",
+        hover_data=["file_path"],
+        color=color,
+        symbol=symbol,
+        facet_row=facet_row,
+        facet_col=facet_col,
+        labels=dict(
+            date="Date",
+            hour_float="Hour"
+        ),
+        category_orders=category_orders,
     )
-    fig.update_layout(scattermode="group", scattergap=0.75)
 
-    # Add centered title
-    fig.update_layout(title={'text':'Recording Times',
-                             'x':0.5,
-                             'y':0.97,
-                             'font':{'size':24}
-                             })
+    fig.update_layout(
+        height=PLOT_HEIGHT,
+        title=dict(
+            text=PAGE_TITLE,
+            x=0.5,
+            y=0.97,
+            font=dict(size=24),
+        ),
+        scattermode="group",
+        scattergap=0.75,
+    )
 
-    # Select sample for audio modal
-    fig.update_layout(clickmode='event+select')
-
-    # Adjust size of scatter dots
     fig.update_traces(marker=dict(size=dot_size))
 
     return fig

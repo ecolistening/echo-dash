@@ -4,7 +4,10 @@ from dash import ctx, callback, Output, Input, State, html
 from loguru import logger
 from typing import Any, Dict, List
 
-from utils.data import dataset_loader, DatasetDecorator
+from api import (
+    dispatch,
+    FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS,
+)
 
 DEFAULT_SELECT_OPTIONS = dict(
     searchable=True,
@@ -23,7 +26,7 @@ def RowFacetSelect(
     select = dmc.Select(
         id=id,
         label="Facet Rows by",
-        value=default,
+        value="location",
         style=style,
         **DEFAULT_SELECT_OPTIONS,
     )
@@ -36,8 +39,11 @@ def RowFacetSelect(
     )
     def update(dataset_name: str, row_facet: str):
         logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} {row_facet=}")
-        decorator = DatasetDecorator(dataset_loader.get_dataset(dataset_name))
-        cat_options = [opt for opt in decorator.categorical_drop_down_select_options() if opt["value"] not in ignore_options]
+        options = dispatch(
+            FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS,
+            dataset_name=dataset_name,
+        )
+        cat_options = [opt for opt in options if opt["value"] not in ignore_options]
         val_cat_options = [opt["value"] for opt in cat_options]
         if row_facet not in val_cat_options:
             row_facet = None
@@ -56,7 +62,7 @@ def ColumnFacetSelect(
     select = dmc.Select(
         id=id,
         label="Facet Columns by",
-        value=default,
+        value="location",
         style=style,
         **DEFAULT_SELECT_OPTIONS,
     )
@@ -69,8 +75,11 @@ def ColumnFacetSelect(
     )
     def update(dataset_name: str, col_facet: str):
         logger.debug(f"Trigger ID={ctx.triggered_id}: dataset={dataset_name} {col_facet=}")
-        decorator = DatasetDecorator(dataset_loader.get_dataset(dataset_name))
-        cat_options = [opt for opt in decorator.categorical_drop_down_select_options() if opt["value"] not in ignore_options]
+        options = dispatch(
+            FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS,
+            dataset_name=dataset_name,
+        )
+        cat_options = [opt for opt in options if opt["value"] not in ignore_options]
         val_cat_options = [opt["value"] for opt in cat_options]
         if col_facet not in val_cat_options:
             col_facet = None

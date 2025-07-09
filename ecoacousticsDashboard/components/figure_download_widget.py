@@ -1,12 +1,14 @@
 import dash_mantine_components as dmc
 import plotly.graph_objects as go
 
-from dash import html, dcc, clientside_callback, callback, Output, Input, ALL, ctx, State
+from dash import html, dcc, clientside_callback, callback
+from dash import Output, Input, State, ALL, ctx
+from dash_iconify import DashIconify
 from loguru import logger
 
 from utils import render_fig_as_image_file
 
-def FigureDownloader(
+def FigureDownloadWidget(
     plot_name: str,
 ) -> html.Div:
 
@@ -46,20 +48,42 @@ def FigureDownloader(
     )
     def download_fig(dataset, fig_dict, rqst):
         logger.debug(f"Trigger Callback: {dataset=} {rqst=}")
-        fig=go.Figure(fig_dict)
+        fig = go.Figure(fig_dict)
         fig.update_layout(width=rqst['width'], height=rqst['height'])
         return render_fig_as_image_file(fig,rqst['trigger'],f"{plot_name.strip('-graph')}_{dataset}_plot")
 
-    return html.Div([
-        dcc.Store(id=f'rqst-plot-{plot_name}'),
-        dcc.Download(id=f'download-plot-{plot_name}'),
-        dmc.Group(
-            grow=True,
-            children=[
-                dmc.Button("JPG", variant="filled", id='dl_jpg'),
-                dmc.Button("PNG", variant="filled", id='dl_png'),
-                dmc.Button("SVG", variant="filled", id='dl_svg'),
-                dmc.Button("PDF", variant="filled", id='dl_pdf'),
-            ]
-        ),
-    ])
+    return dmc.HoverCard(
+        children=[
+            dmc.HoverCardTarget(
+                children=dmc.ActionIcon(
+                    DashIconify(
+                        icon="uil:image-download",
+                        width=24,
+                    ),
+                    id="image-download-icon",
+                    variant="light",
+                    color="blue",
+                    size="lg",
+                    n_clicks=0,
+                ),
+            ),
+            dmc.HoverCardDropdown(
+                children=[
+                    dmc.Text("Download plot image..."),
+                    html.Div([
+                        dcc.Store(id=f'rqst-plot-{plot_name}'),
+                        dcc.Download(id=f'download-plot-{plot_name}'),
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                dmc.Button("JPG", variant="filled", id='dl_jpg'),
+                                dmc.Button("PNG", variant="filled", id='dl_png'),
+                                dmc.Button("SVG", variant="filled", id='dl_svg'),
+                                dmc.Button("PDF", variant="filled", id='dl_pdf'),
+                            ]
+                        ),
+                    ])
+                ]
+            )
+        ],
+    )

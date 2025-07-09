@@ -252,12 +252,9 @@ wheels = [
 
 [[package]]
 name = "dash"
-version = "2.16.1"
+version = "3.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "dash-core-components" },
-    { name = "dash-html-components" },
-    { name = "dash-table" },
     { name = "flask" },
     { name = "importlib-metadata" },
     { name = "nest-asyncio" },
@@ -268,9 +265,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "werkzeug" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/38/c9/1f2a6abe0ab0a61e40c36819effd241e529d147aacc4153ce49a6c69a535/dash-2.16.1.tar.gz", hash = "sha256:b2871d6b8d4c9dfd0a64f89f22d001c93292910b41d92d9ff2bb424a28283976", size = 9911605, upload-time = "2024-03-06T19:55:02.392Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/7c/8569c50a4c07fabee6b2428a1515c0c92247e2127367b438a9f99d69723c/dash-3.1.1.tar.gz", hash = "sha256:916b31cec46da0a3339da0e9df9f446126aa7f293c0544e07adf9fe4ba060b18", size = 7544441, upload-time = "2025-06-30T15:31:30.518Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/68/781d0026a100106b64e4501c76621dfcd0d3c29a546094fcffaa73037a74/dash-2.16.1-py3-none-any.whl", hash = "sha256:8a9d2a618e415113c0b2a4d25d5dc4df5cb921f733b33dde75559db2316b1df1", size = 10208494, upload-time = "2024-03-06T19:54:50.913Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/df/267614cbc1003f6982d7078fd5c7591778f75e07bf36d4771fcb2eab8ff1/dash-3.1.1-py3-none-any.whl", hash = "sha256:66fff37e79c6aa114cd55aea13683d1e9afe0e3f96b35388baca95ff6cfdad23", size = 7885616, upload-time = "2025-06-30T15:31:22.768Z" },
 ]
 
 [[package]]
@@ -323,11 +320,14 @@ wheels = [
 
 [[package]]
 name = "dash-mantine-components"
-version = "0.12.1"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/9a/69/5a9ae8cbff338871f15417837a0d5f4280b5685fadec0137c3a9236b96b9/dash_mantine_components-0.12.1.tar.gz", hash = "sha256:c3dcbfd89813a1539654b8d016eb953dc5f67aafe1a77d45b5ec9faa6f25d3e7", size = 359777, upload-time = "2023-04-09T14:53:06.943Z" }
+dependencies = [
+    { name = "dash" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/84/51/fb32edc8d767e582af7f40cd5f259fa6f0dc074c021147e4101ee5cba6b1/dash_mantine_components-2.1.0.tar.gz", hash = "sha256:3a0a18c26e7373f2c465631a31688d4d25f2584da9770b650bb75da11898934a", size = 870486, upload-time = "2025-07-01T13:43:01.915Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/f6/fa240391c9f7e76d29b965c1784ca0d146534f544bb48dcd98a80bb2293c/dash_mantine_components-0.12.1-py3-none-any.whl", hash = "sha256:2630bca31cb96d96fb2c4f986e639b9f92d6319aba8cba02f76da6c0d8f5ca48", size = 500823, upload-time = "2023-04-09T14:53:04.232Z" },
+    { url = "https://files.pythonhosted.org/packages/52/9a/99ae8901621746d58e4821f122b86565e9445867c5c01fea04b7bff5ba0d/dash_mantine_components-2.1.0-py3-none-any.whl", hash = "sha256:dc75fe485c9b5e2ae9c939f8c09611778b3aad50318e63e1bd1eb3abe2a33711", size = 1287072, upload-time = "2025-07-01T13:43:00.221Z" },
 ]
 
 [[package]]
@@ -482,13 +482,13 @@ requires-dist = [
     { name = "click", specifier = "==8.1.7" },
     { name = "comm", specifier = "==0.2.1" },
     { name = "cryptography", specifier = "==43.0.1" },
-    { name = "dash", specifier = "==2.16.1" },
+    { name = "dash", specifier = "==3.1.1" },
     { name = "dash-bootstrap-components", specifier = "==1.5.0" },
     { name = "dash-core-components", specifier = "==2.0.0" },
     { name = "dash-daq", specifier = "==0.5.0" },
     { name = "dash-html-components", specifier = "==2.0.0" },
     { name = "dash-iconify", specifier = "==0.1.2" },
-    { name = "dash-mantine-components", specifier = "==0.12.1" },
+    { name = "dash-mantine-components", specifier = "==2.1" },
     { name = "dash-table", specifier = "==5.0.0" },
     { name = "debugpy", specifier = "==1.6.7" },
     { name = "decorator", specifier = "==5.1.1" },
@@ -588,7 +588,7 @@ name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749, upload-time = "2025-05-10T17:42:51.123Z" }
 wheels = [

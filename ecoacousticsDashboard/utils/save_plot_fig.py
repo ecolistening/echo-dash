@@ -26,7 +26,8 @@ def get_save_plot(plot_name):
                 return dict;
             } 
         """,
-        Output(f"rqst-plot-{plot_name}", "data"),
+        # FIXME, we shouldnt need to allow duplicate
+        Output(f"rqst-plot-{plot_name}", "data", allow_duplicate=True),
         Input("dl_jpg", "n_clicks"),
         Input("dl_png", "n_clicks"),
         Input("dl_pdf", "n_clicks"),
@@ -36,7 +37,7 @@ def get_save_plot(plot_name):
     )
 
     @callback(
-        Output(f'download-plot-{plot_name}', component_property='data'),
+        Output(f'download-plot-{plot_name}', component_property='data', allow_duplicate=True),
         State('dataset-select', component_property='value'),
         State(plot_name, component_property='figure'),
         Input(f"rqst-plot-{plot_name}", "data"),

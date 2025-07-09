@@ -7,7 +7,7 @@ def SizeSlider(
     default: int = 3,
 ) -> html.Div:
     return html.Div([
-        dmc.Text('Dot Size', size='sm', align='right'),
+        dmc.Text('Dot Size', size='sm', ta='right'),
         dmc.Slider(
             id=id,
             min=1,

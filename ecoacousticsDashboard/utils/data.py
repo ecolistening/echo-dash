@@ -357,7 +357,6 @@ class DatasetDecorator:
         return categorical_orders
 
 
-# a simple collection of datasets
 @attrs.define
 class DatasetLoader(Iterable):
     root_dir: pathlib.Path
@@ -392,10 +391,6 @@ class DatasetLoader(Iterable):
                 logger.error(f"Unable to load dataset {dataset['dataset_name']}")
                 logger.error(e)
         return datasets
-
-
-dataset_loader = DatasetLoader(root_dir)
-dataset_loader.datasets
 
 def filter_data(
     data: str,
