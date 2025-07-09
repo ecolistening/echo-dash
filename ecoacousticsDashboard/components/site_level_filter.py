@@ -67,3 +67,22 @@ def SiteLevelHierarchyAccordion(
             for depth in range(1, tree.max_depth)
         ],
     )
+
+def SiteLevelFilter():
+    return dmc.Accordion(
+        chevronPosition="right",
+        variant="separated",
+        radius="sm",
+        children=[
+            dmc.AccordionItem(
+                value="site-level",
+                children=[
+                    dmc.AccordionControl("Site Level"),
+                    dmc.AccordionPanel(
+                        id="site-level-filter-group",
+                        children=[]
+                    )
+                ]
+            )
+        ],
+    )

@@ -14,8 +14,8 @@ def Tabs(
     tabs = []
     if about:
         tabs.append(dcc.Tab(label='About', value='about'))
-    if feature:
-        tabs.append(dcc.Tab(label='Descriptor', value='feature'))
+    # if feature:
+    #     tabs.append(dcc.Tab(label='Descriptor', value='feature'))
     if dataset:
         tabs.append(dcc.Tab(label='Dataset', value='dataset'))
 
@@ -34,13 +34,18 @@ def Tabs(
         Output(f'{PAGE_NAME}-tabs-content', 'children'),
         Input(f'{PAGE_NAME}-tabs', 'value'),
         Input('dataset-select', component_property='value'),
-        Input('feature-dropdown', component_property='value')
+        # FIXME: find a better place to put feature descriptions in the UI
+        # Input('feature-dropdown', component_property='value')
     )
-    def render_content(tab,dataset,feature):
+    def render_content(
+        tab,
+        dataset,
+        # feature
+    ):
         if tab == 'about':
             return get_content(f"page/{PAGE_NAME}")
-        elif tab == 'feature':
-            return get_content(f"feature/{feature}")
+        # elif tab == 'feature':
+        #     return get_content(f"feature/{feature}")
         elif tab == 'dataset':
             return get_content(f"dataset/{dataset}")
 

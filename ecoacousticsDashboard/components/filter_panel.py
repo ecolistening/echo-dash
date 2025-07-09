@@ -9,6 +9,7 @@ from typing import List
 def FilterPanel(
     children: List,
 ) -> dmc.Accordion:
+    from callbacks import filter_panel_callbacks
     return dmc.Accordion(
         chevronPosition="right",
         variant="separated",
