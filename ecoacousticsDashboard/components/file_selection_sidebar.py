@@ -10,17 +10,9 @@ from dash import exceptions
 from dash_iconify import DashIconify
 from io import StringIO
 from loguru import logger
-from typing import (
-    Any,
-    Dict,
-    List,
-    Tuple,
-)
+from typing import Any, Dict, List, Tuple
 
-from api import (
-    dispatch,
-    FETCH_FILES,
-)
+from api import dispatch, FETCH_FILES
 from utils import audio_bytes_to_enc
 from utils.webhost import AudioAPI
 
@@ -38,6 +30,10 @@ def FileSelectionSidebar(
         style=style_hidden,
         children=html.Div([
             dcc.Store(id="umap-sidebar-file-data"),
+            dmc.Divider(
+                variant="solid",
+                orientation="vertical",
+            ),
             dmc.Stack(
                 style={"margin-top": "1rem"},
                 children=[
@@ -129,14 +125,26 @@ def FileSelectionSidebar(
         Output("graph-container", "span", allow_duplicate=True),
         Output("umap-toggle-sidebar", "span", allow_duplicate=True),
         Output("umap-toggle-sidebar", "style", allow_duplicate=True),
+        State("umap-toggle-sidebar", "style"),
         Input("umap-close-sidebar", "n_clicks"),
+        Input("toggle-file-selection-sidebar", "n_clicks"),
         prevent_initial_call=True
     )
-    def close_selection_sidebar(n_clicks: int):
+    def toggle_selection_sidebar(
+        current_style: Dict[str, str],
+        close: int,
+        n_clicks: int,
+    ) -> Tuple[int, int, Dict[str, str]]:
+        if current_style == style_visible:
+            return (
+                graph_container_span := 12,
+                sidebar_span := 0,
+                sidebar_style := style_hidden,
+            )
         return (
-            graph_container_span := 12,
-            sidebar_span := 0,
-            sidebar_style := style_hidden,
+            graph_container_span := 12 - span,
+            sidebar_span := span,
+            sidebar_style := style_visible,
         )
 
     @callback(
@@ -147,26 +155,26 @@ def FileSelectionSidebar(
         Output("selection-sidebar-files-count", "children", allow_duplicate=True),
         Output("selection-sidebar-files-pagination", "total"),
         State("dataset-select", "value"),
+        State("umap-toggle-sidebar", "span"),
+        State("umap-toggle-sidebar", "style"),
         Input("umap-graph", "selectedData"),
         prevent_initial_call=True,
     )
     def toggle_selection_sidebar(
         dataset_name: str,
+        current_span: int,
+        current_style: Dict[str, str],
         selected_data: Dict[str, Any],
     ) -> Tuple[int, int, Dict[str, str], str, str, int]:
         if selected_data is None or len((points := selected_data['points'])) == 0:
             return (
-                graph_container_span := 12,
-                sidebar_span := 0,
-                sidebar_style := style_hidden,
+                graph_container_span := 12 - current_span,
+                sidebar_span := current_span,
+                sidebar_style := current_style,
                 selected_data_json := "",
                 selected_text := "",
                 total_pages := 1,
             )
-        logger.debug(
-            f"Trigger ID={ctx.triggered_id}: "
-            f"selected={len(points)} {dataset_name=}"
-        )
         data = dispatch(
             FETCH_FILES,
             dataset_name=dataset_name,
@@ -272,14 +280,13 @@ def FileSelectionSidebar(
 
     @callback(
         Output("umap-filter-store", "data", allow_duplicate=True),
-        State("umap-graph", "selectedData"),
+        # TODO: we need access to the whole plot data
         State("umap-sidebar-file-data", "data"),
         State("umap-filter-store", "data"),
         Input("selection-sidebar-filter-include-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def include_file_selection(
-        selected_data: Dict[str, Any],
         json_data: str,
         filtered_file_ids: Dict[str, Any],
         n_clicks: int,
@@ -289,8 +296,8 @@ def FileSelectionSidebar(
         """
         if not n_clicks: return no_update
         # filtered_file_ids = frozenset((filtered_file_ids or {}).keys())
-        # all_file_ids = set([point["hovertext"] for point in selected_data["points"]])
-        # file_ids = filtered_file_ids.union(file_ids)
+        # file_ids = set(pd.read_json(StringIO(json_data), orient="table")["file_id"].tolist())
+        # TODO
         # return dict(zip(file_ids, [1 for _ in range(len(file_ids))]))
         return {}
 

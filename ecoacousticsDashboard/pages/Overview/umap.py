@@ -108,8 +108,35 @@ layout = dmc.Box([
                         "justify-content": "right",
                     },
                     children=[
-                        FigureDownloadWidget(
-                            plot_name="umap-graph",
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                dmc.HoverCard(
+                                    children=[
+                                        dmc.HoverCardTarget(
+                                            children=dmc.ActionIcon(
+                                                DashIconify(
+                                                    icon="fluent:multiselect-16-filled",
+                                                    width=24,
+                                                ),
+                                                id="toggle-file-selection-sidebar",
+                                                variant="light",
+                                                color="blue",
+                                                size="lg",
+                                                n_clicks=0,
+                                            ),
+                                        ),
+                                        dmc.HoverCardDropdown(
+                                            children=[
+                                                dmc.Text("Toggle file selection sidebar"),
+                                            ]
+                                        )
+                                    ],
+                                ),
+                                FigureDownloadWidget(
+                                    plot_name="umap-graph",
+                                ),
+                            ]
                         ),
                     ],
                 ),
