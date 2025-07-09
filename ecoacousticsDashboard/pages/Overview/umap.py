@@ -271,6 +271,7 @@ def init_slider(
     Input("dataset-select", "value"),
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    Input("umap-filter-store", "data"),
     Input("umap-sample-slider", "value"),
     Input("umap-sample-slider", "max"),
     Input("umap-opacity-slider", "value"),
@@ -285,6 +286,7 @@ def draw_figure(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
+    disclude_file_ids: Dict[str, int],
     sample_size: int,
     max_samples: int,
     opacity: int,
@@ -300,12 +302,14 @@ def draw_figure(
     if len(list(filter(lambda d: d is not None, dates))) < 2:
         return no_update
 
+    # TODO: this should be populated on page init
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES_UMAP,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
         locations=list2tuple(locations),
-        sample_size=max_samples, # ensures we subsample rather than re-run UMAP
+        sample_size=max_samples,
+        file_ids=frozenset((disclude_file_ids or {}).keys()),
     )
     category_orders = dispatch(
         FETCH_DATASET_CATEGORIES,
@@ -313,7 +317,7 @@ def draw_figure(
     )
 
     fig = px.scatter(
-        data.sample(sample_size),
+        data.sample(min(len(data), sample_size)),
         x="UMAP Dim 1",
         y="UMAP Dim 2",
         opacity=opacity / 100.0,

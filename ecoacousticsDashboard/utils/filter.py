@@ -11,7 +11,11 @@ def filter_data(
     feature_range: Tuple[float, float] | None = None,
     locations: List[str] | None = None,
     sample_size: int | None = None,
+    file_ids: List[str] | None = None,
 ) -> pd.DataFrame:
+    if file_ids is not None:
+        data = data[~data["file_id"].isin(file_ids)]
+
     if dates is not None:
         dates = [date.fromisoformat(d) for d in dates]
         data = data[data.timestamp.dt.date.between(*dates)]

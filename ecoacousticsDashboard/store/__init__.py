@@ -2,7 +2,7 @@ from dash import dcc
 
 DATASET_CONFIG_STORE = "dataset-config"
 SITES_TREE_STORE = "sites-tree"
-UMAP_FILTER_STORE = "umap-filter"
+UMAP_FILTER_STORE = "umap-filter-store"
 PLOT_DATA_STORE = "plot-data"
 DOWNLOAD_DATA = "download-dataframe"
 REQUEST_PLOT = "rqst-plot"

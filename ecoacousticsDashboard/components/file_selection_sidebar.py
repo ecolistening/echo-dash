@@ -3,7 +3,7 @@ import dash_mantine_components as dmc
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-from dash import callback, dcc, html, ctx
+from dash import callback, dcc, html, ctx, no_update
 from dash import Output, Input, State
 from dash import MATCH
 from dash import exceptions
@@ -41,35 +41,40 @@ def FileSelectionSidebar(
             dmc.Stack(
                 style={"margin-top": "1rem"},
                 children=[
-                    dmc.Grid(
-                        style={"margin": "0 1rem 0 1rem"},
+                    dmc.Group(
+                        grow=True,
                         children=[
-                            dmc.GridCol(
-                                span=5,
-                                children=dmc.Button(
-                                    "Filter Selected",
-                                    id="selection-sidebar-filter-disclude-button",
-                                    variant="light",
-                                    color="red",
-                                    n_clicks=0,
-                                ),
+                            dmc.Button(
+                                "Filter",
+                                id="selection-sidebar-filter-disclude-button",
+                                leftSection=DashIconify(icon="f7:delete-left-fill"),
+                                variant="light",
+                                color="red",
+                                n_clicks=0,
                             ),
-                            dmc.GridCol(
-                                span=5,
-                                children=dmc.Button(
-                                    "Filter Remaining",
-                                    id="selection-sidebar-filter-include-button",
-                                    variant="light",
-                                    color="red",
-                                    n_clicks=0,
-                                ),
+                            dmc.Button(
+                                "Zoom",
+                                id="selection-sidebar-filter-include-button",
+                                leftSection=DashIconify(icon="cil:zoom"),
+                                variant="light",
+                                color="blue",
+                                n_clicks=0,
                             ),
-                            dmc.GridCol(
-                                span=1,
-                                children=[],
+                            dmc.Button(
+                                "Reset",
+                                id="selection-sidebar-filter-reset-button",
+                                leftSection=DashIconify(icon="fluent:arrow-reset-20-filled"),
+                                variant="light",
+                                color="green",
+                                n_clicks=0,
                             ),
-                            dmc.GridCol(
-                                span=1,
+                            dmc.Box(
+                                style={
+                                    "padding": "1rem",
+                                    "display": "flex",
+                                    "align-content": "center",
+                                    "justify-content": "right",
+                                },
                                 children=dmc.ActionIcon(
                                     DashIconify(
                                         icon="system-uicons:cross",
@@ -77,11 +82,10 @@ def FileSelectionSidebar(
                                     ),
                                     id="umap-close-sidebar",
                                     variant="light",
-                                    color="blue",
                                     size="lg",
                                     n_clicks=0,
                                 ),
-                            ),
+                            )
                         ]
                     ),
                     dmc.Group(
@@ -267,27 +271,64 @@ def FileSelectionSidebar(
         ])
 
     @callback(
-        Output("selection-sidebar-filter-include-button", "n_clicks"),
+        Output("umap-filter-store", "data", allow_duplicate=True),
+        State("umap-graph", "selectedData"),
+        State("umap-sidebar-file-data", "data"),
+        State("umap-filter-store", "data"),
         Input("selection-sidebar-filter-include-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def include_file_selection(
+        selected_data: Dict[str, Any],
+        json_data: str,
+        filtered_file_ids: Dict[str, Any],
         n_clicks: int,
     ) -> str:
-        # TODO: include filter means adding all other file_ids to the store
-        logger.debug("clicked", n_clicks)
-        return n_clicks
+        """
+        Include filter means adding all other file_ids to the store
+        """
+        if not n_clicks: return no_update
+        # filtered_file_ids = frozenset((filtered_file_ids or {}).keys())
+        # all_file_ids = set([point["hovertext"] for point in selected_data["points"]])
+        # file_ids = filtered_file_ids.union(file_ids)
+        # return dict(zip(file_ids, [1 for _ in range(len(file_ids))]))
+        return {}
 
     @callback(
-        Output("selection-sidebar-filter-disclude-button", "n_clicks"),
+        Output("umap-filter-store", "data", allow_duplicate=True),
+        State("umap-sidebar-file-data", "data"),
+        State("umap-filter-store", "data"),
         Input("selection-sidebar-filter-disclude-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def disclude_file_selection(
+        json_data: str,
+        filtered_file_ids: Dict[str, Any],
         n_clicks: int,
     ) -> str:
-        # TODO: disclude filter means adding these file_ids to the store
-        logger.debug("clicked", n_clicks)
-        return n_clicks
+        """
+        Include filter means adding all other file_ids to the store
+        """
+        if not n_clicks: return no_update
+        filtered_file_ids = frozenset((filtered_file_ids or {}).keys())
+        file_ids = set(pd.read_json(StringIO(json_data), orient="table")["file_id"].tolist())
+        file_ids = filtered_file_ids.union(file_ids)
+        return dict(zip(file_ids, [1 for _ in range(len(file_ids))]))
+
+    @callback(
+        Output("umap-filter-store", "data", allow_duplicate=True),
+        State("umap-filter-store", "data"),
+        Input("selection-sidebar-filter-reset-button", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def reset_file_selection(
+        filtered_file_ids: Dict[str, Any],
+        n_clicks: int,
+    ) -> str:
+        """
+        Include filter means adding all other file_ids to the store
+        """
+        if not n_clicks: return no_update
+        return {}
 
     return component
