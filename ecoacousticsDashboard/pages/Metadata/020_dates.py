@@ -148,9 +148,8 @@ layout = html.Div([
                             children=[
                                 dmc.AccordionControl("Site Level"),
                                 dmc.AccordionPanel(
-                                    children=[
-
-                                    ]
+                                    id="site-level-filter-group",
+                                    children=[]
                                 )
                             ]
                         )
