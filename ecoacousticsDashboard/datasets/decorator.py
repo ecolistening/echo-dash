@@ -11,91 +11,94 @@ from datasets.dataset import Dataset
 class DatasetDecorator:
     dataset: Dataset
 
-    def drop_down_select_options(self) -> Tuple[Dict[str, Any]]:
-        logger.debug(f"Get options for dataset_name={self.dataset.dataset_name}")
-        opt_groups = []
-        # Add site hierarchies
-        opt_groups.append({
-            "group": "Site Level",
-            "type": "categorical",
-            "items": [
-                { "value": level, "label": self.dataset.config.get('Site Hierarchy', level, fallback=level) }
-                for level in self.site_levels
-            ],
-        })
-        # Add time of the day
-        opt_groups.append({
-            "group": "Time of Day",
-            "type": "categorical",
-            "items": [
-                { "value": "dddn", "label": "Dawn/Day/Dusk/Night", "type": "categorical" }
-            ]
-        })
-        # # HACK -> will be fixed when solar data is present
-        # if len(self.dataset.dates):
-        #     opt_groups += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
-        # Add temporal columns with facet order
-        opt_groups.append({
-            "group": "Temporal",
-            "type": "categorical",
-            "items": [
-                {"value": column, "label": column.capitalize() }
-                for column, _ in self.temporal_columns_with_order
-            ]
-        })
-        # Add spatial columns with facet order
-        opt_groups.append({
-            "group": "Spatial",
-            "type": "categorical",
-            "items": [
-                {"value": column, "label": column.capitalize() }
-                for column in self.spatial_columns
-            ]
-        })
-        # options += [{'value': col, 'label': col.capitalize(), 'group': 'Spatial', 'type': 'categorical', 'items': tuple(sorted(self.dataset.locations[col].unique()))} for col in self.spatial_columns]
-        # deprecated since they are already covered or offer no visualisation value
-        #index = ['file', 'timestamp']
-        #options += [{'value': i, 'label': i.capitalize(), 'group': 'Other Metadata', 'type': 'categorical', 'order': tuple(sorted(data[i].unique()))} for i in index]
-        return opt_groups
+    def category_orders(self):
+        category_orders = {}
+        for group in [self.site_level_columns, self.solar_columns, self.temporal_columns, self.spatial_columns]:
+            for column, params in group.items():
+                category_orders[column] = params["order"]
+        return category_orders
 
     def categorical_drop_down_select_options(self):
-        return [opt_group for opt_group in self.drop_down_select_options() if opt_group["type"] in ("categorical")]
+        return [
+            opt_group
+            for opt_group in self.drop_down_select_options()
+            if opt_group["type"] in ("categorical")
+        ]
 
-    @property
-    def site_level_names(self) -> List[str]:
-        return [self.dataset.config.get('Site Hierarchy', level, fallback=level) for level in self.site_levels]
-
-    @property
-    def site_levels(self) -> List[str]:
-        return [col for col in self.dataset.locations.columns if col.startswith('sitelevel_')]
-
-    @property
-    def site_level_values(self) -> List[str]:
-        columns = []
-        for level in self.site_levels:
-            columns.extend(self.dataset.locations[level].unique())
-        return columns
-
-    @property
-    def temporal_columns(self) -> List[Tuple[str, List[Any]]]:
-        return [key for key, _ in self.temporal_columns_with_order]
-
-    @property
-    def temporal_columns_with_order(self) -> List[Tuple[str, List[Any]]]:
-        return (
-            ('hour', list(range(24))),
-            ('weekday', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']),
-            # ('date', sorted(self.dataset.files['date'].unique())),
-            ('month', ['January','February','March','April','May','June','July','August','September','October','November','December']),
-            ('year', sorted(self.dataset.files['year'].unique())),
+    def drop_down_select_options(self) -> Tuple[Dict[str, Any]]:
+        opt_groups = []
+        column_groups = zip(
+            ["Site Level", "Time of Day", "Temporal", "Spatial"],
+            [self.site_level_columns, self.solar_columns, self.temporal_columns, self.spatial_columns]
         )
+        for group_name, column_group in column_groups:
+            opt_groups.append({
+                "group": group_name,
+                "type": "categorical",
+                "items": [
+                    { "value": value, "label": params["label"] }
+                    for value, params in column_group.items()
+                ],
+            })
+        return opt_groups
 
     @property
-    def spatial_columns(self) -> List[str]:
-        return ['location', 'site', 'recorder']
+    def site_level_columns(self) -> Dict[str, List[Any]]:
+        return {
+            column: {
+                "order": self.dataset.locations[column].unique(),
+                "label": self.dataset.config.get('Site Hierarchy', column, fallback=column),
+            }
+            for column in self.dataset.locations.columns
+            if column.startswith("sitelevel_")
+        }
 
-    def category_orders(self):
-        categorical_orders = {}
-        for opt_group in self.drop_down_select_options():
-            categorical_orders[opt_group["group"]] = opt_group["items"]
-        return categorical_orders
+    @property
+    def solar_columns(self) -> Dict[str, List[Any]]:
+        # # FIXME -> will be fixed when solar data is present
+        # if len(self.dataset.dates):
+        #     opt_groups += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
+        return {
+            "dddn": {
+                "order": ["dawn", "day", "dusk", "night"],
+                "label": "Dawn/Day/Dusk/Night",
+            },
+        }
+
+    @property
+    def temporal_columns(self) -> Dict[str, List[Any]]:
+        return {
+            "hour": {
+                "order": list(range(24)),
+                "label": "Hour",
+            },
+            "weekday": {
+                "order": ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                "label": "Week Day",
+            },
+            "month": {
+                "order": ['January','February','March','April','May','June','July','August','September','October','November','December'],
+                "label": "Month",
+            },
+            "year": {
+                "order": sorted(self.dataset.files['year'].unique()),
+                "label": "Year",
+            },
+        }
+
+    @property
+    def spatial_columns(self) -> Dict[str, List[Any]]:
+        return {
+            "location": {
+                "order": self.dataset.locations["location"].unique(),
+                "label": "Location"
+            },
+            "site": {
+                "order": self.dataset.locations["site"].unique(),
+                "label": "Site"
+            },
+            "recorder": {
+                "order": self.dataset.locations["recorder"].unique(),
+                "label": "Recorder"
+            },
+        }
