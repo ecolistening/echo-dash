@@ -31,7 +31,7 @@ def SiteLevelChipGroup(
                     children=dmc.ChipGroup(
                         id={"type": "checklist-locations-hierarchy", "index": level_depth},
                         multiple=True,
-                        persistence=True,
+                        persistence=False,
                         value=[node.path_name for node in nodes],
                         children=[TreeNodeChip(node) for node in nodes],
                     ),
@@ -59,9 +59,9 @@ def SiteLevelHierarchyAccordion(
                 nodes=list(sorted(
                     bt.levelorder_iter(
                         tree,
-                        filter_condition=lambda x: x.depth == depth + 1
+                        filter_condition=lambda node: node.depth == depth + 1
                     ),
-                    key=lambda m: m.path_name
+                    key=lambda node: node.path_name
                 )),
             )
             for depth in range(1, tree.max_depth)

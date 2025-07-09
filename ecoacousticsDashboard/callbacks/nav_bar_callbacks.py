@@ -133,10 +133,11 @@ def init_site_level_filters(
     dataset_name: str,
 ) -> dmc.Stack:
     params = dict(dataset_name=dataset_name)
-    return SiteLevelHierarchyAccordion(
+    element = SiteLevelHierarchyAccordion(
         tree=dispatch(FETCH_DATASET_SITES_TREE, **params),
         config=dispatch(FETCH_DATASET_CONFIG, **params).get(SITE_HIERARCHY_KEY, {}),
     )
+    return element
 
 @callback(
     Output({"type": "checklist-locations-hierarchy", "index": ALL}, "children"),
