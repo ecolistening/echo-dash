@@ -12,7 +12,7 @@ from io import StringIO
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_FILES
+from api import dispatch, FETCH_FILES, FETCH_DATASET_CONFIG
 from utils import audio_bytes_to_enc
 from utils.webhost import AudioAPI
 
@@ -264,10 +264,11 @@ def FileSelectionSidebar(
         if (file_id := matched["index"]) not in open_values:
             raise exceptions.PreventUpdate
 
+        config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name)
         data = pd.read_json(StringIO(json_data), orient="table").set_index("file_id")
 
         file_info = data.loc[file_id]
-        audio_bytes, mime_type, _ = AudioAPI.get_audio_bytes(file_info.file_path, dataset_name)
+        audio_bytes, mime_type, _ = AudioAPI.get_audio_bytes(file_info.file_path, dataset_name, config)
         return html.Div([
             dcc.Loading(
                 html.Audio(

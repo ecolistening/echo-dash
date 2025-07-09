@@ -3,7 +3,6 @@ import dash_mantine_components as dmc
 from dash import dcc, html, callback, Input, Output
 
 from utils.content import get_content
-from utils.save_plot_fig import get_save_plot
 
 def Tabs(
     PAGE_NAME: str,

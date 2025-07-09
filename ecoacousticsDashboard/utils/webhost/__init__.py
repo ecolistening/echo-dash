@@ -12,17 +12,17 @@ class AudioAPI(object):
     API = {}
 
     @staticmethod
-    def get_hosts(dataset):
+    def get_hosts(dataset, config):
         if not dataset in AudioAPI.API:
             hosts = {}
 
-            sound_file_path = get_path_from_config(dataset,'Sound Files','sound_file_path')
+            sound_file_path = get_path_from_config(dataset, config, 'Sound Files','sound_file_path')
             if sound_file_path is not None:
                 host = Localhost(sound_file_path)
                 if host.is_active():
                     hosts['local'] = host
 
-            sound_file_path = get_path_from_config(dataset,'Sound Files','gdrive_sound_file_path')
+            sound_file_path = get_path_from_config(dataset, config, 'Sound Files','gdrive_sound_file_path')
             if sound_file_path is not None:
                 host = Google_Drive(dataset, sound_file_path)
                 if host.is_active():
@@ -33,9 +33,9 @@ class AudioAPI(object):
         return AudioAPI.API[dataset]
 
     @staticmethod
-    def get_audio_bytes(name, dataset):
+    def get_audio_bytes(name, dataset, config):
         audio_path = name
-        hosts = AudioAPI.get_hosts(dataset)
+        hosts = AudioAPI.get_hosts(dataset, config)
 
         split_name = os.path.splitext(name)
         audio_path_base = split_name[0]
