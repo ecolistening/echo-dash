@@ -3,6 +3,7 @@ import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import datetime as dt
+import numpy as np
 
 from dash import callback, Output, Input, State, ALL, ctx
 from loguru import logger
@@ -15,6 +16,12 @@ from api import (
     FETCH_ACOUSTIC_FEATURES,
     FETCH_FILES,
 )
+
+def ceil(a, precision=0):
+    return np.round(a + 0.5 * 10**(-precision), precision)
+
+def floor(a, precision=0):
+    return np.round(a - 0.5 * 10**(-precision), precision)
 
 @callback(
     Output("appshell", "navbar"),
@@ -52,18 +59,58 @@ def set_default_dataset(dataset_options: List[str]):
 @callback(
     Output("feature-dropdown", "value"),
     Output("feature-dropdown", "data"),
+    Output("acoustic-feature-range-slider", "min"),
+    Output("acoustic-feature-range-slider", "max"),
     Input("dataset-select", "value"),
 )
-def fetch_acoustic_feature_names(
+def set_acoustic_feature(
     dataset_name: str
-) -> Tuple[str, List[str]]:
+) -> Tuple[str, List[str], float, float]:
     trigger_id = ctx.triggered_id
     action = FETCH_ACOUSTIC_FEATURES
     params = dict(dataset_name=dataset_name)
     logger.debug(f"{trigger_id=} {action=} {params=}")
     acoustic_features = dispatch(action, **params)
     feature_names = acoustic_features["feature"].unique()
-    return feature_names[0], feature_names
+    selected_feature = feature_names[0]
+    feature_min = floor(acoustic_features.loc[acoustic_features["feature"] == selected_feature, "value"].min(), precision=2)
+    feature_max = ceil(acoustic_features.loc[acoustic_features["feature"] == selected_feature, "value"].max(), precision=2)
+    return (
+        selected_feature,
+        feature_names,
+        feature_min,
+        feature_max,
+    )
+
+@callback(
+    Output("acoustic-feature-range-slider", "value"),
+    Output("acoustic-feature-range-slider", "marks"),
+    Output("acoustic-feature-range-slider", "step"),
+    Input("acoustic-feature-range-slider", "min"),
+    Input("acoustic-feature-range-slider", "max"),
+)
+def update_acoustic_feature_range_slider(
+    feature_min: float,
+    feature_max: float,
+) -> Tuple[Any, ...]:
+    return (
+        [feature_min, feature_max],
+        slider_marks := {
+            f"{floor(value, precision=2)}": f"{floor(value, precision=2)}"
+            for value in np.linspace(feature_min, feature_max, 5)
+        },
+        step := (feature_max - feature_min) / 1e3,
+    )
+
+@callback(
+    Output("acoustic-feature-range-bounds", "children"),
+    Input("acoustic-feature-range-slider", "value"),
+)
+def update_acoustic_feature_range_bounds(
+    value: List[float],
+) -> str:
+    selected_min, selected_max = value
+    return f"{selected_min} - {selected_max}"
 
 @callback(
     Output("date-picker", "minDate"),
@@ -82,3 +129,76 @@ def update_date_range(
     min_date = data.timestamp.dt.date.min()
     max_date = data.timestamp.dt.date.max()
     return min_date, max_date, [min_date, max_date]
+
+# @callback(
+#     Output({"type": "checklist-locations-hierarchy", "index": ALL}, "children"),
+#     Output({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+#     Input("dataset-select", "value"),
+#     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "children"),
+#     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+# )
+# def update_location_hierarchy(
+#     dataset_name,
+#     current_children,
+#     value
+# ):  # , all_values, previous_values
+#     # TODO:
+#     for i in range(len(children) + 1, tree.max_depth):
+
+#         # Get a sorted list of nodes that match selected parents at the depth in question
+#         nodes = list(sorted(filter(
+#             lambda n: values is None or n.parent.path_name in flatvalues,
+#             bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i + 1)
+#         ), key=lambda m: m.path_name))
+
+#         # Create children
+#         kids = [
+#                    dmc.Chip(
+#                        path_name(r),
+#                        value=r.path_name,
+#                        variant='filled',
+#                        size='xs'
+#                    ) for r in nodes
+#                    # bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i + 1) if (values is None or r.parent.path_name in flatvalues)
+#                ] + []
+
+#         if values is not None:
+#             values[i - 1] = [r.path_name for r in nodes]
+#             flatvalues = list(itertools.chain(*values))
+
+#         if wrap_in_accordian:
+#             config = load_config(dataset)
+
+#             acc = dmc.AccordionItem(
+#                 [
+#                     dmc.AccordionControl(config.get('Site Hierarchy', f'sitelevel_{i}', fallback=f"Level {i}/{tree.max_depth - 1}")),
+#                     dmc.AccordionPanel(children=dmc.ChipGroup(
+#                         kids,
+#                         value=[r.path_name for r in nodes],
+#                         id={
+#                             'type': 'checklist-locations-hierarchy',
+#                             'index': i
+#                         },
+#                         multiple=True,
+#                         persistence=True,
+#                     )),
+#                 ],
+#                 value=f"level_{i}",
+#             )
+#             children.append(acc)
+#         else:
+#             children.append(kids)
+
+#     # print('Children: ', children)
+
+#     if values is not None:
+#         return children, values
+
+#     return children
+#     try:
+#         level = dash.callback_context.triggered_id['index']
+#         current_children, value = update_locations(dataset, children=current_children[:level], values=value)
+#     except TypeError as e:
+#         pass
+
+#         return current_children, value

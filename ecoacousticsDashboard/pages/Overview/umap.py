@@ -1,6 +1,7 @@
 import dash
 import dash_mantine_components as dmc
 import dash_bootstrap_components as dbc
+import datetime as dt
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -22,6 +23,7 @@ from api import (
 )
 from components.dataset_options_select import DatasetOptionsSelect
 from components.controls_panel import ControlsPanel
+from components.filter_panel import FilterPanel
 from components.file_selection_sidebar import FileSelectionSidebar
 from components.figure_download_widget import FigureDownloadWidget
 
@@ -60,8 +62,209 @@ dash.register_page(
 # 2. When updating a particular filter, simply change the omitted ids in the list.
 # 3. Data is fetched by composing together all file_ids in the store, removing duplicates, and executing the query to fetch those that are not in the list
 
-layout = html.Div([
+layout = dmc.Box([
     dcc.Store(id="umap-data"),
+    FilterPanel([
+        dmc.Group(
+            align="start",
+            grow=True,
+            children=[
+                dmc.Accordion(
+                    chevronPosition="right",
+                    variant="separated",
+                    radius="sm",
+                    children=[
+                        dmc.AccordionItem(
+                            value="acoustic-features",
+                            children=[
+                                dmc.AccordionControl("Acoustic Feature"),
+                                dmc.AccordionPanel(
+                                    children=[
+                                        dmc.Stack(
+                                            justify="flex-start",
+                                            children=[
+                                                dmc.Box([
+                                                    dmc.Text("Select an acoustic feature", size="sm"),
+                                                    dmc.Select(
+                                                        id="feature-dropdown",
+                                                        searchable=True,
+                                                        clearable=False,
+                                                        allowDeselect=False,
+                                                        nothingFoundMessage="No options found...",
+                                                    ),
+                                                ]),
+                                                dmc.Divider(
+                                                    variant="solid",
+                                                    orientation="vertical",
+                                                ),
+                                                dmc.Box(
+                                                    # m=10,
+                                                    children=[
+                                                        dmc.Text("Select a value range", size="sm"),
+                                                        dcc.RangeSlider(
+                                                            id="acoustic-feature-range-slider",
+                                                            min=0,
+                                                            max=100,
+                                                            value=[0, 100],
+                                                            allowCross=False,
+                                                        ),
+                                                        dmc.Box(
+                                                            children=[
+                                                                dmc.Text(
+                                                                    "Current Range: ",
+                                                                    size="sm",
+                                                                    span=True
+                                                                ),
+                                                                dmc.Text(
+                                                                    id="acoustic-feature-range-bounds",
+                                                                    size="sm",
+                                                                    span=True
+                                                                ),
+                                                            ]
+                                                        )
+                                                    ]
+                                                ),
+                                            ]
+                                        ),
+                                    ]
+                                )
+                            ]
+                        )
+                    ],
+                ),
+                dmc.Accordion(
+                    chevronPosition="right",
+                    variant="separated",
+                    radius="sm",
+                    children=[
+                        dmc.AccordionItem(
+                            value="date-range",
+                            children=[
+                                dmc.AccordionControl("Date Range"),
+                                dmc.AccordionPanel(
+                                    children=[
+                                        dmc.Stack(
+                                            justify="flex-start",
+                                            children=[
+                                                dmc.Text("Filter by Date"),
+                                                dmc.DatePicker(
+                                                    id="date-picker",
+                                                    type="range",
+                                                    minDate=dt.date(1970, 1, 1),
+                                                    maxDate=dt.date.today(),
+                                                    value=[dt.date(1970, 1, 1), dt.date.today()],
+                                                    persistence=True,
+                                                    allowDeselect=False,
+                                                    numberOfColumns=2,
+                                                    columnsToScroll=1,
+                                                ),
+                                            ]
+                                        ),
+                                    ]
+                                )
+                            ]
+                        )
+                    ],
+                ),
+            ]
+        ),
+        dmc.Space(h=10),
+        dmc.Group(
+            align="start",
+            grow=True,
+            children=[
+                dmc.Accordion(
+                    chevronPosition="right",
+                    variant="separated",
+                    radius="sm",
+                    children=[
+                        dmc.AccordionItem(
+                            value="site-level",
+                            children=[
+                                dmc.AccordionControl("Site Level"),
+                                dmc.AccordionPanel(
+                                    children=[
+
+                                    ]
+                                )
+                            ]
+                        )
+                    ],
+                ),
+                dmc.Accordion(
+                    chevronPosition="right",
+                    variant="separated",
+                    radius="sm",
+                    children=[
+                        dmc.AccordionItem(
+                            value="environmental",
+                            children=[
+                                dmc.AccordionControl("Environmental"),
+                                dmc.AccordionPanel(
+                                    children=[
+                                        dmc.Stack(
+                                            justify="flex-start",
+                                            children=[
+                                                dmc.Box(
+                                                    children=[
+                                                        dmc.Text("Select a temperature range", size="sm"),
+                                                        dcc.RangeSlider(
+                                                            id="temperature-range-slider",
+                                                            min=0,
+                                                            max=100,
+                                                            value=[0, 100],
+                                                            allowCross=False,
+                                                        ),
+                                                    ]
+                                                ),
+                                                dmc.Box(
+                                                    children=[
+                                                        dmc.Text("Select a precipitation range", size="sm"),
+                                                        dcc.RangeSlider(
+                                                            id="precipitation-range-slider",
+                                                            min=0,
+                                                            max=100,
+                                                            value=[0, 100],
+                                                            allowCross=False,
+                                                        ),
+                                                    ]
+                                                ),
+                                                dmc.Box(
+                                                    children=[
+                                                        dmc.Text("Select a wind speed range", size="sm"),
+                                                        dcc.RangeSlider(
+                                                            id="wind-speed-range-slider",
+                                                            min=0,
+                                                            max=100,
+                                                            value=[0, 100],
+                                                            allowCross=False,
+                                                        ),
+                                                    ]
+                                                ),
+                                                dmc.Box(
+                                                    children=[
+                                                        dmc.Text("Select a snowfall range", size="sm"),
+                                                        dcc.RangeSlider(
+                                                            id="snowfall-range-slider",
+                                                            min=0,
+                                                            max=100,
+                                                            value=[0, 100],
+                                                            allowCross=False,
+                                                        ),
+                                                    ]
+                                                ),
+                                            ]
+                                        ),
+                                    ]
+                                )
+                            ]
+                        )
+                    ],
+                ),
+            ]
+        ),
+    ]),
+    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
@@ -82,7 +285,7 @@ layout = html.Div([
                     id="umap-facet-column-select",
                     label="Facet columns by"
                 ),
-                html.Div(
+                dmc.Box(
                     style={
                         "padding": "1rem",
                         "display": "flex",
@@ -223,6 +426,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Input("dataset-select", "value"),
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    # prevent_initial_call=True,
 )
 def init_slider(
     dataset_name: str,

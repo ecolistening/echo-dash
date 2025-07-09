@@ -8,112 +8,63 @@ from dash_iconify import DashIconify
 from loguru import logger
 from typing import Any, List, Dict
 
-from components.menu import Menu
+from api import dispatch, FETCH_DATASETS
+
+NAVBAR_CONFIG = {
+    "width": 200,
+    "breakpoint": "sm",
+    "collapsed": {
+        "desktop": False,
+        "mobile": True
+    },
+}
+
+def Menu():
+    pages = {m: m.split('.')[1:] for m in dash.page_registry}
+    children = {}
+    for p in pages:
+        page = dash.page_registry[p]
+        if len(pages[p]) == 0:
+            logger.warning(f"Can't find page {p}")
+            continue
+        elif len(pages[p]) == 1:
+            link = dmc.NavLink(
+                label=page['name'],
+                href=page["relative_path"],
+            )
+            children[pages[p][0]] = link
+        else:
+            if pages[p][0] not in children:
+                link = dmc.NavLink(
+                    label=pages[p][0],
+                    children=[],
+                )
+                children[pages[p][0]] = link
+            link = dmc.NavLink(
+                label=page['name'],
+                href=page["relative_path"],
+            )
+            children[pages[p][0]].children.append(link)
+    # Put groups in desired order. Adjust file name to sort individual pages within groups alphabetically
+    menu = []
+    order = (
+        'home',
+        'Metadata',
+        'Overview',
+        'Diel',
+        'Seasonal',
+    )
+    for group in order:
+        menu.append(children[group])
+    return dmc.Stack(menu)
 
 def NavBar():
     return dmc.AppShellNavbar(
         id="navbar",
         p="md",
-        w=dict(base=300),
+        w=NAVBAR_CONFIG["width"],
         children=dmc.ScrollArea(
-            dmc.Stack(
-                children=[
-                    Menu(),
-                    dmc.Divider(),
-                    dmc.Title("Data", order=3),
-                    dmc.Select(
-                        id="dataset-select",
-                        label="Dataset",
-                        description="Select a dataset to explore",
-                        searchable=True,
-                        clearable=False,
-                        allowDeselect=False,
-                        nothingFoundMessage="Nothing datasets found...",
-                        persistence=True,
-                    ),
-                    dmc.Button(
-                        "Settings",
-                        id="dataset-settings-button",
-                        variant="filled",
-                        leftSection=DashIconify(icon="fluent:settings-32-regular"),
-                        n_clicks=0,
-                        mb=10,
-                    ),
-                    dmc.Title("Filters", order=3),
-                    dmc.Stack(
-                        children=[
-                            dmc.Select(
-                                label="Acoustic Descriptor",
-                                description="Select an acoustic desscriptor",
-                                id="feature-dropdown",
-                                data=[],
-                                value="",
-                                searchable=True,
-                                clearable=False,
-                                persistence=True,
-                            ),
-                            dmc.DatePickerInput(
-                                id="date-picker",
-                                type="range",
-                                label="Date Range",
-                                description="To include in plots",
-                                minDate=dt.date(1970, 1, 1),
-                                maxDate=dt.date.today(),
-                                value=[dt.date(1970, 1, 1), dt.date.today()],
-                                clearable=True,
-                                persistence=True,
-                            ),
-                        ]
-                    ),
-                    dmc.Drawer(
-                        title="Settings",
-                        id="settings-drawer",
-                        padding="md",
-                        size="55%",
-                        position='right',
-                        zIndex=10000,
-                        children=[
-                            dmc.Title(
-                                "Settings",
-                                id="dataset-settings-dataset-name",
-                                order=2,
-                            ),
-                            dmc.Stack([
-                                dmc.Title('Stats', order=3),
-                                dmc.Text('Recordings: ', ),
-                                dmc.Title('Site Hierarchy', order=3),
-                                dmc.Stack(
-                                    id="dataset-settings-sites-form",
-                                    children=[],
-                                ),
-                            ]),
-                            # FIXME
-                            html.Div(
-                                children=[
-                                    dmc.ButtonGroup([
-                                        dmc.Button(
-                                            "Save",
-                                            id="dataset-settings-save-button",
-                                            variant="filled",
-                                            leftSection=DashIconify(icon="fluent:save-28-filled"),
-                                            n_clicks=0,
-                                            mb=10,
-                                        ),
-                                        dmc.Button(
-                                            "Cancel",
-                                            id="dataset-settings-cancel-button",
-                                            variant="filled",
-                                            leftSection=DashIconify(icon="material-symbols:cancel"),
-                                            n_clicks=0,
-                                            mb=10,
-                                        ),
-                                    ])
-                                ],
-                            ),
-                        ]
-                    )
-                ]
-            )
+            children=Menu(),
         )
     )
 

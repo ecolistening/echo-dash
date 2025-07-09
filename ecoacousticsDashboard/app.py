@@ -38,9 +38,11 @@ def create_dash_app() -> dash.Dash:
         ]
     )
 
-    from components.nav_bar import NavBar
+    from components.header import Header, HEADER_CONFIG
+    from components.nav_bar import NavBar, NAVBAR_CONFIG
     from components.hover_icons import HoverIcons
     from components.filter_menu import FilterMenu
+    from components.dataset_settings_drawer import DatasetSettingsDrawer
     from store import global_store
 
     app.layout = dmc.MantineProvider(
@@ -48,48 +50,14 @@ def create_dash_app() -> dash.Dash:
         withGlobalClasses=True,
         children=dmc.AppShell(
             id="appshell",
-            navbar={
-                "width": 300,
-                "breakpoint": "sm",
-                "collapsed": {
-                    "desktop": False,
-                    "mobile": True
-                },
-            },
-            header={"height": 60, "color": "black"},
+            navbar=NAVBAR_CONFIG,
+            header=HEADER_CONFIG,
             padding="md",
             children=[
                 *global_store,
-                dmc.AppShellHeader(
-                    children=[
-                        dmc.Grid(
-                            style={"padding": "1rem 0.5rem 1rem 0.5rem"},
-                            children=[
-                                dmc.GridCol(
-                                    span=6,
-                                    children=dmc.Group(
-                                        justify="flex-start",
-                                        children=[
-                                            dmc.Burger(
-                                                id="burger",
-                                                size="sm",
-                                                opened=True,
-                                            ),
-                                            # dmc.Image(src=logo, h=40),
-                                            dmc.Title("EchoDash", c="blue"),
-                                        ]
-                                    ),
-                                ),
-                                dmc.GridCol(
-                                    span=6,
-                                    children=HoverIcons()
-                                )
-                            ]
-                        ),
-                        FilterMenu(),
-                    ]
-                ),
+                Header(),
                 NavBar(),
+                DatasetSettingsDrawer(),
                 dmc.AppShellMain([
                     dash.page_container,
                 ]),
