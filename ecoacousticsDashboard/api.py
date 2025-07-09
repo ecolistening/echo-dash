@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 
 from io import StringIO
+from dash import ctx
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
@@ -189,16 +190,16 @@ setup()
 # (3) easier to switch to a service-based architecture at a later date
 
 def dispatch(
-    end_point: str,
+    action: str,
     default: Any | None = None,
     **payload: Dict[str, Any],
 ) -> Any:
+    triggered_id = ctx.triggered_id
+    logger.debug(f"{triggered_id=} {action=} {payload=}")
     try:
-        func = API[end_point]
-        logger.debug(f"Sending {end_point}")
+        func = API[action]
         return func(**payload)
     except Exception as e:
-        logger.warning(f"{end_point} failed")
         logger.error(e)
         return default
 

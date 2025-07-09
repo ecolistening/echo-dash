@@ -3,13 +3,14 @@ import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import datetime as dt
+import itertools
 import numpy as np
 
-from dash import callback, Output, Input, State, ALL, ctx
+from dash import callback, Output, Input, State, ALL, ctx, no_update
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-from components.site_level_chip_group import SiteLevelChipGroup
+from components.site_level_filter import SiteLevelHierarchyAccordion, TreeNodeChip
 
 from api import (
     dispatch,
@@ -20,6 +21,8 @@ from api import (
     FETCH_ACOUSTIC_FEATURES,
     FETCH_FILES,
 )
+
+SITE_HIERARCHY_KEY = "Site Hierarchy"
 
 def ceil(a, precision=0):
     return np.round(a + 0.5 * 10**(-precision), precision)
@@ -41,12 +44,8 @@ def navbar_is_open(opened, navbar):
     Input("load-datasets", "n_intervals"),
 )
 def fetch_datasets(_):
-    trigger_id = ctx.triggered_id
-    action = FETCH_DATASETS
-    params = {}
-    logger.debug(f"{trigger_id=} {action=} {params=}")
     # FIXME to dataset_id and dataset_name
-    datasets = dispatch(action, default=[])
+    datasets = dispatch(FETCH_DATASETS, default=[])
     return [
         dict(label=dataset, value=dataset)
         for dataset in datasets
@@ -70,11 +69,7 @@ def set_default_dataset(dataset_options: List[str]):
 def set_acoustic_feature(
     dataset_name: str
 ) -> Tuple[str, List[str], float, float]:
-    trigger_id = ctx.triggered_id
-    action = FETCH_ACOUSTIC_FEATURES
-    params = dict(dataset_name=dataset_name)
-    logger.debug(f"{trigger_id=} {action=} {params=}")
-    acoustic_features = dispatch(action, **params)
+    acoustic_features = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
     feature_names = acoustic_features["feature"].unique()
     selected_feature = feature_names[0]
     feature_min = floor(acoustic_features.loc[acoustic_features["feature"] == selected_feature, "value"].min(), precision=2)
@@ -125,11 +120,7 @@ def update_acoustic_feature_range_bounds(
 def update_date_range(
     dataset_name: str
 ) -> Tuple[dt.date, dt.date, List[dt.date]]:
-    trigger_id = ctx.triggered_id
-    action = FETCH_FILES
-    params = dict(dataset_name=dataset_name)
-    logger.debug(f"{trigger_id=} {action=} {params=}")
-    data = dispatch(FETCH_FILES, **params)
+    data = dispatch(FETCH_FILES, dataset_name=dataset_name)
     min_date = data.timestamp.dt.date.min()
     max_date = data.timestamp.dt.date.max()
     return min_date, max_date, [min_date, max_date]
@@ -138,104 +129,45 @@ def update_date_range(
     Output("site-level-filter-group", "children"),
     Input("dataset-select", "value"),
 )
-def update_site_level_filters(
+def init_site_level_filters(
     dataset_name: str,
 ) -> dmc.Stack:
-    trigger_id = ctx.triggered_id
     params = dict(dataset_name=dataset_name)
-    logger.debug(f"{trigger_id=} {params=}")
-    site_hierarchy_tree = dispatch(FETCH_DATASET_SITES_TREE, **params)
-    config = dispatch(FETCH_DATASET_CONFIG, **params)
-    return dmc.Stack(
-        justify="flex-start",
-        children=[
-            SiteLevelChipGroup(
-                level_name=(
-                    config.get("Site Hierarchy", {})
-                    .get(f"sitelevel_{depth}", f"Level {depth}/{site_hierarchy_tree.max_depth - 1}"),
-                ),
-                level_depth=depth,
-                nodes=list(sorted(
-                    bt.levelorder_iter(
-                        site_hierarchy_tree,
-                        filter_condition=lambda x: x.depth == depth + 1
-                    ),
-                    key=lambda m: m.path_name
-                )),
-            )
-            for depth in range(1, site_hierarchy_tree.max_depth)
-        ],
+    return SiteLevelHierarchyAccordion(
+        tree=dispatch(FETCH_DATASET_SITES_TREE, **params),
+        config=dispatch(FETCH_DATASET_CONFIG, **params).get(SITE_HIERARCHY_KEY, {}),
     )
 
-# @callback(
-#     Output({"type": "checklist-locations-hierarchy", "index": ALL}, "children"),
-#     Output({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-#     Input("dataset-select", "value"),
-#     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "children"),
-#     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-# )
-# def update_location_hierarchy(
-#     dataset_name,
-#     current_children,
-#     value
-# ):  # , all_values, previous_values
-#     # TODO:
-#     for i in range(len(children) + 1, tree.max_depth):
+@callback(
+    Output({"type": "checklist-locations-hierarchy", "index": ALL}, "children"),
+    Output({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    State("dataset-select", "value"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "children"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    prevent_initial_call=True,
+)
+def update_site_level_filters(
+    dataset_name: str,
+    children: List[List[Dict]],
+    values: List[List[str]],
+) -> Tuple[List[TreeNodeChip], List[str]]:
+    """
+    Removes / adds chips based on the depth selection in the tree,
 
-#         # Get a sorted list of nodes that match selected parents at the depth in question
-#         nodes = list(sorted(filter(
-#             lambda n: values is None or n.parent.path_name in flatvalues,
-#             bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i + 1)
-#         ), key=lambda m: m.path_name))
-
-#         # Create children
-#         kids = [
-#                    dmc.Chip(
-#                        path_name(r),
-#                        value=r.path_name,
-#                        variant='filled',
-#                        size='xs'
-#                    ) for r in nodes
-#                    # bt.levelorder_iter(tree, filter_condition=lambda x: x.depth == i + 1) if (values is None or r.parent.path_name in flatvalues)
-#                ] + []
-
-#         if values is not None:
-#             values[i - 1] = [r.path_name for r in nodes]
-#             flatvalues = list(itertools.chain(*values))
-
-#         if wrap_in_accordian:
-#             config = load_config(dataset)
-
-#             acc = dmc.AccordionItem(
-#                 [
-#                     dmc.AccordionControl(config.get('Site Hierarchy', f'sitelevel_{i}', fallback=f"Level {i}/{tree.max_depth - 1}")),
-#                     dmc.AccordionPanel(children=dmc.ChipGroup(
-#                         kids,
-#                         value=[r.path_name for r in nodes],
-#                         id={
-#                             'type': 'checklist-locations-hierarchy',
-#                             'index': i
-#                         },
-#                         multiple=True,
-#                         persistence=True,
-#                     )),
-#                 ],
-#                 value=f"level_{i}",
-#             )
-#             children.append(acc)
-#         else:
-#             children.append(kids)
-
-#     # print('Children: ', children)
-
-#     if values is not None:
-#         return children, values
-
-#     return children
-#     try:
-#         level = dash.callback_context.triggered_id['index']
-#         current_children, value = update_locations(dataset, children=current_children[:level], values=value)
-#     except TypeError as e:
-#         pass
-
-#         return current_children, value
+    1. Sub-select children to preserve up to those at the selected node depth
+    2. Redraw child nodes of those with the selected parent
+    """
+    tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
+    depth = ctx.triggered_id["index"]
+    children = children[:depth]
+    flat_values = list(itertools.chain(*values))
+    for i in range(len(children) + 1, tree.max_depth):
+        nodes = list(sorted(filter(
+            lambda node: node.parent.path_name in flat_values,
+            bt.levelorder_iter(tree, filter_condition=lambda node: node.depth == i + 1)
+        ), key=lambda node: node.path_name))
+        chips = [TreeNodeChip(node) for node in nodes]
+        values[i - 1] = [node.path_name for node in nodes]
+        flat_values = list(itertools.chain(*values))
+        children.append(chips)
+    return children, values
