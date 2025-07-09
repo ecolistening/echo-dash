@@ -213,7 +213,7 @@ def update_graph(
     fig.update_layout(
         height=PLOT_HEIGHT,
         title={
-            'text': f"{PAGE_TITLE} ({feature_name})",
+            'text': f"{PAGE_TITLE} ({feature})",
             'x':0.5,
             'y':0.97,
             'font':{'size':24}
