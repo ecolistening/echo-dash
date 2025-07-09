@@ -5,7 +5,8 @@ import datetime as dt
 import plotly.express as px
 import plotly.graph_objects as go
 
-from dash import html, ctx, dcc, callback, Output, Input, State, ALL
+from dash import html, ctx, dcc, callback, no_update
+from dash import Output, Input, State, ALL
 from dash_iconify import DashIconify
 from loguru import logger
 from typing import List
@@ -171,6 +172,11 @@ def update_graph(
     facet_row: str,
     facet_col: str,
 ) -> go.Figure:
+    # HACK: this should be available as debounce=True prop on the date-picker class
+    # but dash mantine components hasn't supported this for some reason
+    if len(list(filter(lambda d: d is not None, dates))) < 2:
+        return no_update
+
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,

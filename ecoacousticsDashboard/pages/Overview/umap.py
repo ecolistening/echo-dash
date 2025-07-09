@@ -7,7 +7,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, dcc, callback, Output, Input, ALL, MATCH, ctx, State, no_update
+from dash import html, dcc, callback, ctx, no_update
+from dash import Output, Input, State, ALL, MATCH
 from dash_iconify import DashIconify
 from io import StringIO
 from loguru import logger
@@ -293,6 +294,12 @@ def draw_figure(
     facet_row: str,
     facet_col: str,
 ) -> go.Figure:
+    # HACK: this should be available as debounce=True prop on the date-picker class
+    # but dash mantine components hasn't supported this for some reason
+    # rather than use a default value and double-compute, we'll just exit early
+    if len(list(filter(lambda d: d is not None, dates))) < 2:
+        return no_update
+
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES_UMAP,
         dataset_name=dataset_name,

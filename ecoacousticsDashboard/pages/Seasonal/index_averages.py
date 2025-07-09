@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, ctx, dcc, callback
+from dash import html, ctx, dcc, callback, no_update
 from dash import Output, Input, State, ALL
 from dash_iconify import DashIconify
 from loguru import logger
@@ -161,6 +161,12 @@ def update_graph(
     # colour_locations,
     # separate_plots,
 ) -> go.Figure:
+    # HACK: this should be available as debounce=True prop on the date-picker class
+    # but dash mantine components hasn't supported this for some reason
+    # rather than use a default value and double-compute, we'll just exit early
+    if len(list(filter(lambda d: d is not None, dates))) < 2:
+        return no_update
+
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,

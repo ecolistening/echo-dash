@@ -5,7 +5,7 @@ import datetime as dt
 import pandas as pd
 import plotly.graph_objects as go
 
-from dash import html, ctx, dcc, callback
+from dash import html, ctx, dcc, callback, no_update
 from dash import Output, Input, State, ALL
 from dash_iconify import DashIconify
 from io import StringIO
@@ -95,6 +95,10 @@ def draw_figure(
     dates: List[str],
     locations: List[str],
 ) -> go.Figure:
+    # HACK: this should be available as debounce=True prop on the date-picker class
+    # but dash mantine components hasn't supported this for some reason
+    if len(list(filter(lambda d: d is not None, dates))) < 2:
+        return no_update
     triggered_id = ctx.triggered_id
     action = FETCH_FILES
     params = dict(
