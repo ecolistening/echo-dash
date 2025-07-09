@@ -305,6 +305,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Input("date-picker", 'value'),
     Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
     Input("feature-dropdown", 'value'),
+    Input("acoustic-feature-range-slider", "value"),
     Input("distributions-colour-select", 'value'),
     Input("distributions-facet-row-select", 'value'),
     Input("distributions-facet-column-select", 'value'),
@@ -315,6 +316,7 @@ def draw_figure(
     dates: List[str],
     locations: List[str],
     feature: str,
+    feature_range: Tuple[float, float],
     color: str,
     facet_row: str,
     facet_col: str,
@@ -326,6 +328,10 @@ def draw_figure(
         dates=list2tuple(dates),
         locations=list2tuple(locations),
         feature=feature,
+        # FIXME: hashing floating points will break the LRU cache
+        # (1) set a fixed step-size and
+        # (2) scale values and pass as integers along with scaling factor
+        feature_range=list2tuple(feature_range),
     )
     category_orders = dispatch(
         FETCH_DATASET_CATEGORIES,

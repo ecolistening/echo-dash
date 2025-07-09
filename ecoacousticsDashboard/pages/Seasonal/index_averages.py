@@ -320,6 +320,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("feature-dropdown", "value"),
+    Input("acoustic-feature-range-slider", "value"),
     Input("index-averages-time-aggregation", "value"),
     # Input(outliers_tickbox, "checked"),
     # Input(colours_tickbox, "checked"),
@@ -329,28 +330,28 @@ def update_graph(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
-    feature_name: str,
+    feature: str,
+    feature_range: List[float],
     time_agg: str,
     # outliers,
     # colour_locations,
     # separate_plots,
 ) -> go.Figure:
-    # logger.debug(
-    #     f"Trigger ID={ctx.triggered_id}: "
-    #     f"{dataset_name=} dates:{len(dates)} locations:{len(locations)} "
-    #     f"{feature_name=} {time_agg=}"
-    # )
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
         locations=list2tuple(locations),
+        feature=feature,
+        # FIXME: hashing floating points will break the LRU cache
+        # (1) set a fixed step-size and
+        # (2) scale values and pass as integers along with scaling factor
+        feature_range=list2tuple(feature_range),
     )
     category_orders = dispatch(
         FETCH_DATASET_CATEGORIES,
         dataset_name=dataset_name,
     )
-    # FIXME: there's something off with this!
     data = (
         data
         .sort_values("timestamp")

@@ -328,6 +328,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("feature-dropdown", "value"),
+    Input("acoustic-feature-range-slider", "value"),
     Input("index-box-time-aggregation", "value"),
     Input("index-box-outliers-tickbox", "checked"),
     Input("index-box-colour-select", "value"),
@@ -339,6 +340,7 @@ def update_graph(
     dates: List[str],
     locations: List[str],
     feature: str,
+    feature_range: List[float],
     time_agg: str,
     outliers: bool,
     color: str,
@@ -351,6 +353,10 @@ def update_graph(
         dates=list2tuple(dates),
         locations=list2tuple(locations),
         feature=feature,
+        # FIXME: hashing floating points will break the LRU cache
+        # (1) set a fixed step-size and
+        # (2) scale values and pass as integers along with scaling factor
+        feature_range=list2tuple(feature_range),
     ).sort_values(by='recorder')
 
     data = data.assign(

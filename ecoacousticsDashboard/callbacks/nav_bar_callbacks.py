@@ -35,7 +35,10 @@ def floor(a, precision=0):
     Input("burger", "opened"),
     State("appshell", "navbar"),
 )
-def navbar_is_open(opened, navbar):
+def navbar_is_open(
+    opened: bool,
+    navbar: Dict[str, str],
+) -> Dict[str, str]:
     navbar["collapsed"] = {"desktop": not opened, "mobile": not opened }
     return navbar
 
@@ -43,7 +46,7 @@ def navbar_is_open(opened, navbar):
     Output("dataset-select", "data"),
     Input("load-datasets", "n_intervals"),
 )
-def fetch_datasets(_):
+def fetch_datasets(_) -> List[Dict[str, str]]:
     # FIXME to dataset_id and dataset_name
     datasets = dispatch(FETCH_DATASETS, default=[])
     return [
@@ -62,37 +65,41 @@ def set_default_dataset(dataset_options: List[str]):
 @callback(
     Output("feature-dropdown", "value"),
     Output("feature-dropdown", "data"),
-    Output("acoustic-feature-range-slider", "min"),
-    Output("acoustic-feature-range-slider", "max"),
     Input("dataset-select", "value"),
+    Input("feature-dropdown", "value"),
 )
 def set_acoustic_feature(
-    dataset_name: str
+    dataset_name: str,
+    feature: str | None = None,
 ) -> Tuple[str, List[str], float, float]:
     acoustic_features = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
     feature_names = acoustic_features["feature"].unique()
-    selected_feature = feature_names[0]
-    feature_min = floor(acoustic_features.loc[acoustic_features["feature"] == selected_feature, "value"].min(), precision=2)
-    feature_max = ceil(acoustic_features.loc[acoustic_features["feature"] == selected_feature, "value"].max(), precision=2)
-    return (
-        selected_feature,
-        feature_names,
-        feature_min,
-        feature_max,
-    )
+    feature = feature if feature is not None else feature_names[0]
+    return feature, feature_names
 
 @callback(
+    Output("acoustic-feature-range-slider", "min"),
+    Output("acoustic-feature-range-slider", "max"),
     Output("acoustic-feature-range-slider", "value"),
     Output("acoustic-feature-range-slider", "marks"),
     Output("acoustic-feature-range-slider", "step"),
-    Input("acoustic-feature-range-slider", "min"),
-    Input("acoustic-feature-range-slider", "max"),
+    State("dataset-select", "value"),
+    Input("feature-dropdown", "value"),
 )
-def update_acoustic_feature_range_slider(
-    feature_min: float,
-    feature_max: float,
-) -> Tuple[Any, ...]:
+def set_acoustic_feature_range(
+    dataset_name: str,
+    feature: str,
+) -> Tuple[float, float, List[float], Dict[str, str], float]:
+    data = dispatch(
+        FETCH_ACOUSTIC_FEATURES,
+        dataset_name=dataset_name,
+        feature=feature,
+    )
+    feature_min = floor(data["value"].min(), precision=2)
+    feature_max = ceil(data["value"].max(), precision=2)
     return (
+        feature_min,
+        feature_max,
         [feature_min, feature_max],
         slider_marks := {
             f"{floor(value, precision=2)}": f"{floor(value, precision=2)}"
