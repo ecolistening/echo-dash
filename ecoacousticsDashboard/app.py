@@ -41,7 +41,6 @@ def create_dash_app() -> dash.Dash:
     from components.header import Header, HEADER_CONFIG
     from components.nav_bar import NavBar, NAVBAR_CONFIG
     from components.hover_icons import HoverIcons
-    from components.filter_menu import FilterMenu
     from components.dataset_settings_drawer import DatasetSettingsDrawer
     from store import global_store
 
