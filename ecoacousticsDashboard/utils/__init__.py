@@ -1,9 +1,16 @@
 import base64
 import hashlib
+import numpy as np
 
 from dash import dcc
 from loguru import logger
 from typing import Any, List
+
+def ceil(a, precision=0):
+    return np.round(a + 0.5 * 10**(-precision), precision)
+
+def floor(a, precision=0):
+    return np.round(a - 0.5 * 10**(-precision), precision)
 
 def hashify(s: str):
     h = hashlib.new("sha256")

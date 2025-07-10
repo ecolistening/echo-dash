@@ -11,6 +11,7 @@ from loguru import logger
 from typing import Any, Dict, List, Tuple
 
 from components.site_level_filter import SiteLevelHierarchyAccordion, TreeNodeChip
+from utils import floor, ceil
 
 from api import (
     dispatch,
@@ -20,13 +21,8 @@ from api import (
     FETCH_FILES,
 )
 
+
 SITE_HIERARCHY_KEY = "Site Hierarchy"
-
-def ceil(a, precision=0):
-    return np.round(a + 0.5 * 10**(-precision), precision)
-
-def floor(a, precision=0):
-    return np.round(a - 0.5 * 10**(-precision), precision)
 
 @callback(
     Output("feature-dropdown", "value"),
