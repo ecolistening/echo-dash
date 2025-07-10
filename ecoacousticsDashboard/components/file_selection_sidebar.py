@@ -70,7 +70,7 @@ def FileSelectionSidebar(
                         grow=True,
                         children=[
                             dmc.Button(
-                                "Filter selected",
+                                "Filter Selection",
                                 id="file-sidebar-disclude-button",
                                 leftSection=DashIconify(icon="f7:delete-left-fill"),
                                 variant="light",
@@ -78,7 +78,7 @@ def FileSelectionSidebar(
                                 n_clicks=0,
                             ),
                             dmc.Button(
-                                "Filter remaining",
+                                "Filter Others",
                                 id="file-sidebar-include-button",
                                 leftSection=DashIconify(icon="cil:zoom"),
                                 variant="light",
