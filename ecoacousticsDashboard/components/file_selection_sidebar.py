@@ -303,7 +303,7 @@ def FileSelectionSidebar(
         children: list
             A list of dmc.AccordionItems for each file_id
         """
-        if json_data == "" or json_data is None:
+        if selected_json_data == "" or selected_json_data is None:
             return (
                 accordion_items := [],
                 selected_text := "",
