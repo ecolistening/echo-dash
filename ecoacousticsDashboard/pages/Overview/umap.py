@@ -119,7 +119,7 @@ layout = dmc.Box([
                                                     icon="fluent:multiselect-16-filled",
                                                     width=24,
                                                 ),
-                                                id="toggle-file-selection-sidebar",
+                                                id="toggle-file-sidebar",
                                                 variant="light",
                                                 color="blue",
                                                 size="lg",
@@ -205,15 +205,20 @@ layout = dmc.Box([
     # sibling column span to make itself visible
     dmc.Grid([
         dmc.GridCol(
-            id="graph-container",
+            id="umap-graph-container",
             span=12,
             children=[
                 dcc.Loading([
-                    dcc.Graph(id=f"umap-graph"),
+                    dcc.Graph(id="umap-graph"),
                 ]),
             ],
         ),
-        FileSelectionSidebar(span=4),
+        FileSelectionSidebar(
+            graph_id="umap-graph",
+            graph_container_id="umap-graph-container",
+            filter_store_id="umap-filter-store",
+            span=4
+        ),
     ]),
     dmc.Divider(
         variant="dotted",

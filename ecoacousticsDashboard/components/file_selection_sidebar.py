@@ -19,30 +19,39 @@ from utils.webhost import AudioAPI
 PAGE_LIMIT = 10
 
 def FileSelectionSidebar(
+    graph_id: str,
+    graph_container_id: str,
+    filter_store_id: str,
     span: int = 4
 ) -> dmc.GridCol:
-    style_hidden = dict(display="none")
-    style_visible = dict(display="block")
+    style_hidden = {
+        "display":"none",
+        "margin-top": "1rem",
+        "border-left": "1px solid var(--mantine-color-gray-3)",
+        "padding-left": "1rem",
+    }
+    style_visible = {
+        "display": "block",
+        "margin-top": "1rem",
+        "border-left": "1px solid var(--mantine-color-gray-3)",
+        "padding-left": "1rem",
+    }
 
     component = dmc.GridCol(
-        id=f"umap-toggle-sidebar",
+        id="file-sidebar",
         span=0,
         style=style_hidden,
         children=html.Div([
-            dcc.Store(id="umap-sidebar-file-data"),
-            dmc.Divider(
-                variant="solid",
-                orientation="vertical",
-            ),
+            dcc.Store(id="file-sidebar-store"),
             dmc.Stack(
-                style={"margin-top": "1rem"},
+                m="1rem",
                 children=[
                     dmc.Group(
                         grow=True,
                         children=[
                             dmc.Button(
                                 "Filter",
-                                id="selection-sidebar-filter-disclude-button",
+                                id="file-sidebar-disclude-button",
                                 leftSection=DashIconify(icon="f7:delete-left-fill"),
                                 variant="light",
                                 color="red",
@@ -50,7 +59,7 @@ def FileSelectionSidebar(
                             ),
                             dmc.Button(
                                 "Zoom",
-                                id="selection-sidebar-filter-include-button",
+                                id="file-sidebar-include-button",
                                 leftSection=DashIconify(icon="cil:zoom"),
                                 variant="light",
                                 color="blue",
@@ -58,7 +67,7 @@ def FileSelectionSidebar(
                             ),
                             dmc.Button(
                                 "Reset",
-                                id="selection-sidebar-filter-reset-button",
+                                id="file-sidebar-reset-button",
                                 leftSection=DashIconify(icon="fluent:arrow-reset-20-filled"),
                                 variant="light",
                                 color="green",
@@ -76,7 +85,7 @@ def FileSelectionSidebar(
                                         icon="system-uicons:cross",
                                         width=24,
                                     ),
-                                    id="umap-close-sidebar",
+                                    id="file-close-sidebar",
                                     variant="light",
                                     size="lg",
                                     n_clicks=0,
@@ -88,7 +97,7 @@ def FileSelectionSidebar(
                         grow=True,
                         children=[
                             dmc.Text(
-                                id="selection-sidebar-files-count",
+                                id="file-sidebar-files-count",
                                 size="sm",
                             ),
                         ],
@@ -97,7 +106,7 @@ def FileSelectionSidebar(
                         grow=True,
                         children=[
                             dmc.Pagination(
-                                id="selection-sidebar-files-pagination",
+                                id="file-sidebar-files-pagination",
                                 total=1,
                                 value=1,
                                 size="sm",
@@ -109,7 +118,7 @@ def FileSelectionSidebar(
                         grow=True,
                         children=[
                             dmc.Accordion(
-                                id="selection-sidebar-files-accordion",
+                                id="file-sidebar-files-accordion",
                                 chevronPosition="right",
                                 value=[],
                                 children=[],
@@ -122,12 +131,12 @@ def FileSelectionSidebar(
     )
 
     @callback(
-        Output("graph-container", "span", allow_duplicate=True),
-        Output("umap-toggle-sidebar", "span", allow_duplicate=True),
-        Output("umap-toggle-sidebar", "style", allow_duplicate=True),
-        State("umap-toggle-sidebar", "style"),
-        Input("umap-close-sidebar", "n_clicks"),
-        Input("toggle-file-selection-sidebar", "n_clicks"),
+        Output(graph_container_id, "span", allow_duplicate=True),
+        Output("file-sidebar", "span", allow_duplicate=True),
+        Output("file-sidebar", "style", allow_duplicate=True),
+        State("file-sidebar", "style"),
+        Input("file-close-sidebar", "n_clicks"),
+        Input("toggle-file-sidebar", "n_clicks"),
         prevent_initial_call=True
     )
     def toggle_selection_sidebar(
@@ -148,16 +157,16 @@ def FileSelectionSidebar(
         )
 
     @callback(
-        Output("graph-container", "span", allow_duplicate=True),
-        Output("umap-toggle-sidebar", "span", allow_duplicate=True),
-        Output("umap-toggle-sidebar", "style", allow_duplicate=True),
-        Output("umap-sidebar-file-data", "data"),
-        Output("selection-sidebar-files-count", "children", allow_duplicate=True),
-        Output("selection-sidebar-files-pagination", "total"),
+        Output(graph_container_id, "span", allow_duplicate=True),
+        Output("file-sidebar", "span", allow_duplicate=True),
+        Output("file-sidebar", "style", allow_duplicate=True),
+        Output("file-sidebar-store", "data"),
+        Output("file-sidebar-files-count", "children", allow_duplicate=True),
+        Output("file-sidebar-files-pagination", "total"),
         State("dataset-select", "value"),
-        State("umap-toggle-sidebar", "span"),
-        State("umap-toggle-sidebar", "style"),
-        Input("umap-graph", "selectedData"),
+        State("file-sidebar", "span"),
+        State("file-sidebar", "style"),
+        Input(graph_id, "selectedData"),
         prevent_initial_call=True,
     )
     def toggle_selection_sidebar(
@@ -198,11 +207,11 @@ def FileSelectionSidebar(
         )
 
     @callback(
-        Output("selection-sidebar-files-accordion", "children"),
-        Output("selection-sidebar-files-count", "children", allow_duplicate=True),
-        State("umap-sidebar-file-data", "data"),
-        Input("selection-sidebar-files-pagination", "value"),
-        Input("selection-sidebar-files-pagination", "total"),
+        Output("file-sidebar-files-accordion", "children"),
+        Output("file-sidebar-files-count", "children", allow_duplicate=True),
+        State("file-sidebar-store", "data"),
+        Input("file-sidebar-files-pagination", "value"),
+        Input("file-sidebar-files-pagination", "total"),
         prevent_initial_call=True,
     )
     def change_page(
@@ -231,7 +240,7 @@ def FileSelectionSidebar(
                     dmc.AccordionControl(row["file_name"]),
                     dmc.AccordionPanel(
                         html.Div(
-                            id={"type": "selection-sidebar-file-data", "index": row["file_id"]},
+                            id={"type": "file-sidebar-file-data", "index": row["file_id"]},
                             children=[],
                         )
                     )
@@ -248,11 +257,11 @@ def FileSelectionSidebar(
         return accordion, selected_text
 
     @callback(
-        Output({"type": "selection-sidebar-file-data", "index": MATCH}, "children"),
+        Output({"type": "file-sidebar-file-data", "index": MATCH}, "children"),
         State("dataset-select", "value"),
-        State("umap-sidebar-file-data", "data"),
-        State({"type": "selection-sidebar-file-data", "index": MATCH}, "id"),
-        Input("selection-sidebar-files-accordion", "value"),
+        State("file-sidebar-store", "data"),
+        State({"type": "file-sidebar-file-data", "index": MATCH}, "id"),
+        Input("file-sidebar-files-accordion", "value"),
         prevent_initial_call=True,
     )
     def toggle_file_panel(
@@ -280,11 +289,11 @@ def FileSelectionSidebar(
         ])
 
     @callback(
-        Output("umap-filter-store", "data", allow_duplicate=True),
+        Output(filter_store_id, "data", allow_duplicate=True),
         # TODO: we need access to the whole plot data
-        State("umap-sidebar-file-data", "data"),
-        State("umap-filter-store", "data"),
-        Input("selection-sidebar-filter-include-button", "n_clicks"),
+        State("file-sidebar-store", "data"),
+        State(filter_store_id, "data"),
+        Input("file-sidebar-include-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def include_file_selection(
@@ -303,10 +312,10 @@ def FileSelectionSidebar(
         return {}
 
     @callback(
-        Output("umap-filter-store", "data", allow_duplicate=True),
-        State("umap-sidebar-file-data", "data"),
-        State("umap-filter-store", "data"),
-        Input("selection-sidebar-filter-disclude-button", "n_clicks"),
+        Output(filter_store_id, "data", allow_duplicate=True),
+        State("file-sidebar-store", "data"),
+        State(filter_store_id, "data"),
+        Input("file-sidebar-disclude-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def disclude_file_selection(
@@ -324,9 +333,9 @@ def FileSelectionSidebar(
         return dict(zip(file_ids, [1 for _ in range(len(file_ids))]))
 
     @callback(
-        Output("umap-filter-store", "data", allow_duplicate=True),
-        State("umap-filter-store", "data"),
-        Input("selection-sidebar-filter-reset-button", "n_clicks"),
+        Output(filter_store_id, "data", allow_duplicate=True),
+        State(filter_store_id, "data"),
+        Input("file-sidebar-reset-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def reset_file_selection(
