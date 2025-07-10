@@ -14,6 +14,6 @@ def umap_data(
     proj = pipe.fit_transform(data)
     return (
         pd.DataFrame(proj, index=data.index)
-        .rename(columns={0: "UMAP Dim 1", 1: "UMAP Dim 2"})
+        .rename(columns={0: "x", 1: "y"})
         .reset_index()
     )

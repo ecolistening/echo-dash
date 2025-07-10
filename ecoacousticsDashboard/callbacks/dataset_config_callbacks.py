@@ -12,6 +12,7 @@ from api import (
     FETCH_DATASET_CONFIG,
     SET_DATASET_CONFIG,
     FETCH_DATASET_SITES_TREE,
+    FETCH_DATASET_CATEGORIES,
 )
 from store import DATASET_CONFIG_STORE
 
@@ -85,3 +86,12 @@ def toggle_settings_drawer(*args: Any):
     elif ctx.triggered_id == "dataset-settings-cancel-button":
         return False
     return False
+
+@callback(
+    Output("dataset-category-orders", "data"),
+    Input("dataset-select", "value"),
+)
+def load_categories(
+    dataset_name: str,
+) -> Dict[str, List[str]]:
+    return dispatch(FETCH_DATASET_CATEGORIES, dataset_name=dataset_name)

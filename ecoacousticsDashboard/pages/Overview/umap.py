@@ -4,7 +4,8 @@ import dash_bootstrap_components as dbc
 
 from dash import dcc
 from dash_iconify import DashIconify
-from io import StringIO
+
+from callbacks.pages import umap_callbacks
 
 from components.dataset_options_select import DatasetOptionsSelect
 from components.controls_panel import ControlsPanel
@@ -181,7 +182,7 @@ layout = dmc.Box([
             filter_data="umap-filter-store",
             graph="umap-graph",
             sibling="umap-graph-container",
-            span=4,
+            span=5,
         ),
     ]),
     dbc.Offcanvas(
@@ -220,5 +221,3 @@ layout = dmc.Box([
         ),
     ),
 ])
-
-from callbacks.pages import umap_callbacks

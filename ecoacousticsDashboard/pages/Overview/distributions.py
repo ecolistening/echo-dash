@@ -1,21 +1,12 @@
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-import datetime as dt
-import plotly.express as px
-import plotly.graph_objs as go
 
-from dash import html, ctx, dcc, callback, no_update
-from dash import Output, State, Input, ALL
+from dash import dcc
 from dash_iconify import DashIconify
-from loguru import logger
-from typing import Any, Dict, List, Tuple
 
-from api import (
-    dispatch,
-    FETCH_ACOUSTIC_FEATURES,
-    FETCH_DATASET_CATEGORIES,
-)
+from callbacks.pages import distributions_callbacks
+
 from components.dataset_options_select import DatasetOptionsSelect
 from components.controls_panel import ControlsPanel
 from components.filter_panel import FilterPanel
@@ -25,8 +16,6 @@ from components.environmental_filter import EnvironmentalFilter
 from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
-from utils import list2tuple
-from utils.content import get_tabs
 
 PAGE_NAME = 'distributions'
 PAGE_TITLE = 'Soundscape Descriptor Distributions'
@@ -38,7 +27,8 @@ dash.register_page(
     name='Distributions',
 )
 
-layout = html.Div([
+layout = dmc.Box([
+    dcc.Store(id="distributions-graph-data"),
     FilterPanel([
         dmc.Group(
             align="start",
@@ -75,7 +65,7 @@ layout = html.Div([
                     id="distributions-facet-column-select",
                     label="Facet columns by"
                 ),
-                html.Div([
+                dmc.Box([
                     dmc.Chip(
                         'Normalised',
                         id="distributions-normalised-tickbox",
@@ -84,7 +74,7 @@ layout = html.Div([
                         persistence=True,
                     )
                 ]),
-                html.Div(
+                dmc.Box(
                     style={
                         "padding": "1rem",
                         "display": "flex",
@@ -112,82 +102,3 @@ layout = html.Div([
         children=Footer("distributions"),
     ),
 ])
-
-@callback(
-    Output("distributions-page-info", "is_open"),
-    Input("info-icon", "n_clicks"),
-    State("distributions-page-info", "is_open"),
-    prevent_initial_call=True,
-)
-def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-    return not is_open
-
-
-@callback(
-    Output("distributions-graph", 'figure'),
-    State("dataset-select", 'value'),
-    Input("date-picker", 'value'),
-    Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
-    Input("feature-dropdown", 'value'),
-    Input("acoustic-feature-range-slider", "value"),
-    Input("distributions-colour-select", 'value'),
-    Input("distributions-facet-row-select", 'value'),
-    Input("distributions-facet-column-select", 'value'),
-    Input("distributions-normalised-tickbox", 'checked'),
-)
-def draw_figure(
-    dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    feature: str,
-    feature_range: Tuple[float, float],
-    color: str,
-    facet_row: str,
-    facet_col: str,
-    normalised: bool,
-) -> go.Figure:
-    # HACK: this should be available as debounce=True prop on the date-picker class
-    # but dash mantine components hasn't supported this for some reason
-    # rather than use a default value and double-compute, we'll just exit early
-    if len(list(filter(lambda d: d is not None, dates))) < 2:
-        return no_update
-
-    data = dispatch(
-        FETCH_ACOUSTIC_FEATURES,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        feature=feature,
-        # FIXME: hashing floating points will break the LRU cache
-        # (1) set a fixed step-size and
-        # (2) scale values and pass as integers along with scaling factor
-        feature_range=list2tuple(feature_range),
-    )
-    category_orders = dispatch(
-        FETCH_DATASET_CATEGORIES,
-        dataset_name=dataset_name,
-    )
-
-    fig = px.histogram(
-        data,
-        x='value',
-        marginal='rug',
-        opacity=0.75,
-        height=PLOTHEIGHT,
-        color=color,
-        facet_row=facet_row,
-        facet_col=facet_col,
-        histnorm='percent' if normalised else None,
-        category_orders=category_orders,
-    )
-
-    fig.update_layout(
-        title={
-            'text':f"{PAGE_TITLE} ({feature})",
-            'x':0.5,
-            'y':0.97,
-            'font':{'size':24}
-        }
-    )
-
-    return fig

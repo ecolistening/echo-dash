@@ -11,98 +11,73 @@ from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
-from api import (
-    dispatch,
-    FETCH_FILES,
-    FETCH_ACOUSTIC_FEATURES_UMAP,
-    FETCH_DATASET_CATEGORIES,
-)
+from api import dispatch, FETCH_ACOUSTIC_FEATURES
 from utils import list2tuple
 
 PLOT_HEIGHT = 800
 
 @callback(
-    Output("umap-page-info", "is_open"),
+    Output("index-scatter-page-info", "is_open"),
     Input("info-icon", "n_clicks"),
-    State("umap-page-info", "is_open"),
+    State("index-scatter-page-info", "is_open"),
     prevent_initial_call=True,
 )
-def toggle_page_info(
-    n_clicks: int,
-    is_open: bool
-) -> bool:
+def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
 
 @callback(
-    Output("umap-graph-data", "data"),
+    Output("index-scatter-graph-data", "data"),
     Input("dataset-select", "value"),
     Input("date-picker", "value"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
+    Input("feature-dropdown", 'value'),
+    Input("acoustic-feature-range-slider", "value"),
 )
 def load_data(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
     disclude_file_ids: List[str],
+    feature: str,
+    feature_range: List[float],
 ) -> str:
     # HACK: this should be available as debounce=True prop on the date-picker class
     # but dash mantine components hasn't supported this for some reason
     # rather than use a default value and double-compute, we'll just exit early
     if len(list(filter(None, dates))) < 2:
         return no_update
-    files = dispatch(
-        FETCH_FILES,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-    )
+
     return dispatch(
-        FETCH_ACOUSTIC_FEATURES_UMAP,
+        FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
         locations=list2tuple(locations),
-        sample_size=len(files),
         file_ids=frozenset(disclude_file_ids or []),
+        feature=feature,
+        # FIXME: hashing floating points will break the LRU cache
+        # (1) set a fixed step-size and
+        # (2) scale values and pass as integers along with scaling factor
+        feature_range=list2tuple(feature_range),
     ).to_json(
         date_format="iso",
         orient="table",
     )
 
 @callback(
-    Output("umap-sample-slider", "max"),
-    Output("umap-sample-slider", "value"),
-    Output("umap-sample-slider", "marks"),
-    Input("umap-graph-data", "data"),
-    prevent_initial_call=True,
-)
-def set_slider_range(
-    json_data: str
-) -> str:
-    data = pd.read_json(StringIO(json_data), orient="table")
-    max_samples = len(data)
-    sample_size = max_samples
-    mark_range = np.linspace(1, max_samples, 5, endpoint=True, dtype=int)
-    marks = [dict(value=mark, label=f"{mark}") for mark in mark_range]
-    return max_samples, sample_size, marks
-
-@callback(
-    Output("umap-graph", "figure"),
-    Input("umap-graph-data", "data"),
-    Input("umap-sample-slider", "value"),
-    Input("umap-opacity-slider", "value"),
-    Input("umap-size-slider", "value"),
-    Input("umap-colour-select", "value"),
-    Input("umap-symbol-select", "value"),
-    Input("umap-facet-row-select", "value"),
-    Input("umap-facet-column-select", "value"),
+    Output("index-scatter-graph", "figure"),
+    Input("index-scatter-graph-data", "data"),
+    Input("feature-dropdown", "value"),
+    Input("index-scatter-size-slider", "value"),
+    Input("index-scatter-colour-select", "value"),
+    Input("index-scatter-symbol-select", "value"),
+    Input("index-scatter-facet-row-select", "value"),
+    Input("index-scatter-facet-column-select", "value"),
     Input("dataset-category-orders", "data"),
-    prevent_initial_call=True,
 )
 def draw_figure(
     json_data: str,
-    sample_size: int,
-    opacity: int,
+    feature_name: str,
     dot_size: int,
     color: str,
     symbol: str,
@@ -110,24 +85,23 @@ def draw_figure(
     facet_col: str,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
-    data = pd.read_json(
-        StringIO(json_data),
-        orient="table",
-    )
     fig = px.scatter(
-        data_frame=data.sample(min(len(data), sample_size)),
-        x="x",
-        y="y",
-        opacity=opacity / 100.0,
+        data_frame=pd.read_json(
+            StringIO(json_data),
+            orient="table"
+        ),
+        x='hour',
+        y='value',
         hover_name="file_id",
-        hover_data=["file", "site", "dddn", "timestamp"],
+        hover_data=["file_name", "timestamp"],
+        opacity=0.5,
         color=color,
         symbol=symbol,
         facet_row=facet_row,
         facet_col=facet_col,
         labels=dict(
-            x="UMAP Dim 1",
-            y="UMAP Dim 2",
+            hour="Hour",
+            value=feature_name.capitalize(),
         ),
         category_orders=category_orders,
     )
@@ -135,15 +109,13 @@ def draw_figure(
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(
-            text="UMAP of Soundscape Descriptors",
+            text=f"Acoustic Descriptor by Time of Day",
             x=0.5,
             y=0.97,
             font=dict(size=24),
         )
     )
 
-    fig.update_traces(
-        marker=dict(size=dot_size)
-    )
+    fig.update_traces(marker=dict(size=dot_size))
 
     return fig

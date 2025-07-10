@@ -176,11 +176,11 @@ class Dataset:
         logger.debug(f"Compute temporal splits..")
         data['minute'] = data.timestamp.dt.minute
         data['hour'] = data.timestamp.dt.hour
-        data['hour_float'] = data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0
         data['weekday'] = data.timestamp.dt.day_name()
         data['date'] = data.timestamp.dt.strftime('%Y-%m-%d')
         data['month'] = data.timestamp.dt.month_name()
         data['year'] = data.timestamp.dt.year
+        data["time"] = data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0
         return data
 
     @functools.cached_property

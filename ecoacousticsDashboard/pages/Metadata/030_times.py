@@ -176,18 +176,18 @@ def draw_figure(
 
     fig = px.scatter(
         data,
-        x='date',
-        y='hour_float',
+        x="date",
+        y="time",
         opacity=0.25,
-        hover_name="file_name",
-        hover_data=["file_path"],
+        hover_name="file_id",
+        hover_data=["file_name", "timestamp"],
         color=color,
         symbol=symbol,
         facet_row=facet_row,
         facet_col=facet_col,
         labels=dict(
             date="Date",
-            hour_float="Hour"
+            time="Hour",
         ),
         category_orders=category_orders,
     )

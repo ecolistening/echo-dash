@@ -1,21 +1,12 @@
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-import datetime as dt
-import plotly.express as px
-import plotly.graph_objects as go
 
-from dash import html, ctx, dcc, callback, no_update
-from dash import Output, Input, State, ALL
+from dash import dcc
 from dash_iconify import DashIconify
-from loguru import logger
-from typing import List
 
-from api import (
-    dispatch,
-    FETCH_ACOUSTIC_FEATURES,
-    FETCH_DATASET_CATEGORIES,
-)
+from callbacks.pages import index_scatter_callbacks
+
 from components.dataset_options_select import DatasetOptionsSelect
 from components.controls_panel import ControlsPanel
 from components.filter_panel import FilterPanel
@@ -25,8 +16,6 @@ from components.environmental_filter import EnvironmentalFilter
 from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
-from utils import list2tuple
-from utils import sketch
 
 PAGE_NAME = 'index-scatter'
 PAGE_TITLE = 'Acoustic Descriptor by Time of Day'
@@ -39,7 +28,8 @@ dash.register_page(
 
 PLOT_HEIGHT = 800
 
-layout = html.Div([
+layout = dmc.Box([
+    dcc.Store(id="index-scatter-graph-data"),
     FilterPanel([
         dmc.Group(
             align="start",
@@ -80,7 +70,7 @@ layout = html.Div([
                     id="index-scatter-facet-column-select",
                     label="Facet columns by"
                 ),
-                html.Div(
+                dmc.Box(
                     style={
                         "padding": "1rem",
                         "display": "flex",
@@ -128,91 +118,3 @@ layout = html.Div([
         children=Footer("index-scatter"),
     ),
 ])
-
-@callback(
-    Output("index-scatter-page-info", "is_open"),
-    Input("info-icon", "n_clicks"),
-    State("index-scatter-page-info", "is_open"),
-    prevent_initial_call=True,
-)
-def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-    return not is_open
-
-@callback(
-    Output("index-scatter-graph", "figure"),
-    State("dataset-select", "value"),
-    Input("date-picker", "value"),
-    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input("feature-dropdown", "value"),
-    Input("acoustic-feature-range-slider", "value"),
-    Input("index-scatter-size-slider", "value"),
-    Input("index-scatter-colour-select", "value"),
-    Input("index-scatter-symbol-select", "value"),
-    Input("index-scatter-facet-row-select", "value"),
-    Input("index-scatter-facet-column-select", "value"),
-)
-def draw_figure(
-    dataset_name: str,
-    dates: List,
-    locations: List[str],
-    feature: str,
-    feature_range: List[float],
-    dot_size: int,
-    color: str,
-    symbol: str,
-    facet_row: str,
-    facet_col: str,
-) -> go.Figure:
-    # HACK: this should be available as debounce=True prop on the date-picker class
-    # but dash mantine components hasn't supported this for some reason
-    if len(list(filter(lambda d: d is not None, dates))) < 2:
-        return no_update
-
-    data = dispatch(
-        FETCH_ACOUSTIC_FEATURES,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        feature=feature,
-        # FIXME: hashing floating points will break the LRU cache
-        # (1) set a fixed step-size and
-        # (2) scale values and pass as integers along with scaling factor
-        feature_range=list2tuple(feature_range),
-    )
-    category_orders = dispatch(
-        FETCH_DATASET_CATEGORIES,
-        dataset_name=dataset_name,
-    )
-
-    fig = px.scatter(
-        data,
-        x='hour',
-        y='value',
-        hover_name="file",
-        hover_data=["timestamp", "path"], # Path last for sound sample modal
-        opacity=0.5,
-        color=color,
-        symbol=symbol,
-        facet_row=facet_row,
-        facet_col=facet_col,
-        category_orders=category_orders,
-    )
-
-    # Select sample for audio modal
-    fig.update_layout(clickmode='event+select')
-
-    # Add centered title
-    fig.update_layout(
-        height=PLOT_HEIGHT,
-        title={
-            'text':f"{PAGE_TITLE} ({feature})",
-            'x':0.5,
-            'y':0.97,
-            'font':{'size':24}
-        }
-    )
-
-    # Adjust size of index-scatter dots
-    fig.update_traces(marker=dict(size=dot_size))
-
-    return fig
