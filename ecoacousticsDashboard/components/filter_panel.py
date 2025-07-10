@@ -21,7 +21,7 @@ def FilterPanel(
                     dmc.AccordionControl(
                         "Filters",
                         icon=DashIconify(
-                            icon="uil:filter",
+                            icon="cil:filter",
                             width=24,
                         ),
                     ),
