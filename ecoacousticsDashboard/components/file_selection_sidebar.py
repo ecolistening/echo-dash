@@ -19,11 +19,31 @@ from utils.webhost import AudioAPI
 PAGE_LIMIT = 10
 
 def FileSelectionSidebar(
-    graph_id: str,
-    graph_container_id: str,
-    filter_store_id: str,
+    graph_data: str,
+    filter_data: str,
+    graph: str,
+    sibling: str,
     span: int = 4
 ) -> dmc.GridCol:
+    """Render a sidebar for selecting and filtering data points.
+    The sidebar is toggled by adjusting the style of itself and its sibling
+
+    Parameters
+    ----------
+    graph_data: str
+        The element ID for a dcc.Store containing json graph data
+    filter_data: str
+        The element ID for a dcc.Store containing a discluded list of file IDs
+    graph: str
+        The element ID for a dcc.Graph
+    sibling: str
+        The element ID for a sibling dmc.GridCol containing the graph
+
+    Returns
+    -------
+    dmc.GridCol
+        The sidebar container, initialized as hidden
+    """
     style_hidden = {
         "display":"none",
         "margin-top": "1rem",
@@ -50,7 +70,7 @@ def FileSelectionSidebar(
                         grow=True,
                         children=[
                             dmc.Button(
-                                "Filter",
+                                "Filter selected",
                                 id="file-sidebar-disclude-button",
                                 leftSection=DashIconify(icon="f7:delete-left-fill"),
                                 variant="light",
@@ -58,7 +78,7 @@ def FileSelectionSidebar(
                                 n_clicks=0,
                             ),
                             dmc.Button(
-                                "Zoom",
+                                "Filter remaining",
                                 id="file-sidebar-include-button",
                                 leftSection=DashIconify(icon="cil:zoom"),
                                 variant="light",
@@ -131,7 +151,7 @@ def FileSelectionSidebar(
     )
 
     @callback(
-        Output(graph_container_id, "span", allow_duplicate=True),
+        Output(sibling, "span", allow_duplicate=True),
         Output("file-sidebar", "span", allow_duplicate=True),
         Output("file-sidebar", "style", allow_duplicate=True),
         State("file-sidebar", "style"),
@@ -144,20 +164,40 @@ def FileSelectionSidebar(
         close: int,
         n_clicks: int,
     ) -> Tuple[int, int, Dict[str, str]]:
+        """Toggle the sidebar
+
+        Parameters
+        ----------
+        current_style: int
+            The current style of the sidebar
+        close: int
+            Input from the close element (not used for governing state)
+        n_clicks: int
+            Input from the toggle element (not used for governing state)
+
+        Returns
+        -------
+        sibling_span: int
+            Updated span of the sibling element
+        sidebar_span: int
+            Updated span of the sidebar element
+        sidebar_style: dict
+            Updated styling of the sidebar element (resetting display)
+        """
         if current_style == style_visible:
             return (
-                graph_container_span := 12,
+                sibling_span := 12,
                 sidebar_span := 0,
                 sidebar_style := style_hidden,
             )
         return (
-            graph_container_span := 12 - span,
+            sibling_span := 12 - span,
             sidebar_span := span,
             sidebar_style := style_visible,
         )
 
     @callback(
-        Output(graph_container_id, "span", allow_duplicate=True),
+        Output(sibling, "span", allow_duplicate=True),
         Output("file-sidebar", "span", allow_duplicate=True),
         Output("file-sidebar", "style", allow_duplicate=True),
         Output("file-sidebar-store", "data"),
@@ -166,7 +206,7 @@ def FileSelectionSidebar(
         State("dataset-select", "value"),
         State("file-sidebar", "span"),
         State("file-sidebar", "style"),
-        Input(graph_id, "selectedData"),
+        Input(graph, "selectedData"),
         prevent_initial_call=True,
     )
     def toggle_selection_sidebar(
@@ -175,9 +215,37 @@ def FileSelectionSidebar(
         current_style: Dict[str, str],
         selected_data: Dict[str, Any],
     ) -> Tuple[int, int, Dict[str, str], str, str, int]:
+        """Toggle the sidebar and populate the selected data store
+
+        Parameters
+        ----------
+        dataset_name: str
+            The name of the currently selected dataset
+        current_span: int
+            The current span of the sidebar
+        current_style: int
+            The current style of the sidebar
+        selected_data: dict
+            The data as returned by the 'selectedData' hook on a plotly graph object
+
+        Returns
+        -------
+        sibling_span: int
+            Updated span of the sibling element
+        sidebar_span: int
+            Updated span of the sidebar element
+        sidebar_style: dict
+            Updated styling of the sidebar element (resetting display)
+        selected_data_json: str
+            The data for selected data points encoded as a json string
+        selected_text: str
+            Pagination text describing which page we are on
+        total_pages: int
+            The total number of pages for pagination
+        """
         if selected_data is None or len((points := selected_data['points'])) == 0:
             return (
-                graph_container_span := 12 - current_span,
+                sibling_span := 12 - current_span,
                 sidebar_span := current_span,
                 sidebar_style := current_style,
                 selected_data_json := "",
@@ -198,7 +266,7 @@ def FileSelectionSidebar(
         end = min(total, PAGE_LIMIT * start)
 
         return (
-            graph_container_span := 12 - span,
+            sibling_span := 12 - span,
             sidebar_span := span,
             sidebar_style := style_visible,
             selected_data_json := data.to_json(date_format="iso", orient="table"),
@@ -215,17 +283,33 @@ def FileSelectionSidebar(
         prevent_initial_call=True,
     )
     def change_page(
-        json_data: str,
+        selected_json_data: str,
         current_page: int,
         total_pages: int,
     ) -> html.Div:
+        """Populate the current page with an accordion for each file
+
+        Parameters
+        ----------
+        selected_json_data: str
+            The file data as JSON parsable as a table using pandas
+        current_page: int
+            The selected page number
+        open_values: str
+            The total number of pages
+
+        Returns
+        -------
+        children: list
+            A list of dmc.AccordionItems for each file_id
+        """
         if json_data == "" or json_data is None:
             return (
-                accordion := html.Div(),
+                accordion_items := [],
                 selected_text := "",
             )
 
-        data = pd.read_json(StringIO(json_data), orient="table")
+        data = pd.read_json(StringIO(selected_json_data), orient="table")
         page_data = data.iloc[(current_page - 1):(current_page - 1) + PAGE_LIMIT]
 
         logger.debug(
@@ -233,7 +317,7 @@ def FileSelectionSidebar(
             f"{current_page=} selected={len(page_data)}"
         )
 
-        accordion = html.Div([
+        accordion_items = [
             dmc.AccordionItem(
                 value=row["file_id"],
                 children=[
@@ -247,14 +331,14 @@ def FileSelectionSidebar(
                 ]
             )
             for _, row in page_data.iterrows()
-        ])
+        ]
 
         total = len(data)
         start = PAGE_LIMIT * (current_page - 1) + 1
         end = min(total, PAGE_LIMIT * current_page)
         selected_text = f"Showing {start} - {end} / {total}",
 
-        return accordion, selected_text
+        return accordion_items, selected_text
 
     @callback(
         Output({"type": "file-sidebar-file-data", "index": MATCH}, "children"),
@@ -266,19 +350,38 @@ def FileSelectionSidebar(
     )
     def toggle_file_panel(
         dataset_name: str,
-        json_data: str,
+        selected_json_data: str,
         matched: str,
         open_values: str,
     ) -> html.Div:
+        """Toggle the accordion panel for a single file,
+        showing file metadata and a html audio element
+
+        Parameters
+        ----------
+        dataset_name: str
+            The name of the currently selected dataset
+        selected_json_data: str
+            The file data as JSON parsable as a table using pandas
+        matched: str
+            The pattern matcher for the selected file, where 'index' is a file_id
+        open_values: str
+            The list of file_ids present on the current page
+
+        Returns
+        -------
+        component: dmc.Box
+            A html element containing file metadata and audio
+        """
         if (file_id := matched["index"]) not in open_values:
             raise exceptions.PreventUpdate
 
         config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name)
-        data = pd.read_json(StringIO(json_data), orient="table").set_index("file_id")
+        data = pd.read_json(StringIO(selected_json_data), orient="table").set_index("file_id")
 
         file_info = data.loc[file_id]
         audio_bytes, mime_type, _ = AudioAPI.get_audio_bytes(file_info.file_path, dataset_name, config)
-        return html.Div([
+        return dmc.Box([
             dcc.Loading(
                 html.Audio(
                     id="audio-player",
@@ -289,52 +392,76 @@ def FileSelectionSidebar(
         ])
 
     @callback(
-        Output(filter_store_id, "data", allow_duplicate=True),
-        # TODO: we need access to the whole plot data
+        Output(filter_data, "data", allow_duplicate=True),
+        State(graph_data, "data"),
         State("file-sidebar-store", "data"),
-        State(filter_store_id, "data"),
+        State(filter_data, "data"),
         Input("file-sidebar-include-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def include_file_selection(
-        json_data: str,
+        graph_json_data: str,
+        selected_json_data: str,
         filtered_file_ids: Dict[str, Any],
         n_clicks: int,
     ) -> str:
-        """
-        Include filter means adding all other file_ids to the store
+        """Add *all other* file_ids to the filter store
+
+        Parameters
+        ----------
+        graph_json_data: str
+            The graph data as JSON parsable as a table using pandas
+        selected_json_data: str
+            The file data as JSON parsable as a table using pandas
+        filtered_file_ids: list
+            A list of unique file ids currently discluded from the graph
+
+        Returns
+        -------
+        filter_data: list
+            An updated list of unique file ids to disclude from the graph
         """
         if not n_clicks: return no_update
-        # filtered_file_ids = frozenset((filtered_file_ids or {}).keys())
-        # file_ids = set(pd.read_json(StringIO(json_data), orient="table")["file_id"].tolist())
-        # TODO
-        # return dict(zip(file_ids, [1 for _ in range(len(file_ids))]))
-        return {}
+        filtered_file_ids = set(filtered_file_ids or [])
+        selected_file_ids = pd.read_json(StringIO(selected_json_data), orient="table")["file_id"]
+        graph_data = pd.read_json(StringIO(graph_json_data), orient="table")
+        file_ids = set(graph_data.loc[~graph_data["file_id"].isin(selected_file_ids), "file_id"].tolist())
+        return list(filtered_file_ids.union(file_ids))
 
     @callback(
-        Output(filter_store_id, "data", allow_duplicate=True),
+        Output(filter_data, "data", allow_duplicate=True),
         State("file-sidebar-store", "data"),
-        State(filter_store_id, "data"),
+        State(filter_data, "data"),
         Input("file-sidebar-disclude-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def disclude_file_selection(
-        json_data: str,
+        selected_json_data: str,
         filtered_file_ids: Dict[str, Any],
         n_clicks: int,
-    ) -> str:
-        """
-        Include filter means adding all other file_ids to the store
+    ) -> List[str]:
+        """Add *selected* file_ids to the filter store
+
+        Parameters
+        ----------
+        selected_json_data: str
+            The file data as JSON parsable as a table using pandas
+        filtered_file_ids: list
+            A list of unique file ids currently discluded from the graph
+
+        Returns
+        -------
+        filter_data: list
+            An updated list of unique file ids to disclude from the graph
         """
         if not n_clicks: return no_update
-        filtered_file_ids = frozenset((filtered_file_ids or {}).keys())
-        file_ids = set(pd.read_json(StringIO(json_data), orient="table")["file_id"].tolist())
-        file_ids = filtered_file_ids.union(file_ids)
-        return dict(zip(file_ids, [1 for _ in range(len(file_ids))]))
+        filtered_file_ids = set(filtered_file_ids or [])
+        file_ids = set(pd.read_json(StringIO(selected_json_data), orient="table")["file_id"].tolist())
+        return list(filtered_file_ids.union(file_ids))
 
     @callback(
-        Output(filter_store_id, "data", allow_duplicate=True),
-        State(filter_store_id, "data"),
+        Output(filter_data, "data", allow_duplicate=True),
+        State(filter_data, "data"),
         Input("file-sidebar-reset-button", "n_clicks"),
         prevent_initial_call=True,
     )
@@ -343,9 +470,19 @@ def FileSelectionSidebar(
         n_clicks: int,
     ) -> str:
         """
-        Include filter means adding all other file_ids to the store
+        Reset the scope of the file filters, reverting back to the original graph data
+
+        Parameters
+        ----------
+        filtered_file_ids: list
+            A list of unique file ids currently discluded from the graph
+
+        Returns
+        -------
+        filter_data: list
+            An empty list
         """
         if not n_clicks: return no_update
-        return {}
+        return []
 
     return component
