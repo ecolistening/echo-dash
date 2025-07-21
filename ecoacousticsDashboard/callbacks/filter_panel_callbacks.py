@@ -28,52 +28,65 @@ SITE_HIERARCHY_KEY = "Site Hierarchy"
     Output("feature-dropdown", "value"),
     Output("feature-dropdown", "data"),
     Input("dataset-select", "value"),
-    Input("feature-dropdown", "value"),
+    State("acoustic-feature-store", "data"),
 )
-def set_acoustic_feature(
+def set_acoustic_feature_dropdown(
     dataset_name: str,
-    feature: str | None = None,
+    store: str | None = None,
 ) -> Tuple[str, List[str], float, float]:
-    acoustic_features = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
-    feature_names = acoustic_features["feature"].unique()
-    feature = feature if feature is not None else feature_names[0]
+    data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
+    feature_names = data["feature"].unique()
+    feature = store.get("feature", feature_names[0])
     return feature, feature_names
 
 @callback(
-    Output("acoustic-feature-range-store", "data", allow_duplicate=True),
     Output("acoustic-feature-range-slider", "min"),
     Output("acoustic-feature-range-slider", "max"),
     Output("acoustic-feature-range-slider", "value"),
     Output("acoustic-feature-range-slider", "marks"),
     Output("acoustic-feature-range-slider", "step"),
+    Output("acoustic-feature-store", "data", allow_duplicate=True),
     State("dataset-select", "value"),
+    State("acoustic-feature-store", "data"),
     Input("feature-dropdown", "value"),
     prevent_initial_call=True,
 )
-def set_acoustic_feature_range(
+def set_acoustic_feature_range_slider(
     dataset_name: str,
+    store: Dict[str, Any],
     feature: str,
-) -> Tuple[List[float], float, float, List[float], Dict[str, str], float]:
-    data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name, feature=feature)
-    feature_min = floor(data["value"].min(), precision=2)
-    feature_max = ceil(data["value"].max(), precision=2)
-    values = [feature_min, feature_max]
+) -> Tuple[float, float, List[float], Dict[str, str], float, Dict[str, Any]]:
+    if not len(store) or store.get("feature") != feature:
+        data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name, feature=feature)
+        feature_min, feature_max = floor(data["value"].min(), precision=2), ceil(data["value"].max(), precision=2)
+        current_min, current_max = feature_min, feature_max
+        store = {"feature": feature, "min": feature_min, "max": feature_max, "feature_min": current_min, "feature_max": current_max}
+    else:
+        feature_min, feature_max = store["min"], store["max"]
+        current_min, current_max = store["feature_min"], store["feature_max"]
     marks = {
         f"{floor(value, precision=2)}": f"{floor(value, precision=2)}"
         for value in np.linspace(feature_min, feature_max, 5)
     }
     step = (feature_max - feature_min) / 1e3
-    return values, feature_min, feature_max, values, marks, step
+    return feature_min, feature_max, [current_min, current_max], marks, step, store
 
 @callback(
-    Output("acoustic-feature-range-store", "data", allow_duplicate=True),
+    Output("acoustic-feature-store", "data", allow_duplicate=True),
+    State("acoustic-feature-store", "data"),
     Input("acoustic-feature-range-slider", "value"),
     prevent_initial_call=True,
 )
-def update_acoustic_feature_range_store(
+def set_acoustic_feature_bounds_with_slider(
+    store: Dict[str, Any],
     values: List[float],
-) -> List[float]:
-    return values
+) -> Dict[str, Any]:
+    feature_min, feature_max = values
+    store.update({
+        "feature_min": feature_min,
+        "feature_max": feature_max
+    })
+    return store
 
 @callback(
     Output("acoustic-feature-range-bounds", "children"),
@@ -112,7 +125,6 @@ def update_date_store(
     new_date_range: List[str],
     current_date_store: List[str],
 ) -> Tuple[dt.date, dt.date, List[dt.date]]:
-    # TODO: default to dataset min/max
     if len(list(filter(None, new_date_range))) < 2:
         return no_update
     start_date, end_date = new_date_range
