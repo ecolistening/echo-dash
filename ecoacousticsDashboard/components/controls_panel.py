@@ -27,7 +27,7 @@ def ControlsPanel(
                         ),
                     ),
                     dmc.AccordionPanel(
-                        style={"padding": "0 0 1rem 0"},
+                        pb="1rem",
                         children=children
                     )
                 ]

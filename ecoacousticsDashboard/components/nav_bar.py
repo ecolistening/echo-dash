@@ -3,7 +3,8 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import datetime as dt
 
-from dash import html, dcc
+from dash import html, dcc, callback
+from dash import Input, Output
 from dash_iconify import DashIconify
 from loguru import logger
 from typing import Any, List, Dict
@@ -11,11 +12,11 @@ from typing import Any, List, Dict
 from api import dispatch, FETCH_DATASETS
 
 NAVBAR_CONFIG = {
-    "width": 200,
+    "width": 300,
     "breakpoint": "sm",
     "collapsed": {
         "desktop": False,
-        "mobile": True
+        "mobile": True,
     },
 }
 
@@ -64,7 +65,24 @@ def NavBar():
         p="md",
         w=NAVBAR_CONFIG["width"],
         children=dmc.ScrollArea(
-            children=Menu(),
+            children=[
+                Menu(),
+                dmc.Divider(
+                    variant="solid",
+                    orientation="horizontal",
+                ),
+                dmc.Space(h="1rem"),
+                dmc.Box([
+                    dmc.Text("Active Filters", size="md"),
+                    dmc.Text(id="filter-state", size="sm", span=True),
+                    dmc.Space(h="sm"),
+                    dmc.Box(id="date-range-filter-chips"),
+                    dmc.Space(h="sm"),
+                    dmc.Box(id="acoustic-feature-range-filter-chips"),
+                    dmc.Space(h="sm"),
+                    dmc.Box(id="file-filter-chips"),
+                ])
+            ]
         )
     )
 

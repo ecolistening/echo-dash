@@ -38,6 +38,9 @@ def create_dash_app() -> dash.Dash:
         ]
     )
 
+    from callbacks import nav_bar_callbacks
+    from callbacks import dataset_config_callbacks
+
     from components.header import Header, HEADER_CONFIG
     from components.nav_bar import NavBar, NAVBAR_CONFIG
     from components.hover_icons import HoverIcons
@@ -68,9 +71,6 @@ def create_dash_app() -> dash.Dash:
             ],
         )
     )
-
-    from callbacks import nav_bar_callbacks
-    from callbacks import dataset_config_callbacks
 
     return app
 

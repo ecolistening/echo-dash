@@ -22,9 +22,6 @@ def DateRangeFilter():
                                     dmc.DatePicker(
                                         id="date-picker",
                                         type="range",
-                                        minDate=dt.date(1970, 1, 1),
-                                        maxDate=dt.date.today(),
-                                        value=[dt.date(1970, 1, 1), dt.date.today()],
                                         persistence=True,
                                         allowDeselect=False,
                                     ),

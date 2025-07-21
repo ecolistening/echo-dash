@@ -40,6 +40,7 @@ def set_acoustic_feature(
     return feature, feature_names
 
 @callback(
+    Output("acoustic-feature-range-store", "data", allow_duplicate=True),
     Output("acoustic-feature-range-slider", "min"),
     Output("acoustic-feature-range-slider", "max"),
     Output("acoustic-feature-range-slider", "value"),
@@ -47,44 +48,50 @@ def set_acoustic_feature(
     Output("acoustic-feature-range-slider", "step"),
     State("dataset-select", "value"),
     Input("feature-dropdown", "value"),
+    prevent_initial_call=True,
 )
 def set_acoustic_feature_range(
     dataset_name: str,
     feature: str,
-) -> Tuple[float, float, List[float], Dict[str, str], float]:
-    data = dispatch(
-        FETCH_ACOUSTIC_FEATURES,
-        dataset_name=dataset_name,
-        feature=feature,
-    )
+) -> Tuple[List[float], float, float, List[float], Dict[str, str], float]:
+    data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name, feature=feature)
     feature_min = floor(data["value"].min(), precision=2)
     feature_max = ceil(data["value"].max(), precision=2)
-    return (
-        feature_min,
-        feature_max,
-        [feature_min, feature_max],
-        slider_marks := {
-            f"{floor(value, precision=2)}": f"{floor(value, precision=2)}"
-            for value in np.linspace(feature_min, feature_max, 5)
-        },
-        step := (feature_max - feature_min) / 1e3,
-    )
+    values = [feature_min, feature_max]
+    marks = {
+        f"{floor(value, precision=2)}": f"{floor(value, precision=2)}"
+        for value in np.linspace(feature_min, feature_max, 5)
+    }
+    step = (feature_max - feature_min) / 1e3
+    return values, feature_min, feature_max, values, marks, step
+
+@callback(
+    Output("acoustic-feature-range-store", "data", allow_duplicate=True),
+    Input("acoustic-feature-range-slider", "value"),
+    prevent_initial_call=True,
+)
+def update_acoustic_feature_range_store(
+    values: List[float],
+) -> List[float]:
+    return values
 
 @callback(
     Output("acoustic-feature-range-bounds", "children"),
     Input("acoustic-feature-range-slider", "value"),
 )
 def update_acoustic_feature_range_bounds(
-    value: List[float],
+    values: List[float],
 ) -> str:
-    selected_min, selected_max = value
+    selected_min, selected_max = values
     return f"{selected_min} - {selected_max}"
 
 @callback(
     Output("date-picker", "minDate"),
     Output("date-picker", "maxDate"),
     Output("date-picker", "value"),
+    Output("date-range-store", "data", allow_duplicate=True),
     Input("dataset-select", "value"),
+    prevent_initial_call=True,
 )
 def update_date_range(
     dataset_name: str
@@ -92,7 +99,22 @@ def update_date_range(
     data = dispatch(FETCH_FILES, dataset_name=dataset_name)
     min_date = data.timestamp.dt.date.min()
     max_date = data.timestamp.dt.date.max()
-    return min_date, max_date, [min_date, max_date]
+    return min_date, max_date, [min_date, max_date], [min_date, max_date]
+
+@callback(
+    Output("date-range-store", "data", allow_duplicate=True),
+    Input("date-picker", "value"),
+    Input("date-range-store", "data"),
+    prevent_initial_call=True,
+)
+def update_date_store(
+    new_date_range: List[str],
+    current_date_range: List[str],
+) -> Tuple[dt.date, dt.date, List[dt.date]]:
+    # TODO: default to dataset min/max
+    if len(list(filter(None, new_date_range))) < 2:
+        return current_date_range
+    return new_date_range
 
 @callback(
     Output("site-level-filter-group", "children"),
