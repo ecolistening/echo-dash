@@ -66,7 +66,7 @@ def create_dash_app() -> dash.Dash:
                 dcc.Interval(
                     id="load-datasets",
                     interval=100,
-                    max_intervals=1
+                    max_intervals=1,
                 ),
             ],
         )

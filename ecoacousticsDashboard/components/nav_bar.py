@@ -67,6 +67,7 @@ def NavBar():
         children=dmc.ScrollArea(
             children=[
                 Menu(),
+                dmc.Space(h="1rem"),
                 dmc.Divider(
                     variant="solid",
                     orientation="horizontal",

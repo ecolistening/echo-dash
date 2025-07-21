@@ -1,6 +1,7 @@
 import dash
 import dash_mantine_components as dmc
 import dash_bootstrap_components as dbc
+import itertools
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -38,7 +39,7 @@ def load_data(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
-    disclude_file_ids: List[str],
+    file_filter_groups: Dict[int, List[str]],
     feature: str,
     feature_range: List[float],
 ) -> str:
@@ -53,7 +54,7 @@ def load_data(
         dataset_name=dataset_name,
         dates=list2tuple(dates),
         locations=list2tuple(locations),
-        file_ids=frozenset(disclude_file_ids or []),
+        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
         feature=feature,
         # FIXME: hashing floating points will break the LRU cache
         # (1) set a fixed step-size and

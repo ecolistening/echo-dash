@@ -99,22 +99,28 @@ def update_date_range(
     data = dispatch(FETCH_FILES, dataset_name=dataset_name)
     min_date = data.timestamp.dt.date.min()
     max_date = data.timestamp.dt.date.max()
-    return min_date, max_date, [min_date, max_date], [min_date, max_date]
+    store = {"min": min_date, "max": max_date, "start_date": min_date, "end_date": max_date}
+    return min_date, max_date, [min_date, max_date], store
 
 @callback(
     Output("date-range-store", "data", allow_duplicate=True),
     Input("date-picker", "value"),
-    Input("date-range-store", "data"),
+    State("date-range-store", "data"),
     prevent_initial_call=True,
 )
 def update_date_store(
     new_date_range: List[str],
-    current_date_range: List[str],
+    current_date_store: List[str],
 ) -> Tuple[dt.date, dt.date, List[dt.date]]:
     # TODO: default to dataset min/max
     if len(list(filter(None, new_date_range))) < 2:
-        return current_date_range
-    return new_date_range
+        return no_update
+    start_date, end_date = new_date_range
+    current_date_store.update({
+        "start_date": start_date,
+        "end_date": end_date,
+    })
+    return current_date_store
 
 @callback(
     Output("site-level-filter-group", "children"),
