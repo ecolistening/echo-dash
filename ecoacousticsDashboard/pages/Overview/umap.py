@@ -8,6 +8,7 @@ from dash_iconify import DashIconify
 from callbacks.pages import umap_callbacks
 
 from components.dataset_options_select import DatasetOptionsSelect
+from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
 from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
@@ -24,6 +25,30 @@ dash.register_page(
     title=PAGE_TITLE,
     name=PAGE_NAME,
 )
+
+def FileSelectionSidebarIcon():
+    return dmc.HoverCard(
+        children=[
+            dmc.HoverCardTarget(
+                children=dmc.ActionIcon(
+                    DashIconify(
+                        icon="fluent:multiselect-16-filled",
+                        width=24,
+                    ),
+                    id="toggle-file-sidebar",
+                    variant="light",
+                    color="blue",
+                    size="lg",
+                    n_clicks=0,
+                ),
+            ),
+            dmc.HoverCardDropdown(
+                children=[
+                    dmc.Text("Toggle file selection sidebar"),
+                ]
+            )
+        ],
+    )
 
 layout = dmc.Box([
     dcc.Store(id="umap-graph-data"),
@@ -60,38 +85,18 @@ layout = dmc.Box([
                     id="umap-facet-column-select",
                     label="Facet columns by"
                 ),
-                dmc.Box(
-                    style={
-                        "padding": "1rem",
-                        "display": "flex",
-                        "align-content": "center",
-                        "justify-content": "right",
-                    },
+                dmc.Flex(
+                    p="1rem",
+                    align="center",
+                    justify="right",
+                    direction="row",
                     children=[
                         dmc.Group(
                             grow=True,
                             children=[
-                                dmc.HoverCard(
-                                    children=[
-                                        dmc.HoverCardTarget(
-                                            children=dmc.ActionIcon(
-                                                DashIconify(
-                                                    icon="fluent:multiselect-16-filled",
-                                                    width=24,
-                                                ),
-                                                id="toggle-file-sidebar",
-                                                variant="light",
-                                                color="blue",
-                                                size="lg",
-                                                n_clicks=0,
-                                            ),
-                                        ),
-                                        dmc.HoverCardDropdown(
-                                            children=[
-                                                dmc.Text("Toggle file selection sidebar"),
-                                            ]
-                                        )
-                                    ],
+                                FileSelectionSidebarIcon(),
+                                DataDownloadWidget(
+                                    graph_data="umap-graph-data",
                                 ),
                                 FigureDownloadWidget(
                                     plot_name="umap-graph",
