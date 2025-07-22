@@ -23,6 +23,7 @@ def DateRangeFilter():
                                         id="date-picker",
                                         type="range",
                                         persistence=True,
+                                        persistence_type="memory",
                                         allowDeselect=False,
                                     ),
                                 ]

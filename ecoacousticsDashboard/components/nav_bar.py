@@ -82,6 +82,8 @@ def NavBar():
                     dmc.Box(id="acoustic-feature-range-filter-chips"),
                     dmc.Space(h="sm"),
                     dmc.Box(id="file-filter-chips"),
+                    dmc.Space(h="sm"),
+                    dmc.Box(id="site-filter-chips"),
                 ])
             ]
         )

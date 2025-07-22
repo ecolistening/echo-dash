@@ -26,6 +26,8 @@ def AcousticFeatureFilter():
                                             searchable=True,
                                             clearable=False,
                                             allowDeselect=False,
+                                            persistence=True,
+                                            persistence_type="memory",
                                             nothingFoundMessage="No options found...",
                                         ),
                                     ]),
@@ -41,8 +43,9 @@ def AcousticFeatureFilter():
                                                 id="acoustic-feature-range-slider",
                                                 min=0,
                                                 max=100,
-                                                value=[0, 100],
                                                 allowCross=False,
+                                                persistence=True,
+                                                persistence_type="memory",
                                             ),
                                             dmc.Box(
                                                 children=[

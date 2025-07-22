@@ -31,7 +31,7 @@ def SiteLevelChipGroup(
                     children=dmc.ChipGroup(
                         id={"type": "checklist-locations-hierarchy", "index": level_depth},
                         multiple=True,
-                        persistence=False,
+                        persistence=True,
                         value=[node.path_name for node in nodes],
                         children=[TreeNodeChip(node) for node in nodes],
                     ),

@@ -47,29 +47,75 @@ def fetch_datasets(current_dataset, _) -> List[Dict[str, str]]:
     Input("date-range-store", "data"),
     Input("acoustic-feature-store", "data"),
     Input("umap-filter-store", "data"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
 )
 def update_active_filters(
     date_range: List[str],
     feature_range: List[float],
     discluded_file_ids: str,
+    locations: List[str],
 ) -> dmc.AccordionItem:
     no_active_filters = (
         (date_range is None or not len(date_range)) and
         (feature_range is None or not len(feature_range)) and
-        (discluded_file_ids is None or not len(discluded_file_ids))
+        (discluded_file_ids is None or not len(discluded_file_ids)) and
+        (locations is None or not len(locations))
     )
     if no_active_filters:
         return "No filters currently active"
     return ""
 
-# @callback(
-#     Output("date-range-store", "data"),
-#     Input("date-range-filter-chip-group","value")
-# )
-# def update_date_range(
-#     chip_value: List[str],
-# ) -> List[str]:
-#     import code; code.interact(local=locals())
+@callback(
+    Output("site-filter-chips", "children"),
+    State("dataset-config", "data"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    prevent_initial_call=True,
+)
+def update_active_site_filters(
+    config: Dict[str, str],
+    locations: List[str],
+) -> dmc.Accordion:
+    if not len(config):
+        return []
+    sites = [
+        f"{config.get('Site Hierarchy', {}).get(f'sitelevel_{i+1}', f'sitelevel_{i+1}')}={value}"
+        for i, group in enumerate(locations)
+        for value in group
+    ]
+    return dmc.Accordion(
+        id="site-filters-accordion",
+        chevronPosition="right",
+        variant="separated",
+        radius="sm",
+        value=["site-filter"],
+        children=[
+            dmc.AccordionItem(
+                value="sites-filter",
+                children=[
+                    dmc.AccordionControl("Site Level"),
+                    dmc.AccordionPanel(
+                        pb="1rem",
+                        children=dmc.ChipGroup(
+                            id={"type": "active-filter-chip-group", "index": "site-level"},
+                            value=sites,
+                            multiple=True,
+                            children=[
+                                dmc.Chip(
+                                    variant="outline",
+                                    icon=DashIconify(icon="bi-x-circle"),
+                                    value=value,
+                                    mt="xs",
+                                    children=value,
+                                )
+                                for value in sites
+                            ]
+                        )
+                    )
+                ]
+            )
+        ]
+    )
+
 
 @callback(
     Output("date-range-filter-chips", "children"),

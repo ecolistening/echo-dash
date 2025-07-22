@@ -22,7 +22,8 @@ def ControlsPanel(
                     dmc.AccordionControl(
                         "Controls",
                         icon=DashIconify(
-                            icon="lsicon:control-outline",
+                            icon="oui:controls-horizontal",
+                            width=24,
                             color="blue",
                         ),
                     ),
