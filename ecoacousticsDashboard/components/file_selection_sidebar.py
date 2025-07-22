@@ -487,7 +487,7 @@ def FileSelectionSidebar(
             A dictionary containing selected file ids indexed by selection event
         """
         if not n_clicks: return no_update
-        filter_groups.pop(len(filter_groups.keys()) + 1, None)
+        filter_groups.pop(len(filter_groups.keys()), None)
         return filter_groups
 
     @callback(

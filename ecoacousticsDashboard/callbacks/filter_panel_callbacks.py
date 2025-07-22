@@ -25,6 +25,14 @@ from api import (
 SITE_HIERARCHY_KEY = "Site Hierarchy"
 
 @callback(
+    Output("umap-filter-store", "data", allow_duplicate=True),
+    Input("dataset-select", "value"),
+    prevent_initial_call=True,
+)
+def reset_file_filter_store(dataset_name):
+    return {}
+
+@callback(
     Output("feature-dropdown", "value"),
     Output("feature-dropdown", "data"),
     Input("dataset-select", "value"),

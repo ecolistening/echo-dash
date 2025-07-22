@@ -113,7 +113,7 @@ def draw_figure(
         markers=True,
         labels=dict(
             timestamp="Time",
-            value_mean=feature_name.capitalize(),
+            value_mean="</br></br>".join(map(str.capitalize, feature_name.split(" "))),
         ),
         category_orders=category_orders,
     )
