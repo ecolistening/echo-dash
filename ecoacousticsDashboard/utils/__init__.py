@@ -1,4 +1,5 @@
 import base64
+import datetime as dt
 import hashlib
 import numpy as np
 
@@ -19,6 +20,9 @@ def hashify(s: str):
 
 def dedup(l: List[Any]) -> List[Any]:
     return list(dict.fromkeys(l))
+
+def str2date(s: str):
+    return dt.datetime.strptime(s, "%Y-%m-%d").date()
 
 def list2tuple(arr):
     if isinstance(arr,tuple):

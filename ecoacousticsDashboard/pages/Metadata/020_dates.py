@@ -87,7 +87,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 @callback(
     Output("dates-graph", "figure"),
     Input("dataset-select", "value"),
-    Input("date-picker", "value"),
+    Input("date-range-current-bounds", "data"),
     Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
 )
 def draw_figure(
@@ -95,10 +95,6 @@ def draw_figure(
     dates: List[str],
     locations: List[str],
 ) -> go.Figure:
-    # HACK: this should be available as debounce=True prop on the date-picker class
-    # but dash mantine components hasn't supported this for some reason
-    if len(list(filter(lambda d: d is not None, dates))) < 2:
-        return no_update
     triggered_id = ctx.triggered_id
     action = FETCH_FILES
     params = dict(

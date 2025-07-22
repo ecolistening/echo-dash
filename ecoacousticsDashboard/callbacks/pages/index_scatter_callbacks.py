@@ -29,26 +29,19 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 @callback(
     Output("index-scatter-graph-data", "data"),
     Input("dataset-select", "value"),
-    Input("date-picker", "value"),
+    Input("date-range-current-bounds", "data"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
-    Input("feature-dropdown", 'value'),
-    Input("acoustic-feature-range-slider", "value"),
+    Input("acoustic-feature-current-bounds", "data"),
 )
 def load_data(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
-    file_filter_groups: Dict[int, List[str]],
-    feature: str,
-    feature_range: List[float],
+    file_filter_groups: Dict[str, List],
+    feature_params: Dict[str, Any],
 ) -> str:
-    # HACK: this should be available as debounce=True prop on the date-picker class
-    # but dash mantine components hasn't supported this for some reason
-    # rather than use a default value and double-compute, we'll just exit early
-    if len(list(filter(None, dates))) < 2:
-        return no_update
-
+    feature, start_value, end_value = feature_params.values()
     return dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
@@ -56,10 +49,7 @@ def load_data(
         locations=list2tuple(locations),
         file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
         feature=feature,
-        # FIXME: hashing floating points will break the LRU cache
-        # (1) set a fixed step-size and
-        # (2) scale values and pass as integers along with scaling factor
-        feature_range=list2tuple(feature_range),
+        feature_range=(start_value, end_value),
     ).to_json(
         date_format="iso",
         orient="table",
@@ -68,7 +58,7 @@ def load_data(
 @callback(
     Output("index-scatter-graph", "figure"),
     Input("index-scatter-graph-data", "data"),
-    Input("feature-dropdown", "value"),
+    Input("acoustic-feature-current-bounds", "data"),
     Input("index-scatter-size-slider", "value"),
     Input("index-scatter-colour-select", "value"),
     Input("index-scatter-symbol-select", "value"),
@@ -78,7 +68,7 @@ def load_data(
 )
 def draw_figure(
     json_data: str,
-    feature_name: str,
+    feature_state: Dict[str, Any],
     dot_size: int,
     color: str,
     symbol: str,
@@ -86,6 +76,7 @@ def draw_figure(
     facet_col: str,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
+    feature = feature_state["feature"]
     fig = px.scatter(
         data_frame=pd.read_json(
             StringIO(json_data),
@@ -102,7 +93,7 @@ def draw_figure(
         facet_col=facet_col,
         labels=dict(
             hour="Hour",
-            value=feature_name.capitalize(),
+            value=feature.capitalize(),
         ),
         category_orders=category_orders,
     )

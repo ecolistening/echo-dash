@@ -22,8 +22,6 @@ def DateRangeFilter():
                                     dmc.DatePicker(
                                         id="date-picker",
                                         type="range",
-                                        persistence=True,
-                                        persistence_type="memory",
                                         allowDeselect=False,
                                     ),
                                 ]

@@ -18,7 +18,7 @@ from api import (
     FETCH_ACOUSTIC_FEATURES_UMAP,
     FETCH_DATASET_CATEGORIES,
 )
-from utils import list2tuple
+from utils import list2tuple, str2date
 
 PLOT_HEIGHT = 800
 
@@ -37,9 +37,10 @@ def toggle_page_info(
 @callback(
     Output("umap-graph-data", "data"),
     Input("dataset-select", "value"),
-    Input("date-picker", "value"),
+    Input("date-range-current-bounds", "data"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
+    prevent_initial_call=True,
 )
 def load_data(
     dataset_name: str,
@@ -47,17 +48,13 @@ def load_data(
     locations: List[str],
     file_filter_groups: Dict[int, List[str]],
 ) -> str:
-    # HACK: this should be available as debounce=True prop on the date-picker class
-    # but dash mantine components hasn't supported this for some reason
-    # rather than use a default value and double-compute, we'll just exit early
-    if len(list(filter(None, dates))) < 2:
-        return no_update
     files = dispatch(
         FETCH_FILES,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
         locations=list2tuple(locations),
     )
+
     return dispatch(
         FETCH_ACOUSTIC_FEATURES_UMAP,
         dataset_name=dataset_name,
@@ -111,6 +108,9 @@ def draw_figure(
     facet_col: str,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
+    if json_data is None or not len(json_data):
+        return no_update
+
     data = pd.read_json(
         StringIO(json_data),
         orient="table",
