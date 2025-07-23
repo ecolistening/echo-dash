@@ -2,6 +2,7 @@ import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import datetime as dt
+import itertools
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
@@ -9,15 +10,13 @@ import plotly.graph_objs as go
 from dash import html, ctx, dcc, callback, no_update
 from dash import Output, Input, State, ALL
 from dash_iconify import DashIconify
+from io import StringIO
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-from api import (
-    dispatch,
-    FETCH_FILES,
-    FETCH_DATASET_CATEGORIES,
-)
+from api import dispatch, FETCH_FILES
 from components.dataset_options_select import DatasetOptionsSelect
+from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
 from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
@@ -38,7 +37,8 @@ dash.register_page(
     name='Times'
 )
 
-layout = html.Div([
+layout = dmc.Box([
+    dcc.Store(id="times-graph-data"),
     FilterPanel([
         dmc.Group(
             align="start",
@@ -71,16 +71,22 @@ layout = html.Div([
                     id="times-facet-column-select",
                     label="Facet columns by"
                 ),
-                html.Div(
-                    style={
-                        "padding": "1rem",
-                        "display": "flex",
-                        "align-content": "center",
-                        "justify-content": "right",
-                    },
+                dmc.Flex(
+                    p="1rem",
+                    align="center",
+                    justify="right",
+                    direction="row",
                     children=[
-                        FigureDownloadWidget(
-                            plot_name="times-graph",
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                DataDownloadWidget(
+                                    graph_data="times-graph-data",
+                                ),
+                                FigureDownloadWidget(
+                                    plot_name="times-graph",
+                                ),
+                            ],
                         ),
                     ],
                 ),
@@ -134,43 +140,57 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
 
 @callback(
-    Output("times-graph", "figure"),
+    Output("times-graph-data", "data"),
     Input("dataset-select", "value"),
     Input("date-range-current-bounds", "data"),
     Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
+    Input("umap-filter-store", "data"),
+    prevent_initial_call=True,
+)
+def load_data(
+    dataset_name: str,
+    dates: List[str],
+    locations: List[str],
+    file_filter_groups: Dict[int, List[str]],
+) -> str:
+    return dispatch(
+        FETCH_FILES,
+        dataset_name=dataset_name,
+        dates=list2tuple(dates),
+        locations=list2tuple(locations),
+        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+    ).to_json(
+        date_format="iso",
+        orient="table",
+    )
+
+@callback(
+    Output("times-graph", "figure"),
+    Input("times-graph-data", "data"),
     Input("times-size-slider", "value"),
     Input("times-colour-select", "value"),
     Input("times-symbol-select", "value"),
     Input("times-facet-row-select", "value"),
     Input("times-facet-column-select", "value"),
+    Input("dataset-category-orders", "data"),
 )
 def draw_figure(
-    dataset_name: str,
-    dates: List[str],
-    locations: List[str],
+    json_data: str,
     dot_size: int,
     color: str,
     symbol: str,
     facet_row: str,
     facet_col: str,
+    category_orders: Dict[str, List[str]],
 ) -> go.Figure:
-    triggered_id = ctx.triggered_id
-    action = FETCH_FILES
-    params = dict(
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations)
-    )
-    logger.debug(f"{triggered_id=} {action=} {params=}")
-    data = dispatch(action, **params)
-
-    category_orders = dispatch(
-        FETCH_DATASET_CATEGORIES,
-        dataset_name=dataset_name,
-    )
+    if json_data is None or not len(json_data):
+        return no_update
 
     fig = px.scatter(
-        data,
+        data_frame=pd.read_json(
+            StringIO(json_data),
+            orient="table",
+        ),
         x="date",
         y="time",
         opacity=0.25,

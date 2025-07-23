@@ -8,6 +8,7 @@ from dash_iconify import DashIconify
 from callbacks.pages import index_box_callbacks
 
 from components.dataset_options_select import DatasetOptionsSelect
+from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
 from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
@@ -66,16 +67,22 @@ layout = dmc.Box([
                     id="index-box-facet-column-select",
                     label="Facet columns by"
                 ),
-                dmc.Box(
-                    style={
-                        "padding": "1rem",
-                        "display": "flex",
-                        "align-content": "center",
-                        "justify-content": "right",
-                    },
+                dmc.Flex(
+                    p="1rem",
+                    align="center",
+                    justify="right",
+                    direction="row",
                     children=[
-                        FigureDownloadWidget(
-                            plot_name="index-box-graph",
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                DataDownloadWidget(
+                                    graph_data="index-box-graph-data",
+                                ),
+                                FigureDownloadWidget(
+                                    plot_name="index-box-graph",
+                                ),
+                            ],
                         ),
                     ],
                 ),

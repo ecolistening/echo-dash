@@ -12,6 +12,7 @@ from callbacks.filter import acoustic_feature_filter_callbacks
 from callbacks.pages import distributions_callbacks
 
 from components.dataset_options_select import DatasetOptionsSelect
+from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
 from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
@@ -78,16 +79,22 @@ layout = dmc.Box([
                         persistence=True,
                     )
                 ]),
-                dmc.Box(
-                    style={
-                        "padding": "1rem",
-                        "display": "flex",
-                        "align-content": "center",
-                        "justify-content": "right",
-                    },
+                dmc.Flex(
+                    p="1rem",
+                    align="center",
+                    justify="right",
+                    direction="row",
                     children=[
-                        FigureDownloadWidget(
-                            plot_name="distributions-graph",
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                DataDownloadWidget(
+                                    graph_data="distributions-graph-data",
+                                ),
+                                FigureDownloadWidget(
+                                    plot_name="distributions-graph",
+                                ),
+                            ],
                         ),
                     ],
                 ),

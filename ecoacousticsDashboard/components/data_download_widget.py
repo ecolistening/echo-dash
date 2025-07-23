@@ -46,7 +46,7 @@ def register_download_callbacks(
         if json_data is None or not len(json_data): return no_update
         triggered_id = ctx.triggered_id
         action = "EXPORT_DATA"
-        file_name = f"{dataset_name}.{extension}"
+        file_name = f"{dataset_name}_{source_id}.{extension}"
         data = pd.read_json(StringIO(json_data), orient="table")
         logger.debug(f"{triggered_id=} {action=} {file_name=} {params=} rows={len(data)}")
         return dcc.send_data_frame(render(data), file_name, **params), False
@@ -66,10 +66,10 @@ def DataDownloadWidget(
     dmc.HoverCard
     """
     download_params = {
-        "csv": {"trigger_id": "dl_csv", "extension": "csv", "render": lambda df: df.to_csv, "params": {} },
-        "excel": {"trigger_id": "dl_excel", "extension": "xlsx", "render": lambda df: df.to_excel, "params": { "sheet_name": "Sheet 1" } },
-        "json": {"trigger_id": "dl_json", "extension": "json", "render": lambda df: df.to_json, "params": {} },
-        "parquet": {"trigger_id": "dl_parquet", "extension": "parquet", "render": lambda df: df.to_parquet, "params": {} },
+        "csv": {"trigger_id": f"{graph_data}-dl_csv", "extension": "csv", "render": lambda df: df.to_csv, "params": {} },
+        "excel": {"trigger_id": f"{graph_data}-dl_excel", "extension": "xlsx", "render": lambda df: df.to_excel, "params": { "sheet_name": "Sheet 1" } },
+        "json": {"trigger_id": f"{graph_data}-dl_json", "extension": "json", "render": lambda df: df.to_json, "params": {} },
+        "parquet": {"trigger_id": f"{graph_data}-dl_parquet", "extension": "parquet", "render": lambda df: df.to_parquet, "params": {} },
     }
 
     buttons = []
@@ -79,7 +79,7 @@ def DataDownloadWidget(
             children=dl_type,
             variant="filled",
         ))
-        register_download_callbacks(source_id=graph_data, sink_id="data-download", **dl_params)
+        register_download_callbacks(source_id=graph_data, sink_id=f"{graph_data}-download", **dl_params)
 
     return dmc.HoverCard(
         children=[
@@ -98,7 +98,7 @@ def DataDownloadWidget(
             ),
             dmc.HoverCardDropdown(
                 children=[
-                    dcc.Download(id="data-download"),
+                    dcc.Download(id=f"{graph_data}-download"),
                     dmc.Text("Export filtered data as..."),
                     dmc.Group(
                         grow=True,

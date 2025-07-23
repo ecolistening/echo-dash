@@ -55,7 +55,6 @@ def FileSelectionSidebarIcon():
 
 layout = dmc.Box([
     dcc.Store(id="umap-graph-data"),
-    dcc.Store(id="umap-category-orders"),
     FilterPanel([
         dmc.Group(
             align="start",

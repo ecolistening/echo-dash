@@ -12,6 +12,7 @@ from dash_iconify import DashIconify
 from callbacks.pages import index_averages_callbacks
 
 from components.dataset_options_select import DatasetOptionsSelect
+from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
 from components.figure_download_widget import FigureDownloadWidget
 from components.filter_panel import FilterPanel
@@ -96,16 +97,22 @@ layout = dmc.Box([
                 #     persistence=True,
                 #     id='separate-plots'
                 # ),
-                dmc.Box(
-                    style={
-                        "padding": "1rem",
-                        "display": "flex",
-                        "align-content": "center",
-                        "justify-content": "right",
-                    },
+                dmc.Flex(
+                    p="1rem",
+                    align="center",
+                    justify="right",
+                    direction="row",
                     children=[
-                        FigureDownloadWidget(
-                            plot_name="index-averages-graph",
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                DataDownloadWidget(
+                                    graph_data="index-averages-graph-data",
+                                ),
+                                FigureDownloadWidget(
+                                    plot_name="index-averages-graph",
+                                ),
+                            ],
                         ),
                     ],
                 ),

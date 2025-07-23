@@ -291,9 +291,9 @@ def update_active_file_filters(
                                     icon=DashIconify(icon="bi-x-circle"),
                                     value=selection_id,
                                     mt="xs",
-                                    children=f"UMAP Selection {selection_id}",
+                                    children=f"UMAP Selection {selection_id}: {len(file_ids)} samples",
                                 )
-                                for selection_id in file_filter_groups.keys()
+                                for selection_id, file_ids in file_filter_groups.items()
                             ]
                         )
                     )
