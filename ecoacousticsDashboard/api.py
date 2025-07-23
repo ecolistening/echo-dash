@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 
 from io import StringIO
+from dash import ctx
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
@@ -120,10 +121,22 @@ def fetch_acoustic_features(
     logger.debug(f"Applying filters {filters}")
     return filter_data(data, **filters)
 
+@functools.lru_cache(maxsize=10)
+def fetch_birdnet_species(
+    dataset_name: str,
+    **filters: Any,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
+    data = dataset.species_predictions
+    logger.debug(f"Applying filters {filters}")
+    return filter_data(data, **filters)
+
 @functools.lru_cache(maxsize=4)
 def fetch_acoustic_features_umap(
     dataset_name: str,
     sample_size: int,
+    file_ids: frozenset = frozenset(),
     **filters: Any,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     logger.debug(f"Fetch acoustic features for dataset={dataset_name}")
@@ -135,10 +148,11 @@ def fetch_acoustic_features_umap(
     # load from disk if its present
     if (umap_path := (dataset.path / "umap" / f"{umap_id}.parquet")).exists():
         logger.debug(f"Loading UMAP from {umap_path}")
-        return pd.read_parquet(umap_path)
+        data = pd.read_parquet(umap_path)
+        return data[~data["file_id"].isin(file_ids)]
     data = dataset.acoustic_features
     logger.debug(f"Applying filters {filters}")
-    data = filter_data(data, **filters)
+    data = filter_data(data, file_ids=file_ids, **filters)
     logger.debug(f"Pivoting features")
     data = data.pivot(
         index=data.columns[~data.columns.isin(["feature", "value"])],
@@ -146,7 +160,7 @@ def fetch_acoustic_features_umap(
         values='value',
     )
     sample = data.sample(min(sample_size, len(data)))
-    logger.debug(f"Running UMAP on subsample {sample_size}/{len(data)} ")
+    logger.debug(f"Running UMAP on subsample {len(sample)}/{len(data)} ")
     proj = umap_data(sample)
     logger.debug(f"UMAP complete")
     logger.debug(f"Persisting UMAP to {umap_path}")
@@ -189,16 +203,16 @@ setup()
 # (3) easier to switch to a service-based architecture at a later date
 
 def dispatch(
-    end_point: str,
+    action: str,
     default: Any | None = None,
     **payload: Dict[str, Any],
 ) -> Any:
+    triggered_id = ctx.triggered_id
+    logger.debug(f"{triggered_id=} {action=} {payload=}")
     try:
-        func = API[end_point]
-        logger.debug(f"Sending {end_point}")
+        func = API[action]
         return func(**payload)
     except Exception as e:
-        logger.warning(f"{end_point} failed")
         logger.error(e)
         return default
 
@@ -214,6 +228,7 @@ FETCH_FILES = "fetch_files"
 FETCH_LOCATIONS = "fetch_locations"
 FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
+FETCH_BIRDNET_SPECIES = "fetch_birdnet_species"
 FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
 
 API = {
@@ -230,4 +245,5 @@ API = {
     FETCH_LOCATIONS: fetch_locations,
     FETCH_ACOUSTIC_FEATURES: fetch_acoustic_features,
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
+    FETCH_BIRDNET_SPECIES: fetch_birdnet_species,
 }

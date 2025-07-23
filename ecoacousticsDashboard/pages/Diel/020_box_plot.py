@@ -1,25 +1,22 @@
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-import plotly.express as px
-import plotly.graph_objects as go
 
-from dash import html, ctx, dcc, callback, Output, Input, State, ALL
+from dash import dcc
 from dash_iconify import DashIconify
-from loguru import logger
-from typing import List
 
-from api import (
-    dispatch,
-    FETCH_ACOUSTIC_FEATURES,
-    FETCH_DATASET_CATEGORIES,
-)
+from callbacks.pages import index_box_callbacks
+
 from components.dataset_options_select import DatasetOptionsSelect
+from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
+from components.filter_panel import FilterPanel
+from components.date_range_filter import DateRangeFilter
+from components.site_level_filter import SiteLevelFilter
+from components.environmental_filter import EnvironmentalFilter
+from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
-from utils import list2tuple
-import components
 
 PAGE_NAME = "index-box-plot"
 PAGE_TITLE = "Box Plot of Acoustic Descriptor by Time of Day"
@@ -32,7 +29,28 @@ dash.register_page(
 
 PLOT_HEIGHT = 800
 
-layout = html.Div([
+layout = dmc.Box([
+    dcc.Store(id="index-box-graph-data"),
+    FilterPanel([
+        dmc.Group(
+            align="start",
+            grow=True,
+            children=[
+                SiteLevelFilter(),
+                DateRangeFilter(),
+                EnvironmentalFilter(),
+            ]
+        ),
+        dmc.Space(h=10),
+        dmc.Group(
+            align="start",
+            grow=True,
+            children=[
+                AcousticFeatureFilter(),
+            ]
+        ),
+    ]),
+    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
@@ -49,16 +67,22 @@ layout = html.Div([
                     id="index-box-facet-column-select",
                     label="Facet columns by"
                 ),
-                html.Div(
-                    style={
-                        "padding": "1rem",
-                        "display": "flex",
-                        "align-content": "center",
-                        "justify-content": "right",
-                    },
+                dmc.Flex(
+                    p="1rem",
+                    align="center",
+                    justify="right",
+                    direction="row",
                     children=[
-                        FigureDownloadWidget(
-                            plot_name="index-box-graph",
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                DataDownloadWidget(
+                                    graph_data="index-box-graph-data",
+                                ),
+                                FigureDownloadWidget(
+                                    plot_name="index-box-graph",
+                                ),
+                            ],
                         ),
                     ],
                 ),
@@ -104,90 +128,5 @@ layout = html.Div([
         placement="bottom",
         children=Footer("index-box"),
     ),
-    # FIXME
-    # components.SoundSampleModal(
-    #     PAGE_NAME,
-    # ),
 ])
 
-@callback(
-    Output("index-box-page-info", "is_open"),
-    Input("info-icon", "n_clicks"),
-    State("index-box-page-info", "is_open"),
-    prevent_initial_call=True,
-)
-def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-    return not is_open
-
-
-@callback(
-    Output("index-box-graph", "figure"),
-    State("dataset-select", "value"),
-    Input("date-picker", "value"),
-    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input("feature-dropdown", "value"),
-    Input("index-box-time-aggregation", "value"),
-    Input("index-box-outliers-tickbox", "checked"),
-    Input("index-box-colour-select", "value"),
-    Input("index-box-facet-row-select", "value"),
-    Input("index-box-facet-column-select", "value"),
-)
-def update_graph(
-    dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    feature: str,
-    time_agg: str,
-    outliers: bool,
-    color: str,
-    facet_row: str,
-    facet_col: str,
-) -> go.Figure:
-    data = dispatch(
-        FETCH_ACOUSTIC_FEATURES,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        feature=feature,
-    ).sort_values(by='recorder')
-
-    data = data.assign(
-        time=data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0,
-        hour=data.timestamp.dt.hour,
-        minute=data.timestamp.dt.minute
-    )
-
-    category_orders = dispatch(
-        FETCH_DATASET_CATEGORIES,
-        dataset_name=dataset_name,
-    )
-
-    fig = px.box(
-        data,
-        x=time_agg,
-        y='value',
-        hover_name='file',
-        hover_data=['file', 'timestamp', 'path'], # Path last for sound sample modal
-        height=PLOT_HEIGHT,
-        color=color,
-        facet_row=facet_row,
-        facet_col=facet_col,
-        # facet_col_wrap=4,
-        points='outliers' if outliers else False,
-        category_orders=category_orders,
-    )
-
-    # Select sample for audio modal
-    fig.update_layout(clickmode='event+select')
-
-    # Add centered title
-    fig.update_layout(
-        title={
-            'text':f"{PAGE_TITLE} ({feature})",
-            'x':0.5,
-            'y':0.97,
-            'font':{'size':24}
-        }
-    )
-
-    return fig

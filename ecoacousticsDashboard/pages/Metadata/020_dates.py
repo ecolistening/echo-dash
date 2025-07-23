@@ -1,10 +1,12 @@
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
+import datetime as dt
+import itertools
 import pandas as pd
 import plotly.graph_objects as go
 
-from dash import html, ctx, dcc, callback
+from dash import html, ctx, dcc, callback, no_update
 from dash import Output, Input, State, ALL
 from dash_iconify import DashIconify
 from io import StringIO
@@ -12,12 +14,14 @@ from loguru import logger
 from plotly_calplot import calplot
 from typing import Any, Dict, List, Tuple
 
-from api import (
-    dispatch,
-    FETCH_FILES,
-)
+from api import dispatch, FETCH_FILES
 from components.figure_download_widget import FigureDownloadWidget
+from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
+from components.filter_panel import FilterPanel
+from components.date_range_filter import DateRangeFilter
+from components.site_level_filter import SiteLevelFilter
+from components.environmental_filter import EnvironmentalFilter
 from components.footer import Footer
 from utils import list2tuple
 
@@ -26,21 +30,40 @@ PAGE_TITLE = 'Recording Dates'
 PLOT_HEIGHT = 800
 dash.register_page(__name__, title=PAGE_TITLE, name='Dates')
 
-layout = html.Div([
+layout = dmc.Box([
+    dcc.Store(id="dates-graph-data"),
+    FilterPanel([
+        dmc.Group(
+            align="start",
+            grow=True,
+            children=[
+                SiteLevelFilter(),
+                DateRangeFilter(),
+                EnvironmentalFilter(),
+            ]
+        ),
+    ]),
+    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
             children=[
-                html.Div(
-                    style={
-                        "padding": "1rem",
-                        "display": "flex",
-                        "align-content": "center",
-                        "justify-content": "right",
-                    },
+                dmc.Flex(
+                    p="1rem",
+                    align="center",
+                    justify="right",
+                    direction="row",
                     children=[
-                        FigureDownloadWidget(
-                            plot_name="dates-graph",
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                DataDownloadWidget(
+                                    graph_data="dates-graph-data",
+                                ),
+                                FigureDownloadWidget(
+                                    plot_name="dates-graph",
+                                ),
+                            ],
                         ),
                     ],
                 ),
@@ -68,26 +91,46 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
 
 @callback(
-    Output("dates-graph", "figure"),
+    Output("dates-graph-data", "data"),
     Input("dataset-select", "value"),
-    Input("date-picker", "value"),
-    Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
+    Input("date-range-current-bounds", "data"),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    Input("umap-filter-store", "data"),
+    prevent_initial_call=True,
 )
-def draw_figure(
+def load_data(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
-) -> go.Figure:
-    triggered_id = ctx.triggered_id
-    action = FETCH_FILES
-    params = dict(
+    file_filter_groups: Dict[int, List[str]],
+) -> str:
+    return dispatch(
+        FETCH_FILES,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
-        locations=list2tuple(locations)
+        locations=list2tuple(locations),
+        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+    ).to_json(
+        date_format="iso",
+        orient="table",
     )
-    logger.debug(f"{triggered_id=} {action=} {params=}")
-    data = dispatch(action, **params)
-    data = data.groupby('date').agg('count').reset_index()
+
+@callback(
+    Output("dates-graph", "figure"),
+    Input("dates-graph-data", "data"),
+)
+def draw_figure(
+    json_data: str,
+) -> go.Figure:
+    if json_data is None or not len(json_data):
+        return no_update
+
+    data = (
+        pd.read_json(StringIO(json_data), orient="table")
+        .groupby('date')
+        .agg('count')
+        .reset_index()
+    )
     fig = calplot(
         data,
         x='date',

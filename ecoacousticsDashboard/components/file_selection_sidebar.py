@@ -3,92 +3,129 @@ import dash_mantine_components as dmc
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-from dash import callback, dcc, html, ctx
+from dash import callback, dcc, html, ctx, no_update
 from dash import Output, Input, State
 from dash import MATCH
 from dash import exceptions
 from dash_iconify import DashIconify
 from io import StringIO
 from loguru import logger
-from typing import (
-    Any,
-    Dict,
-    List,
-    Tuple,
-)
+from typing import Any, Dict, List, Tuple
 
-from api import (
-    dispatch,
-    FETCH_FILES,
-)
+from api import dispatch, FETCH_FILES, FETCH_DATASET_CONFIG
 from utils import audio_bytes_to_enc
 from utils.webhost import AudioAPI
 
 PAGE_LIMIT = 10
 
 def FileSelectionSidebar(
+    graph_data: str,
+    filter_data: str,
+    graph: str,
+    sibling: str,
     span: int = 4
 ) -> dmc.GridCol:
-    style_hidden = dict(display="none")
-    style_visible = dict(display="block")
+    """Render a sidebar for selecting and filtering data points.
+    The sidebar is toggled by adjusting the style of itself and its sibling
+
+    Parameters
+    ----------
+    graph_data: str
+        The element ID for a dcc.Store containing json graph data
+    filter_data: str
+        The element ID for a dcc.Store containing a discluded list of file IDs
+    graph: str
+        The element ID for a dcc.Graph
+    sibling: str
+        The element ID for a sibling dmc.GridCol containing the graph
+
+    Returns
+    -------
+    dmc.GridCol
+        The sidebar container, initialized as hidden
+    """
+    style_hidden = {
+        "display":"none",
+        "margin-top": "1rem",
+        "border-left": "1px solid var(--mantine-color-gray-3)",
+        "padding-left": "1rem",
+    }
+    style_visible = {
+        "display": "block",
+        "margin-top": "1rem",
+        "border-left": "1px solid var(--mantine-color-gray-3)",
+        "padding-left": "1rem",
+    }
 
     component = dmc.GridCol(
-        id=f"umap-toggle-sidebar",
+        id="file-sidebar",
         span=0,
         style=style_hidden,
         children=html.Div([
-            dcc.Store(id="umap-sidebar-file-data"),
+            dcc.Store(id="file-sidebar-store"),
             dmc.Stack(
-                style={"margin-top": "1rem"},
+                m="1rem",
                 children=[
-                    dmc.Grid(
-                        style={"margin": "0 1rem 0 1rem"},
+                    dmc.Group(
+                        grow=True,
                         children=[
-                            dmc.GridCol(
-                                span=5,
-                                children=dmc.Button(
-                                    "Filter Selected",
-                                    id="selection-sidebar-filter-disclude-button",
-                                    variant="light",
-                                    color="red",
-                                    n_clicks=0,
-                                ),
+                            dmc.Button(
+                                "Selected",
+                                id="file-sidebar-disclude-button",
+                                leftSection=DashIconify(icon="cil:filter"),
+                                variant="light",
+                                color="red",
+                                n_clicks=0,
                             ),
-                            dmc.GridCol(
-                                span=5,
-                                children=dmc.Button(
-                                    "Filter Remaining",
-                                    id="selection-sidebar-filter-include-button",
-                                    variant="light",
-                                    color="red",
-                                    n_clicks=0,
-                                ),
+                            dmc.Button(
+                                "Others",
+                                id="file-sidebar-include-button",
+                                leftSection=DashIconify(icon="cil:filter"),
+                                variant="light",
+                                color="green",
+                                n_clicks=0,
                             ),
-                            dmc.GridCol(
-                                span=1,
-                                children=[],
+                            dmc.Button(
+                                "Undo",
+                                id="file-sidebar-undo-button",
+                                leftSection=DashIconify(icon="cil:action-undo"),
+                                variant="light",
+                                color="blue",
+                                n_clicks=0,
                             ),
-                            dmc.GridCol(
-                                span=1,
+                            dmc.Button(
+                                "Reset",
+                                id="file-sidebar-reset-button",
+                                leftSection=DashIconify(icon="fluent:arrow-reset-20-filled"),
+                                variant="light",
+                                color="blue",
+                                n_clicks=0,
+                            ),
+                            dmc.Box(
+                                style={
+                                    "padding": "1rem",
+                                    "display": "flex",
+                                    "align-content": "center",
+                                    "justify-content": "right",
+                                },
                                 children=dmc.ActionIcon(
                                     DashIconify(
                                         icon="system-uicons:cross",
                                         width=24,
                                     ),
-                                    id="umap-close-sidebar",
+                                    id="file-close-sidebar",
                                     variant="light",
-                                    color="blue",
                                     size="lg",
                                     n_clicks=0,
                                 ),
-                            ),
+                            )
                         ]
                     ),
                     dmc.Group(
                         grow=True,
                         children=[
                             dmc.Text(
-                                id="selection-sidebar-files-count",
+                                id="file-sidebar-files-count",
                                 size="sm",
                             ),
                         ],
@@ -97,7 +134,7 @@ def FileSelectionSidebar(
                         grow=True,
                         children=[
                             dmc.Pagination(
-                                id="selection-sidebar-files-pagination",
+                                id="file-sidebar-files-pagination",
                                 total=1,
                                 value=1,
                                 size="sm",
@@ -109,7 +146,7 @@ def FileSelectionSidebar(
                         grow=True,
                         children=[
                             dmc.Accordion(
-                                id="selection-sidebar-files-accordion",
+                                id="file-sidebar-files-accordion",
                                 chevronPosition="right",
                                 value=[],
                                 children=[],
@@ -122,47 +159,107 @@ def FileSelectionSidebar(
     )
 
     @callback(
-        Output("graph-container", "span", allow_duplicate=True),
-        Output("umap-toggle-sidebar", "span", allow_duplicate=True),
-        Output("umap-toggle-sidebar", "style", allow_duplicate=True),
-        Input("umap-close-sidebar", "n_clicks"),
+        Output(sibling, "span", allow_duplicate=True),
+        Output("file-sidebar", "span", allow_duplicate=True),
+        Output("file-sidebar", "style", allow_duplicate=True),
+        State("file-sidebar", "style"),
+        Input("file-close-sidebar", "n_clicks"),
+        Input("toggle-file-sidebar", "n_clicks"),
         prevent_initial_call=True
     )
-    def close_selection_sidebar(n_clicks: int):
+    def toggle_selection_sidebar(
+        current_style: Dict[str, str],
+        close: int,
+        n_clicks: int,
+    ) -> Tuple[int, int, Dict[str, str]]:
+        """Toggle the sidebar
+
+        Parameters
+        ----------
+        current_style: int
+            The current style of the sidebar
+        close: int
+            Input from the close element (not used for governing state)
+        n_clicks: int
+            Input from the toggle element (not used for governing state)
+
+        Returns
+        -------
+        sibling_span: int
+            Updated span of the sibling element
+        sidebar_span: int
+            Updated span of the sidebar element
+        sidebar_style: dict
+            Updated styling of the sidebar element (resetting display)
+        """
+        if current_style == style_visible:
+            return (
+                sibling_span := 12,
+                sidebar_span := 0,
+                sidebar_style := style_hidden,
+            )
         return (
-            graph_container_span := 12,
-            sidebar_span := 0,
-            sidebar_style := style_hidden,
+            sibling_span := 12 - span,
+            sidebar_span := span,
+            sidebar_style := style_visible,
         )
 
     @callback(
-        Output("graph-container", "span", allow_duplicate=True),
-        Output("umap-toggle-sidebar", "span", allow_duplicate=True),
-        Output("umap-toggle-sidebar", "style", allow_duplicate=True),
-        Output("umap-sidebar-file-data", "data"),
-        Output("selection-sidebar-files-count", "children", allow_duplicate=True),
-        Output("selection-sidebar-files-pagination", "total"),
+        Output(sibling, "span", allow_duplicate=True),
+        Output("file-sidebar", "span", allow_duplicate=True),
+        Output("file-sidebar", "style", allow_duplicate=True),
+        Output("file-sidebar-store", "data"),
+        Output("file-sidebar-files-count", "children", allow_duplicate=True),
+        Output("file-sidebar-files-pagination", "total"),
         State("dataset-select", "value"),
-        Input("umap-graph", "selectedData"),
+        State("file-sidebar", "span"),
+        State("file-sidebar", "style"),
+        Input(graph, "selectedData"),
         prevent_initial_call=True,
     )
     def toggle_selection_sidebar(
         dataset_name: str,
+        current_span: int,
+        current_style: Dict[str, str],
         selected_data: Dict[str, Any],
     ) -> Tuple[int, int, Dict[str, str], str, str, int]:
+        """Toggle the sidebar and populate the selected data store
+
+        Parameters
+        ----------
+        dataset_name: str
+            The name of the currently selected dataset
+        current_span: int
+            The current span of the sidebar
+        current_style: int
+            The current style of the sidebar
+        selected_data: dict
+            The data as returned by the 'selectedData' hook on a plotly graph object
+
+        Returns
+        -------
+        sibling_span: int
+            Updated span of the sibling element
+        sidebar_span: int
+            Updated span of the sidebar element
+        sidebar_style: dict
+            Updated styling of the sidebar element (resetting display)
+        selected_data_json: str
+            The data for selected data points encoded as a json string
+        selected_text: str
+            Pagination text describing which page we are on
+        total_pages: int
+            The total number of pages for pagination
+        """
         if selected_data is None or len((points := selected_data['points'])) == 0:
             return (
-                graph_container_span := 12,
-                sidebar_span := 0,
-                sidebar_style := style_hidden,
+                sibling_span := 12 - current_span,
+                sidebar_span := current_span,
+                sidebar_style := current_style,
                 selected_data_json := "",
                 selected_text := "",
                 total_pages := 1,
             )
-        logger.debug(
-            f"Trigger ID={ctx.triggered_id}: "
-            f"selected={len(points)} {dataset_name=}"
-        )
         data = dispatch(
             FETCH_FILES,
             dataset_name=dataset_name,
@@ -177,7 +274,7 @@ def FileSelectionSidebar(
         end = min(total, PAGE_LIMIT * start)
 
         return (
-            graph_container_span := 12 - span,
+            sibling_span := 12 - span,
             sidebar_span := span,
             sidebar_style := style_visible,
             selected_data_json := data.to_json(date_format="iso", orient="table"),
@@ -186,25 +283,41 @@ def FileSelectionSidebar(
         )
 
     @callback(
-        Output("selection-sidebar-files-accordion", "children"),
-        Output("selection-sidebar-files-count", "children", allow_duplicate=True),
-        State("umap-sidebar-file-data", "data"),
-        Input("selection-sidebar-files-pagination", "value"),
-        Input("selection-sidebar-files-pagination", "total"),
+        Output("file-sidebar-files-accordion", "children"),
+        Output("file-sidebar-files-count", "children", allow_duplicate=True),
+        State("file-sidebar-store", "data"),
+        Input("file-sidebar-files-pagination", "value"),
+        Input("file-sidebar-files-pagination", "total"),
         prevent_initial_call=True,
     )
     def change_page(
-        json_data: str,
+        selected_json_data: str,
         current_page: int,
         total_pages: int,
     ) -> html.Div:
-        if json_data == "" or json_data is None:
+        """Populate the current page with an accordion for each file
+
+        Parameters
+        ----------
+        selected_json_data: str
+            The file data as JSON parsable as a table using pandas
+        current_page: int
+            The selected page number
+        open_values: str
+            The total number of pages
+
+        Returns
+        -------
+        children: list
+            A list of dmc.AccordionItems for each file_id
+        """
+        if selected_json_data == "" or selected_json_data is None:
             return (
-                accordion := html.Div(),
+                accordion_items := [],
                 selected_text := "",
             )
 
-        data = pd.read_json(StringIO(json_data), orient="table")
+        data = pd.read_json(StringIO(selected_json_data), orient="table")
         page_data = data.iloc[(current_page - 1):(current_page - 1) + PAGE_LIMIT]
 
         logger.debug(
@@ -212,51 +325,71 @@ def FileSelectionSidebar(
             f"{current_page=} selected={len(page_data)}"
         )
 
-        accordion = html.Div([
+        accordion_items = [
             dmc.AccordionItem(
                 value=row["file_id"],
                 children=[
                     dmc.AccordionControl(row["file_name"]),
                     dmc.AccordionPanel(
                         html.Div(
-                            id={"type": "selection-sidebar-file-data", "index": row["file_id"]},
+                            id={"type": "file-sidebar-file-data", "index": row["file_id"]},
                             children=[],
                         )
                     )
                 ]
             )
             for _, row in page_data.iterrows()
-        ])
+        ]
 
         total = len(data)
         start = PAGE_LIMIT * (current_page - 1) + 1
         end = min(total, PAGE_LIMIT * current_page)
         selected_text = f"Showing {start} - {end} / {total}",
 
-        return accordion, selected_text
+        return accordion_items, selected_text
 
     @callback(
-        Output({"type": "selection-sidebar-file-data", "index": MATCH}, "children"),
+        Output({"type": "file-sidebar-file-data", "index": MATCH}, "children"),
         State("dataset-select", "value"),
-        State("umap-sidebar-file-data", "data"),
-        State({"type": "selection-sidebar-file-data", "index": MATCH}, "id"),
-        Input("selection-sidebar-files-accordion", "value"),
+        State("file-sidebar-store", "data"),
+        State({"type": "file-sidebar-file-data", "index": MATCH}, "id"),
+        Input("file-sidebar-files-accordion", "value"),
         prevent_initial_call=True,
     )
     def toggle_file_panel(
         dataset_name: str,
-        json_data: str,
+        selected_json_data: str,
         matched: str,
         open_values: str,
     ) -> html.Div:
+        """Toggle the accordion panel for a single file,
+        showing file metadata and a html audio element
+
+        Parameters
+        ----------
+        dataset_name: str
+            The name of the currently selected dataset
+        selected_json_data: str
+            The file data as JSON parsable as a table using pandas
+        matched: str
+            The pattern matcher for the selected file, where 'index' is a file_id
+        open_values: str
+            The list of file_ids present on the current page
+
+        Returns
+        -------
+        component: dmc.Box
+            A html element containing file metadata and audio
+        """
         if (file_id := matched["index"]) not in open_values:
             raise exceptions.PreventUpdate
 
-        data = pd.read_json(StringIO(json_data), orient="table").set_index("file_id")
+        config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name)
+        data = pd.read_json(StringIO(selected_json_data), orient="table").set_index("file_id")
 
         file_info = data.loc[file_id]
-        audio_bytes, mime_type, _ = AudioAPI.get_audio_bytes(file_info.file_path, dataset_name)
-        return html.Div([
+        audio_bytes, mime_type, _ = AudioAPI.get_audio_bytes(file_info.file_path, dataset_name, config)
+        return dmc.Box([
             dcc.Loading(
                 html.Audio(
                     id="audio-player",
@@ -267,27 +400,110 @@ def FileSelectionSidebar(
         ])
 
     @callback(
-        Output("selection-sidebar-filter-include-button", "n_clicks"),
-        Input("selection-sidebar-filter-include-button", "n_clicks"),
+        Output(filter_data, "data", allow_duplicate=True),
+        State(graph_data, "data"),
+        State("file-sidebar-store", "data"),
+        State(filter_data, "data"),
+        Input("file-sidebar-include-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def include_file_selection(
+        graph_json_data: str,
+        selected_json_data: str,
+        filter_groups: Dict[str, List[str]],
         n_clicks: int,
-    ) -> str:
-        # TODO: include filter means adding all other file_ids to the store
-        logger.debug("clicked", n_clicks)
-        return n_clicks
+    ) -> Dict[str, List[str]]:
+        """Add *all other* file_ids to the filter store
+
+        Parameters
+        ----------
+        graph_json_data: str
+            The graph data as JSON parsable as a table using pandas
+        selected_json_data: str
+            The file data as JSON parsable as a table using pandas
+        filtered_file_ids: list
+            A list of unique file ids currently discluded from the graph
+
+        Returns
+        -------
+        filter_data: list
+            An updated list of unique file ids to disclude from the graph
+        """
+        if not n_clicks: return no_update
+        selected_file_ids = pd.read_json(StringIO(selected_json_data), orient="table")["file_id"]
+        graph_data = pd.read_json(StringIO(graph_json_data), orient="table")
+        file_ids = set(graph_data.loc[~graph_data["file_id"].isin(selected_file_ids), "file_id"].tolist())
+        selection_id = len(filter_groups.keys()) + 1
+        filter_groups[selection_id] = list(file_ids)
+        return filter_groups
 
     @callback(
-        Output("selection-sidebar-filter-disclude-button", "n_clicks"),
-        Input("selection-sidebar-filter-disclude-button", "n_clicks"),
+        Output(filter_data, "data", allow_duplicate=True),
+        State("file-sidebar-store", "data"),
+        State(filter_data, "data"),
+        Input("file-sidebar-disclude-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def disclude_file_selection(
+        selected_json_data: str,
+        filter_groups: Dict[str, List[str]],
+        n_clicks: int,
+    ) -> Dict[str, List[str]]:
+        """Add *selected* file_ids to the filter store
+
+        Parameters
+        ----------
+        selected_json_data: str
+            The file data as JSON parsable as a table using pandas
+        filter_groups: dict
+            File ids indexed by selection event
+
+        Returns
+        -------
+        filter_groups: dict
+            A dictionary containing selected file ids indexed by selection event
+        """
+        if not n_clicks: return no_update
+        file_ids = set(pd.read_json(StringIO(selected_json_data), orient="table")["file_id"].tolist())
+        selection_id = len(filter_groups.keys()) + 1
+        filter_groups[selection_id] = list(file_ids)
+        return filter_groups
+
+    @callback(
+        Output(filter_data, "data", allow_duplicate=True),
+        State(filter_data, "data"),
+        Input("file-sidebar-undo-button", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def undo_last_file_selection(
+        filter_groups: Dict[str, Any],
         n_clicks: int,
     ) -> str:
-        # TODO: disclude filter means adding these file_ids to the store
-        logger.debug("clicked", n_clicks)
-        return n_clicks
+        """Undo the last file filter
+
+        Returns
+        -------
+        filter_groups: dict
+            A dictionary containing selected file ids indexed by selection event
+        """
+        if not n_clicks: return no_update
+        filter_groups.pop(len(filter_groups.keys()), None)
+        return filter_groups
+
+    @callback(
+        Output(filter_data, "data", allow_duplicate=True),
+        Input("file-sidebar-reset-button", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def reset_file_selection(n_clicks: int) -> str:
+        """Reset the scope of the file filters, reverting back to the original graph data
+
+        Returns
+        -------
+        filter_groups: dict
+            An empty dict
+        """
+        if not n_clicks: return no_update
+        return {}
 
     return component

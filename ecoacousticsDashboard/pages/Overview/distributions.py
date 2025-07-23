@@ -1,26 +1,26 @@
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-import plotly.express as px
-import plotly.graph_objs as go
 
-from dash import html, ctx, dcc, callback
-from dash import Output, State, Input, ALL
+from dash import dcc
 from dash_iconify import DashIconify
-from loguru import logger
-from typing import Any, Dict, List, Tuple
 
-from api import (
-    dispatch,
-    FETCH_ACOUSTIC_FEATURES,
-    FETCH_DATASET_CATEGORIES,
-)
+from callbacks.filter import date_filter_callbacks
+from callbacks.filter import file_filter_callbacks
+from callbacks.filter import site_level_filter_callbacks
+from callbacks.filter import acoustic_feature_filter_callbacks
+from callbacks.pages import distributions_callbacks
+
 from components.dataset_options_select import DatasetOptionsSelect
+from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
+from components.filter_panel import FilterPanel
+from components.date_range_filter import DateRangeFilter
+from components.site_level_filter import SiteLevelFilter
+from components.environmental_filter import EnvironmentalFilter
+from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
-from utils import list2tuple
-from utils.content import get_tabs
 
 PAGE_NAME = 'distributions'
 PAGE_TITLE = 'Soundscape Descriptor Distributions'
@@ -32,7 +32,28 @@ dash.register_page(
     name='Distributions',
 )
 
-layout = html.Div([
+layout = dmc.Box([
+    dcc.Store(id="distributions-graph-data"),
+    FilterPanel([
+        dmc.Group(
+            align="start",
+            grow=True,
+            children=[
+                SiteLevelFilter(),
+                DateRangeFilter(),
+                EnvironmentalFilter(),
+            ]
+        ),
+        dmc.Space(h=10),
+        dmc.Group(
+            align="start",
+            grow=True,
+            children=[
+                AcousticFeatureFilter(),
+            ]
+        ),
+    ]),
+    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
@@ -49,7 +70,7 @@ layout = html.Div([
                     id="distributions-facet-column-select",
                     label="Facet columns by"
                 ),
-                html.Div([
+                dmc.Box([
                     dmc.Chip(
                         'Normalised',
                         id="distributions-normalised-tickbox",
@@ -58,16 +79,22 @@ layout = html.Div([
                         persistence=True,
                     )
                 ]),
-                html.Div(
-                    style={
-                        "padding": "1rem",
-                        "display": "flex",
-                        "align-content": "center",
-                        "justify-content": "right",
-                    },
+                dmc.Flex(
+                    p="1rem",
+                    align="center",
+                    justify="right",
+                    direction="row",
                     children=[
-                        FigureDownloadWidget(
-                            plot_name="distributions-graph",
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                DataDownloadWidget(
+                                    graph_data="distributions-graph-data",
+                                ),
+                                FigureDownloadWidget(
+                                    plot_name="distributions-graph",
+                                ),
+                            ],
                         ),
                     ],
                 ),
@@ -86,70 +113,3 @@ layout = html.Div([
         children=Footer("distributions"),
     ),
 ])
-
-@callback(
-    Output("distributions-page-info", "is_open"),
-    Input("info-icon", "n_clicks"),
-    State("distributions-page-info", "is_open"),
-    prevent_initial_call=True,
-)
-def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-    return not is_open
-
-
-@callback(
-    Output("distributions-graph", 'figure'),
-    State("dataset-select", 'value'),
-    Input("date-picker", 'value'),
-    Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
-    Input("feature-dropdown", 'value'),
-    Input("distributions-colour-select", 'value'),
-    Input("distributions-facet-row-select", 'value'),
-    Input("distributions-facet-column-select", 'value'),
-    Input("distributions-normalised-tickbox", 'checked'),
-)
-def draw_figure(
-    dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    feature: str,
-    color: str,
-    facet_row: str,
-    facet_col: str,
-    normalised: bool,
-) -> go.Figure:
-    data = dispatch(
-        FETCH_ACOUSTIC_FEATURES,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        feature=feature,
-    )
-    category_orders = dispatch(
-        FETCH_DATASET_CATEGORIES,
-        dataset_name=dataset_name,
-    )
-
-    fig = px.histogram(
-        data,
-        x='value',
-        marginal='rug',
-        opacity=0.75,
-        height=PLOTHEIGHT,
-        color=color,
-        facet_row=facet_row,
-        facet_col=facet_col,
-        histnorm='percent' if normalised else None,
-        category_orders=category_orders,
-    )
-
-    fig.update_layout(
-        title={
-            'text':f"{PAGE_TITLE} ({feature})",
-            'x':0.5,
-            'y':0.97,
-            'font':{'size':24}
-        }
-    )
-
-    return fig

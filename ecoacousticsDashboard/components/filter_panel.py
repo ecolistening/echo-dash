@@ -6,29 +6,26 @@ from dash_iconify import DashIconify
 
 from typing import List
 
-def ControlsPanel(
+def FilterPanel(
     children: List,
-    is_open: bool = False,
 ) -> dmc.Accordion:
     return dmc.Accordion(
         chevronPosition="right",
         variant="separated",
         radius="sm",
-        value=["controls"] if is_open else [],
         children=[
             dmc.AccordionItem(
-                value="controls",
+                value="filters",
                 children=[
                     dmc.AccordionControl(
-                        "Controls",
+                        "Filters",
                         icon=DashIconify(
-                            icon="oui:controls-horizontal",
+                            icon="cil:filter",
                             width=24,
-                            color="blue",
                         ),
                     ),
                     dmc.AccordionPanel(
-                        pb="1rem",
+                        style={"padding": "0 0 1rem 0"},
                         children=children
                     )
                 ]

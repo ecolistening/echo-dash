@@ -12,11 +12,9 @@ from api import (
     FETCH_DATASET_CONFIG,
     SET_DATASET_CONFIG,
     FETCH_DATASET_SITES_TREE,
+    FETCH_DATASET_CATEGORIES,
 )
-from store import (
-    DATASET_CONFIG_STORE,
-    SITES_TREE_STORE,
-)
+from store import DATASET_CONFIG_STORE
 
 @callback(
     Output(DATASET_CONFIG_STORE, "data"),
@@ -49,31 +47,15 @@ def set_dataset_config(
     return dispatch(action, **params)
 
 @callback(
-    Output(SITES_TREE_STORE, "data"),
-    Input("dataset-select", "value"),
-    prevent_initial_call=True,
-)
-def get_dataset_sites_tree(dataset_name: str) -> Dict[str, Any]:
-    trigger_id = ctx.triggered_id
-    action = FETCH_DATASET_SITES_TREE
-    params = dict(dataset_name=dataset_name)
-    logger.debug(f"{trigger_id=} {action=} {params=}")
-    tree = dispatch(action, **params)
-    return bt.tree_to_dict(tree)
-
-@callback(
     Output("dataset-settings-sites-form", "children"),
-    Input(DATASET_CONFIG_STORE, "data"),
-    Input(SITES_TREE_STORE, "data"),
-    prevent_initial_call=True,
+    Input("dataset-select", "value"),
 )
 def set_sites_form(
-    config: Dict[str, Any],
-    tree_dict: List[str],
+    dataset_name: str
 ) -> List[dmc.TextInput]:
-    if config is None or tree_dict is None:
-        return []
-    tree = bt.dict_to_tree(tree_dict)
+    params = dict(dataset_name=dataset_name)
+    config = dispatch(FETCH_DATASET_CONFIG, **params)
+    tree = dispatch(FETCH_DATASET_SITES_TREE, **params)
     return [
         dmc.TextInput(
             label=f"Level {i}",
@@ -104,3 +86,12 @@ def toggle_settings_drawer(*args: Any):
     elif ctx.triggered_id == "dataset-settings-cancel-button":
         return False
     return False
+
+@callback(
+    Output("dataset-category-orders", "data"),
+    Input("dataset-select", "value"),
+)
+def load_categories(
+    dataset_name: str,
+) -> Dict[str, List[str]]:
+    return dispatch(FETCH_DATASET_CATEGORIES, dataset_name=dataset_name)
