@@ -4,7 +4,10 @@ from dash import ctx, callback, Output, Input, State, html
 from loguru import logger
 from typing import Any, Dict, Tuple, List
 
-from api import dispatch
+from api import (
+    dispatch,
+    FETCH_DATASET_WEATHER_OPTIONS,
+)
 
 DEFAULT_SELECT_OPTIONS = dict(
     nothingFoundMessage="Options not found...",
@@ -17,9 +20,9 @@ DEFAULT_SELECT_OPTIONS = dict(
     value=None,
 )
 
-def DatasetOptionsSelect(
+def WeatherOptionsSelect(
     id: str,
-    action: str,
+    categorical: bool = False,
     **kwargs: Any,
 ) -> dmc.Select:
     select_options = DEFAULT_SELECT_OPTIONS.copy()
@@ -30,6 +33,10 @@ def DatasetOptionsSelect(
         Input("dataset-select", "value"),
     )
     def init_select_options(dataset_name: str) -> List[Dict[str, str]]:
-        return dispatch(action, dataset_name=dataset_name)
+        return dispatch(
+            FETCH_DATASET_WEATHER_OPTIONS,
+            dataset_name=dataset_name
+        )
 
     return dmc.Select(id=id, **select_options)
+

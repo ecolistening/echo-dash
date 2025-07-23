@@ -80,12 +80,19 @@ def fetch_dataset_categorical_dropdown_options(
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).categorical_drop_down_select_options()
 
+def fetch_dataset_weather_options(dataset_name):
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.weather["variable"].unique()
+
+def fetch_dataset_spatial_dropdown_options(dataset_name):
+    dataset = DATASETS.get_dataset(dataset_name)
+    return DatasetDecorator(dataset).spatial_drop_down_select_options()
+
 def fetch_files(
     dataset_name: str,
     file_ids: List[str] | None = None,
     **filters: Any,
 ) -> pd.DataFrame:
-    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
     dataset = DATASETS.get_dataset(dataset_name)
     # FIXME: another hack, we should just be able to get the files table
     # but we have two sources of truth at the moment
@@ -100,15 +107,21 @@ def fetch_files(
         how="inner",
         suffixes=('', '_IGNORE'),
     ).drop_duplicates()
-    logger.debug(f"Applying filters {filters}")
     return filter_data(data, **filters)
 
 def fetch_locations(
     dataset_name: str,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
     return dataset.locations
+
+def fetch_weather(
+    dataset_name: str,
+    **filters: Any,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    data = dataset.weather.join(dataset.locations, on="site_id", how="left")
+    return filter_data(data, **filters)
 
 @functools.lru_cache(maxsize=10)
 def fetch_acoustic_features(
@@ -116,9 +129,7 @@ def fetch_acoustic_features(
     **filters: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
     data = dataset.acoustic_features
-    logger.debug(f"Applying filters {filters}")
     return filter_data(data, **filters)
 
 @functools.lru_cache(maxsize=10)
@@ -144,7 +155,6 @@ def fetch_acoustic_features_umap(
     file_ids: frozenset = frozenset(),
     **filters: Any,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    logger.debug(f"Fetch acoustic features for dataset={dataset_name}")
     dataset = DATASETS.get_dataset(dataset_name)
     # ensure umap directory exists
     (dataset.path / "umap").mkdir(exist_ok=True, parents=True)
@@ -156,9 +166,7 @@ def fetch_acoustic_features_umap(
         data = pd.read_parquet(umap_path)
         return data[~data["file_id"].isin(file_ids)]
     data = dataset.acoustic_features
-    logger.debug(f"Applying filters {filters}")
     data = filter_data(data, file_ids=file_ids, **filters)
-    logger.debug(f"Pivoting features")
     data = data.pivot(
         index=data.columns[~data.columns.isin(["feature", "value"])],
         columns='feature',
@@ -167,7 +175,6 @@ def fetch_acoustic_features_umap(
     sample = data.sample(min(sample_size, len(data)))
     logger.debug(f"Running UMAP on subsample {len(sample)}/{len(data)} ")
     proj = umap_data(sample)
-    logger.debug(f"UMAP complete")
     logger.debug(f"Persisting UMAP to {umap_path}")
     # persist so we don't need to recompute
     proj.to_parquet(umap_path)
@@ -186,7 +193,7 @@ def fetch_acoustic_features_umap(
 # (2) less messy when rendering components in the front-end
 # (3) easier to switch to a service-based architecture at a later date
 
-from dash import exceptions as de
+from dash import exceptions
 
 def dispatch(
     action: str,
@@ -195,7 +202,7 @@ def dispatch(
 ) -> Any:
     try:
         triggered_id = ctx.triggered_id
-    except de.MissingCallbackContextException as e:
+    except exceptions.MissingCallbackContextException as e:
         triggered_id = "preload"
 
     logger.debug(f"{triggered_id=} {action=} {payload=}")
@@ -215,12 +222,15 @@ SET_DATASET_CONFIG = "set_dataset_config"
 FETCH_DATASET_SITES_TREE = "fetch_dataset_sites_tree"
 FETCH_DATASET_DROPDOWN_OPTIONS = "fetch_dataset_dropdown_options"
 FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS = "fetch_dataset_categorical_dropdown_options"
+FETCH_DATASET_WEATHER_OPTIONS = "fetch_dataset_weather_options"
 FETCH_FILES = "fetch_files"
 FETCH_LOCATIONS = "fetch_locations"
 FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
 FETCH_BIRDNET_SPECIES_RICHNESS = "fetch_birdnet_species_richness"
 FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
+FETCH_WEATHER = "fetch_weather"
+FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS = "fetch_dataset_spatial_dropdown_options"
 
 API = {
     FETCH_DATASETS: fetch_datasets,
@@ -232,11 +242,14 @@ API = {
     FETCH_DATASET_CATEGORIES: fetch_dataset_categories,
     FETCH_DATASET_DROPDOWN_OPTIONS: fetch_dataset_dropdown_options,
     FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS: fetch_dataset_categorical_dropdown_options,
+    FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS: fetch_dataset_spatial_dropdown_options,
     FETCH_FILES: fetch_files,
     FETCH_LOCATIONS: fetch_locations,
     FETCH_ACOUSTIC_FEATURES: fetch_acoustic_features,
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
     FETCH_BIRDNET_SPECIES_RICHNESS: fetch_birdnet_species_richness,
+    FETCH_DATASET_WEATHER_OPTIONS: fetch_dataset_weather_options,
+    FETCH_WEATHER: fetch_weather,
 }
 
 # TODO: switch to parametric UMAP so we simply load the model in the dataset class, no need to pre-cache

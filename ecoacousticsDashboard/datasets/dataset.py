@@ -28,6 +28,7 @@ class Dataset:
         self.locations
         # cache solar data
         self.dates
+        self.weather
         # cache acoustic features and UMAP
         self.acoustic_features
         # cache species and birdet predictions
@@ -189,6 +190,30 @@ class Dataset:
             dates_path = self.path / "dates_table.parquet"
             logger.debug(f"Loading & caching \"{dates_path}\"..")
             return pd.read_parquet(dates_path)
+        except Exception as e:
+            return pd.DataFrame()
+
+    @functools.cached_property
+    def weather(self) -> pd.DataFrame:
+        weather_columns = {
+            "temperature_2m": "Temperature at 2m (°C)",
+            "precipitation": "Precipitation (cm)",
+            "rain": "Rain (cm)",
+            "snowfall": "Snowfall (cm)",
+            "wind_speed_10m": "Wind Speed at 10m (km/h)",
+            "wind_speed_100m": "Wind Speed at 100m (km/h)",
+            "wind_direction_10m": "Wind Direction at 10m (°)",
+            "wind_direction_100m": "Wind Direction at 100m (°)",
+            "wind_gusts_10m": "Wind Gusts at 10m (km/h)",
+        }
+        try:
+            weather_path = self.path / "weather_table.parquet"
+            logger.debug(f"Loading & caching \"{weather_path}\"..")
+            return pd.read_parquet(weather_path).rename(columns=weather_columns).melt(
+                id_vars=["timestamp", "site_id"],
+                var_name="variable",
+                value_name="value",
+            )
         except Exception as e:
             return pd.DataFrame()
 

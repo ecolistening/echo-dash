@@ -10,7 +10,6 @@ from dash import dcc
 from dash_iconify import DashIconify
 
 from callbacks.pages import index_averages_callbacks
-
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel

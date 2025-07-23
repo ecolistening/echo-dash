@@ -14,7 +14,7 @@ from io import StringIO
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_FILES
+from api import dispatch, FETCH_FILES, FETCH_DATASET_DROPDOWN_OPTIONS
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
@@ -57,18 +57,22 @@ layout = dmc.Box([
             children=[
                 DatasetOptionsSelect(
                     id="times-colour-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
                     label="Colour by"
                 ),
                 DatasetOptionsSelect(
                     id="times-symbol-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
                     label="Symbol by"
                 ),
                 DatasetOptionsSelect(
                     id="times-facet-row-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
                     label="Facet rows by"
                 ),
                 DatasetOptionsSelect(
                     id="times-facet-column-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
                     label="Facet columns by"
                 ),
                 dmc.Flex(

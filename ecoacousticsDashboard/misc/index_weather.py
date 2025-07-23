@@ -32,21 +32,21 @@ def OpenMeteoClient(
     retry_session = retry(cache_session, retries=retries, backoff_factor=backoff_factor)
     return openmeteo_requests.Client(session=retry_session)
 
-DEFAULT_WEATHER_COLUMNS = [
-    "temperature_2m",
-    "rain",
-    "precipitation",
-    "snowfall",
-    "wind_speed_10m",
-    "wind_speed_100m",
-    "wind_direction_10m",
-    "wind_direction_100m",
-    "wind_gusts_10m",
-]
+DEFAULT_WEATHER_COLUMNS = {
+    "temperature_2m": "Temperature at 2m (°C)",
+    "precipitation": "Precipitation (cm)",
+    "rain": "Rain (cm)",
+    "snowfall": "Snowfall (cm)",
+    "wind_speed_10m": "Wind Speed at 10m (km/h)",
+    "wind_speed_100m": "Wind Speed at 100m (km/h)",
+    "wind_direction_10m": "Wind Direction at 10m (km/h)",
+    "wind_direction_100m": "Wind Direction at 100m (km/h)",
+    "wind_gusts_10m": "Wind Gusts at 10m (km/h)",
+}
 
 def find_weather_hourly(
     d: Dict[str, Any],
-    columns: List[str] = DEFAULT_WEATHER_COLUMNS,
+    columns: List[str] = DEFAULT_WEATHER_COLUMNS.keys(),
 ) -> Dict[str, Any]:
     client = init_client()
     params = {

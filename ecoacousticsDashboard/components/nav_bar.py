@@ -54,6 +54,7 @@ def Menu():
         'Overview',
         'Diel',
         'Seasonal',
+        "Weather",
     )
     for group in order:
         menu.append(children[group])

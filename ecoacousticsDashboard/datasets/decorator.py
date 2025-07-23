@@ -25,11 +25,29 @@ class DatasetDecorator:
             if opt_group["type"] in ("categorical")
         ]
 
+    # TODO: refactor so the dropdown is parametrised at the component level
     def drop_down_select_options(self) -> Tuple[Dict[str, Any]]:
         opt_groups = []
         column_groups = zip(
             ["Site Level", "Time of Day", "Temporal", "Spatial"],
             [self.site_level_columns, self.solar_columns, self.temporal_columns, self.spatial_columns]
+        )
+        for group_name, column_group in column_groups:
+            opt_groups.append({
+                "group": group_name,
+                "type": "categorical",
+                "items": [
+                    { "value": value, "label": params["label"] }
+                    for value, params in column_group.items()
+                ],
+            })
+        return opt_groups
+
+    def spatial_drop_down_select_options(self) -> Tuple[Dict[str, Any]]:
+        opt_groups = []
+        column_groups = zip(
+            ["Spatial"],
+            [self.spatial_columns]
         )
         for group_name, column_group in column_groups:
             opt_groups.append({
