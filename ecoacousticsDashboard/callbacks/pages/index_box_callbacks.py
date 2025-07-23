@@ -33,6 +33,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
     Input("acoustic-feature-current-bounds", "data"),
+    prevent_initial_call=True,
 )
 def load_data(
     dataset_name: str,
@@ -65,6 +66,7 @@ def load_data(
     Input("index-box-facet-row-select", "value"),
     Input("index-box-facet-column-select", "value"),
     Input("dataset-category-orders", "data"),
+    prevent_initial_call=True,
 )
 def draw_figure(
     json_data: str,

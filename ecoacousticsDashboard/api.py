@@ -121,6 +121,17 @@ def fetch_acoustic_features(
     logger.debug(f"Applying filters {filters}")
     return filter_data(data, **filters)
 
+@functools.lru_cache(maxsize=10)
+def fetch_birdnet_species(
+    dataset_name: str,
+    **filters: Any,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
+    data = dataset.species_predictions
+    logger.debug(f"Applying filters {filters}")
+    return filter_data(data, **filters)
+
 @functools.lru_cache(maxsize=4)
 def fetch_acoustic_features_umap(
     dataset_name: str,
@@ -217,6 +228,7 @@ FETCH_FILES = "fetch_files"
 FETCH_LOCATIONS = "fetch_locations"
 FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
+FETCH_BIRDNET_SPECIES = "fetch_birdnet_species"
 FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
 
 API = {
@@ -233,4 +245,5 @@ API = {
     FETCH_LOCATIONS: fetch_locations,
     FETCH_ACOUSTIC_FEATURES: fetch_acoustic_features,
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
+    FETCH_BIRDNET_SPECIES: fetch_birdnet_species,
 }
