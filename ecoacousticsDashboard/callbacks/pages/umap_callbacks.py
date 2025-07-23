@@ -48,24 +48,19 @@ def load_data(
     locations: List[str],
     file_filter_groups: Dict[int, List[str]],
 ) -> str:
-    files = dispatch(
-        FETCH_FILES,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-    )
-
-    return dispatch(
+    data = dispatch(
         FETCH_ACOUSTIC_FEATURES_UMAP,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
         locations=list2tuple(locations),
-        sample_size=len(files),
+        sample_size=len(dispatch(FETCH_FILES, dataset_name=dataset_name)),
         file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-    ).to_json(
+    )
+    return data.to_json(
         date_format="iso",
         orient="table",
     )
+
 
 @callback(
     Output("umap-sample-slider", "max"),

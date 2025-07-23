@@ -173,27 +173,6 @@ def fetch_acoustic_features_umap(
     proj.to_parquet(umap_path)
     return proj
 
-def setup():
-    """
-    Sets up the LRU cache for UMAP
-    Not a great solution
-    """
-    for dataset in DATASETS:
-        dates = (dataset.files.date.min(), dataset.files.date.max())
-        locations = list2tuple(dataset.locations.site_name.unique().tolist())
-        fetch_acoustic_features_umap(
-            dataset.dataset_name,
-            dates=dates,
-            locations=locations,
-            sample_size=len(fetch_files(
-                dataset.dataset_name,
-                dates=dates,
-                locations=locations,
-            ))
-        )
-
-setup()
-
 # NOTE:
 # Please use the dispatch pattern mapping a string to a function
 # instead of making an API function call directly in UI components
@@ -207,13 +186,20 @@ setup()
 # (2) less messy when rendering components in the front-end
 # (3) easier to switch to a service-based architecture at a later date
 
+from dash import exceptions as de
+
 def dispatch(
     action: str,
     default: Any | None = None,
     **payload: Dict[str, Any],
 ) -> Any:
-    triggered_id = ctx.triggered_id
+    try:
+        triggered_id = ctx.triggered_id
+    except de.MissingCallbackContextException as e:
+        triggered_id = "preload"
+
     logger.debug(f"{triggered_id=} {action=} {payload=}")
+
     try:
         func = API[action]
         return func(**payload)
