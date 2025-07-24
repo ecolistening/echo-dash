@@ -69,8 +69,15 @@ class Dataset:
         data = pd.read_parquet(self.path / "indices.parquet")
         # TODO: my own hack to ensure temporal fields are on the acoustic indices (used in options / filters)
         # we will be able to do a simple table join once finished
+        files_sites_weather_df = self.files.join(
+            self.file_weather.set_index(["file_id", "site_id", "timestamp"]),
+            on=["file_id", "site_id", "timestamp"]
+        ).join(
+            self.locations,
+            on="site_id"
+        )
         data = data.merge(
-            self.files.join(self.locations, on="site_id").reset_index(),
+            files_sites_weather_df.reset_index(),
             left_on=["file", "site"],
             right_on=["file_name", "site_name"],
             how="left",
@@ -182,6 +189,7 @@ class Dataset:
         data['month'] = data["timestamp"].dt.month_name()
         data['year'] = data["timestamp"].dt.year
         data["time"] = data["timestamp"].dt.hour + data.timestamp.dt.minute / 60.0
+        data["nearest_hour"] = data["timestamp"].dt.round("h")
         return data
 
     @functools.cached_property
@@ -213,16 +221,13 @@ class Dataset:
         resulting df is same length as files table with weather data from the nearest hour
         """
         try:
-            files = self.files
-            files["nearest_hour"] = files["timestamp"].dt.round("h")
-            id_vars = ["file_id", "site_id", "timestamp_weather", "timestamp"]
-            return files.reset_index().merge(
+            return self.files.reset_index().merge(
                 self.weather.reset_index(),
                 left_on=["nearest_hour", "site_id"],
                 right_on=["timestamp", "site_id"],
                 suffixes=("", "_weather"),
             ).filter(
-                items=[*id_vars, *self.weather.columns],
+                items=[*["file_id", "site_id", "timestamp_weather", "timestamp"], *self.weather.columns],
             )
         except Exception as e:
             return pd.DataFrame()

@@ -115,7 +115,14 @@ def fetch_locations(
     dataset = DATASETS.get_dataset(dataset_name)
     return dataset.locations
 
-# @functools.lru_cache(maxsize=10)
+def fetch_weather(
+    dataset_name: str,
+    **filters: Any,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.weather
+
+@functools.lru_cache(maxsize=10)
 def fetch_file_weather(
     dataset_name: str,
     variable: str,
@@ -137,8 +144,8 @@ def fetch_acoustic_features(
     **filters: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    data = dataset.acoustic_features
-    return filter_data(data, **filters)
+    data = filter_data(dataset.acoustic_features, **filters)
+    return data
 
 @functools.lru_cache(maxsize=10)
 def fetch_birdnet_species_richness(
@@ -237,6 +244,7 @@ FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
 FETCH_BIRDNET_SPECIES_RICHNESS = "fetch_birdnet_species_richness"
 FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
+FETCH_WEATHER = "fetch_weather"
 FETCH_FILE_WEATHER = "fetch_file_weather"
 FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS = "fetch_dataset_spatial_dropdown_options"
 
@@ -257,6 +265,7 @@ API = {
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
     FETCH_BIRDNET_SPECIES_RICHNESS: fetch_birdnet_species_richness,
     FETCH_DATASET_WEATHER_OPTIONS: fetch_dataset_weather_options,
+    FETCH_WEATHER: fetch_weather,
     FETCH_FILE_WEATHER: fetch_file_weather,
 }
 

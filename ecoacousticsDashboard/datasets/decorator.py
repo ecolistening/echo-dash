@@ -6,6 +6,7 @@ from loguru import logger
 from typing import Any, Dict, Tuple, List
 
 from datasets.dataset import Dataset
+from utils import floor, ceil
 
 @attrs.define
 class DatasetDecorator:
@@ -62,12 +63,15 @@ class DatasetDecorator:
 
     def weather_drop_down_select_options(self) -> List[Dict[str, Any]]:
         opt_groups = []
-        for group_name, column_group in zip(["Weather"], [self.weather_columns]):
+        column_groups = zip(
+            ["Temperature", "Precipitation", "Wind"],
+            [self.temperature_columns, self.precipitation_columns, self.wind_columns]
+        )
+        for group_name, column_group in column_groups:
             opt_groups.append({
                 "group": group_name,
-                "type": "continuous",
                 "items": [
-                    {"value": value, "label": params["label"]}
+                    {"value": value, "label": params["label"], "min": params["min"], "max": params["max"]}
                     for value, params in column_group.items()
                 ]
             })
@@ -137,31 +141,67 @@ class DatasetDecorator:
     @property
     def weather_columns(self) -> Dict[str, List[Any]]:
         return {
+            **self.temperature_columns,
+            **self.precipitation_columns,
+            **self.wind_columns,
+        }
+
+    @property
+    def temperature_columns(self) -> Dict[str, List[Any]]:
+        return {
             "temperature_2m": {
-                "label": "Temperature at 2m (°C)",
+                "label": "Temperature at 2m elevation (°C)",
+                "min": floor(self.dataset.weather["temperature_2m"].min()),
+                "max": ceil(self.dataset.weather["temperature_2m"].max()),
             },
+        }
+
+    @property
+    def precipitation_columns(self) -> Dict[str, List[Any]]:
+        return {
             "precipitation": {
-                "label": "Precipitation (cm)",
+                "label": "Overall (cm)",
+                "min": 0.0, # floor(self.dataset.weather["precipitation"].min(), precision=2),
+                "max": ceil(self.dataset.weather["precipitation"].max()),
             },
             "rain": {
-                "label": "Rain (cm)",
+                "label": "Rain only (cm)",
+                "min": 0.0, # floor(self.dataset.weather["rain"].min(), precision=2),
+                "max": ceil(self.dataset.weather["rain"].max()),
             },
             "snowfall": {
-                "label": "Snowfall (cm)",
+                "label": "Snowfall only (cm)",
+                "min": 0.0, # floor(self.dataset.weather["snowfall"].min(), precision=2),
+                "max": ceil(self.dataset.weather["snowfall"].max()),
             },
+        }
+
+    @property
+    def wind_columns(self) -> Dict[str, List[Any]]:
+        return {
             "wind_speed_10m": {
-                "label": "Wind Speed at 10m (km/h)",
+                "label": "Speed at 10m elevation (kph)",
+                "min": 0.0, # floor(self.dataset.weather["wind_speed_10m"].min(), precision=2),
+                "max": ceil(self.dataset.weather["wind_speed_10m"].max()),
             },
             "wind_speed_100m": {
-                "label": "Wind Speed at 100m (km/h)",
+                "label": "Speed at 100m elevation (kph)",
+                "min": 0.0, # floor(self.dataset.weather["wind_speed_100m"].min(), precision=2),
+                "max": ceil(self.dataset.weather["wind_speed_100m"].max()),
             },
             "wind_direction_10m": {
-                "label": "Wind Direction at 10m (°)",
+                "label": "Direction at 10m elevation (°)",
+                "min": 0.0, # floor(self.dataset.weather["wind_direction_10m"].min(), precision=2),
+                "max": ceil(self.dataset.weather["wind_direction_10m"].max()),
             },
             "wind_direction_100m": {
-                "label": "Wind Direction at 100m (°)",
+                "label": "Direction at 100m elevation (°)",
+                "min": 0.0, # floor(self.dataset.weather["wind_direction_100m"].min(), precision=2),
+                "max": ceil(self.dataset.weather["wind_direction_100m"].max()),
             },
             "wind_gusts_10m": {
-                "label": "Wind Gusts at 10m (km/h)",
+                "label": "Gusts at 10m elevation (kph)",
+                "min": 0.0, # floor(self.dataset.weather["wind_gusts_10m"].min(), precision=2),
+                "max": ceil(self.dataset.weather["wind_gusts_10m"].max()),
             },
         }
