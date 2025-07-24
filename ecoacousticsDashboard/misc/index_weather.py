@@ -65,8 +65,8 @@ def find_weather_hourly(
     }
     df = pd.DataFrame({
         "timestamp": pd.date_range(
-            pd.to_datetime(hourly.Time(), unit="s", utc=True),
-            pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
+            pd.to_datetime(hourly.Time(), unit="s"),
+            pd.to_datetime(hourly.TimeEnd(), unit="s"),
             freq=pd.Timedelta(seconds=hourly.Interval()),
             inclusive="left",
         ),

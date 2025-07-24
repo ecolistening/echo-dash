@@ -60,6 +60,19 @@ class DatasetDecorator:
             })
         return opt_groups
 
+    def weather_drop_down_select_options(self) -> List[Dict[str, Any]]:
+        opt_groups = []
+        for group_name, column_group in zip(["Weather"], [self.weather_columns]):
+            opt_groups.append({
+                "group": group_name,
+                "type": "continuous",
+                "items": [
+                    {"value": value, "label": params["label"]}
+                    for value, params in column_group.items()
+                ]
+            })
+        return opt_groups
+
     @property
     def site_level_columns(self) -> Dict[str, List[Any]]:
         return {
@@ -118,5 +131,37 @@ class DatasetDecorator:
             "recorder": {
                 "order": self.dataset.locations["recorder"].unique(),
                 "label": "Recorder"
+            },
+        }
+
+    @property
+    def weather_columns(self) -> Dict[str, List[Any]]:
+        return {
+            "temperature_2m": {
+                "label": "Temperature at 2m (°C)",
+            },
+            "precipitation": {
+                "label": "Precipitation (cm)",
+            },
+            "rain": {
+                "label": "Rain (cm)",
+            },
+            "snowfall": {
+                "label": "Snowfall (cm)",
+            },
+            "wind_speed_10m": {
+                "label": "Wind Speed at 10m (km/h)",
+            },
+            "wind_speed_100m": {
+                "label": "Wind Speed at 100m (km/h)",
+            },
+            "wind_direction_10m": {
+                "label": "Wind Direction at 10m (°)",
+            },
+            "wind_direction_100m": {
+                "label": "Wind Direction at 100m (°)",
+            },
+            "wind_gusts_10m": {
+                "label": "Wind Gusts at 10m (km/h)",
             },
         }

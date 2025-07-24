@@ -82,7 +82,7 @@ def fetch_dataset_categorical_dropdown_options(
 
 def fetch_dataset_weather_options(dataset_name):
     dataset = DATASETS.get_dataset(dataset_name)
-    return dataset.weather["variable"].unique()
+    return DatasetDecorator(dataset).weather_drop_down_select_options()
 
 def fetch_dataset_spatial_dropdown_options(dataset_name):
     dataset = DATASETS.get_dataset(dataset_name)
@@ -115,12 +115,20 @@ def fetch_locations(
     dataset = DATASETS.get_dataset(dataset_name)
     return dataset.locations
 
-def fetch_weather(
+# @functools.lru_cache(maxsize=10)
+def fetch_file_weather(
     dataset_name: str,
+    variable: str,
     **filters: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    data = dataset.weather.join(dataset.locations, on="site_id", how="left")
+    data = dataset.file_weather
+    id_vars = ["file_id", "site_id", "timestamp_weather", "timestamp"]
+    data = (
+        data[[*id_vars, variable]]
+        .melt(id_vars=id_vars, var_name="variable", value_name="value")
+        .join(dataset.locations, on="site_id", how="left")
+    )
     return filter_data(data, **filters)
 
 @functools.lru_cache(maxsize=10)
@@ -229,7 +237,7 @@ FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
 FETCH_BIRDNET_SPECIES_RICHNESS = "fetch_birdnet_species_richness"
 FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
-FETCH_WEATHER = "fetch_weather"
+FETCH_FILE_WEATHER = "fetch_file_weather"
 FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS = "fetch_dataset_spatial_dropdown_options"
 
 API = {
@@ -249,7 +257,7 @@ API = {
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
     FETCH_BIRDNET_SPECIES_RICHNESS: fetch_birdnet_species_richness,
     FETCH_DATASET_WEATHER_OPTIONS: fetch_dataset_weather_options,
-    FETCH_WEATHER: fetch_weather,
+    FETCH_FILE_WEATHER: fetch_file_weather,
 }
 
 # TODO: switch to parametric UMAP so we simply load the model in the dataset class, no need to pre-cache

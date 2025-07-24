@@ -64,14 +64,21 @@ layout = dmc.Box([
                     id="weather-hourly-variable-select",
                     action=FETCH_DATASET_WEATHER_OPTIONS,
                     label="Weather Variable",
-                    value="Temperature at 2m (°C)",
+                    value="temperature_2m",
                     clearable=False,
                     allowDeselect=False,
+                ),
+                DatasetOptionsSelect(
+                    id="weather-hourly-colour-select",
+                    action=FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS,
+                    label="Colour by",
+                    value="location",
                 ),
                 DatasetOptionsSelect(
                     id="weather-hourly-facet-row-select",
                     action=FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS,
                     label="Facet rows by",
+                    value="location",
                 ),
                 dmc.Flex(
                     p="1rem",

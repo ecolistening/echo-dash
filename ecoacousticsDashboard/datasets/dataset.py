@@ -175,13 +175,13 @@ class Dataset:
         logger.debug(f"Loading & caching \"{files_path}\"..")
         data = pd.read_parquet(files_path)
         logger.debug(f"Compute temporal splits..")
-        data['minute'] = data.timestamp.dt.minute
-        data['hour'] = data.timestamp.dt.hour
-        data['weekday'] = data.timestamp.dt.day_name()
-        data['date'] = data.timestamp.dt.strftime('%Y-%m-%d')
-        data['month'] = data.timestamp.dt.month_name()
-        data['year'] = data.timestamp.dt.year
-        data["time"] = data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0
+        data['minute'] = data["timestamp"].dt.minute
+        data['hour'] = data["timestamp"].dt.hour
+        data['weekday'] = data["timestamp"].dt.day_name()
+        data['date'] = data["timestamp"].dt.strftime('%Y-%m-%d')
+        data['month'] = data["timestamp"].dt.month_name()
+        data['year'] = data["timestamp"].dt.year
+        data["time"] = data["timestamp"].dt.hour + data.timestamp.dt.minute / 60.0
         return data
 
     @functools.cached_property
@@ -195,24 +195,34 @@ class Dataset:
 
     @functools.cached_property
     def weather(self) -> pd.DataFrame:
-        weather_columns = {
-            "temperature_2m": "Temperature at 2m (°C)",
-            "precipitation": "Precipitation (cm)",
-            "rain": "Rain (cm)",
-            "snowfall": "Snowfall (cm)",
-            "wind_speed_10m": "Wind Speed at 10m (km/h)",
-            "wind_speed_100m": "Wind Speed at 100m (km/h)",
-            "wind_direction_10m": "Wind Direction at 10m (°)",
-            "wind_direction_100m": "Wind Direction at 100m (°)",
-            "wind_gusts_10m": "Wind Gusts at 10m (km/h)",
-        }
         try:
             weather_path = self.path / "weather_table.parquet"
             logger.debug(f"Loading & caching \"{weather_path}\"..")
-            return pd.read_parquet(weather_path).rename(columns=weather_columns).melt(
-                id_vars=["timestamp", "site_id"],
-                var_name="variable",
-                value_name="value",
+            return pd.read_parquet(weather_path).set_index(["site_id", "timestamp"])
+        except Exception as e:
+            return pd.DataFrame()
+
+    @functools.cached_property
+    def file_weather(self) -> pd.DataFrame:
+        """
+        if we want to look at the weather for specific files,
+        we need to duplicate weather data for each file reference
+        Weather data is by the hour, but files can be snapshots at any temporal resolution
+        we round the file timestamp to the nearest hour, left join with weather on the timestamp
+        by preserving the weather timestamp, we throw away everything other than file_id
+        resulting df is same length as files table with weather data from the nearest hour
+        """
+        try:
+            files = self.files
+            files["nearest_hour"] = files["timestamp"].dt.round("h")
+            id_vars = ["file_id", "site_id", "timestamp_weather", "timestamp"]
+            return files.reset_index().merge(
+                self.weather.reset_index(),
+                left_on=["nearest_hour", "site_id"],
+                right_on=["timestamp", "site_id"],
+                suffixes=("", "_weather"),
+            ).filter(
+                items=[*id_vars, *self.weather.columns],
             )
         except Exception as e:
             return pd.DataFrame()
