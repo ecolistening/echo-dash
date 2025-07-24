@@ -122,15 +122,20 @@ def fetch_acoustic_features(
     return filter_data(data, **filters)
 
 @functools.lru_cache(maxsize=10)
-def fetch_birdnet_species(
+def fetch_birdnet_species_richness(
     dataset_name: str,
+    threshold: float,
+    group_by: List[str],
     **filters: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
-    data = dataset.species_predictions
-    logger.debug(f"Applying filters {filters}")
-    return filter_data(data, **filters)
+    data = filter_data(dataset.species_predictions, **filters)
+    return (
+        data[data["confidence"] >= threshold]
+        .groupby(list(group_by))["species_id"]
+        .nunique()
+        .reset_index(name="richness")
+    )
 
 @functools.lru_cache(maxsize=4)
 def fetch_acoustic_features_umap(
@@ -228,7 +233,7 @@ FETCH_FILES = "fetch_files"
 FETCH_LOCATIONS = "fetch_locations"
 FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
-FETCH_BIRDNET_SPECIES = "fetch_birdnet_species"
+FETCH_BIRDNET_SPECIES_RICHNESS = "fetch_birdnet_species_richness"
 FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
 
 API = {
@@ -245,5 +250,19 @@ API = {
     FETCH_LOCATIONS: fetch_locations,
     FETCH_ACOUSTIC_FEATURES: fetch_acoustic_features,
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
-    FETCH_BIRDNET_SPECIES: fetch_birdnet_species,
+    FETCH_BIRDNET_SPECIES_RICHNESS: fetch_birdnet_species_richness,
 }
+
+# TODO: switch to parametric UMAP so we simply load the model in the dataset class, no need to pre-cache
+def setup():
+    for dataset in DATASETS:
+        dispatch(
+            FETCH_ACOUSTIC_FEATURES_UMAP,
+            dataset_name=dataset.dataset_name,
+            dates=(dataset.files.date.min(), dataset.files.date.max()),
+            locations=list2tuple(dataset.locations.site_name.unique().tolist()),
+            sample_size=len(dispatch(FETCH_FILES, dataset_name=dataset.dataset_name)),
+            file_ids=frozenset(),
+        )
+
+setup()

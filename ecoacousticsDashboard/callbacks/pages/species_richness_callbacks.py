@@ -13,7 +13,7 @@ from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_BIRDNET_SPECIES
+from api import dispatch, FETCH_BIRDNET_SPECIES_RICHNESS
 from utils import list2tuple
 from utils import sketch
 
@@ -94,34 +94,11 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
 
 @callback(
-    Output("species-richness-graph-data", "data"),
+    Output("species-richness-graph", "figure"),
     Input("dataset-select", "value"),
     Input("date-range-current-bounds", "data"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
-    prevent_initial_call=True,
-)
-def load_data(
-    dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    file_filter_groups: Dict[str, List],
-) -> str:
-    data = dispatch(
-        FETCH_BIRDNET_SPECIES,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-    )
-    return data.to_json(
-        date_format="iso",
-        orient="table",
-    )
-
-@callback(
-    Output("species-richness-graph", "figure"),
-    Input("species-richness-graph-data", "data"),
     Input("species-richness-plot-type-select", "value"),
     Input("species-richness-threshold-slider", "value"),
     Input("species-richness-facet-row-select", "value"),
@@ -130,19 +107,24 @@ def load_data(
     prevent_initial_call=True,
 )
 def draw_figure(
-    json_data: str,
+    dataset_name: str,
+    dates: List[str],
+    locations: List[str],
+    file_filter_groups: Dict[str, List],
     plot_type: str,
     threshold: str,
     facet_row: str,
     facet_col: str,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
-    data = pd.read_json(StringIO(json_data), orient="table")
-    data = (
-        data[data["confidence"] >= threshold]
-        .groupby(list(filter(None, set(["hour", facet_row, facet_col]))))["species_id"]
-        .nunique()
-        .reset_index(name="richness")
+    data = dispatch(
+        FETCH_BIRDNET_SPECIES_RICHNESS,
+        dataset_name=dataset_name,
+        threshold=threshold,
+        group_by=list2tuple(list(filter(None, set(["hour", facet_row, facet_col])))),
+        dates=list2tuple(dates),
+        locations=list2tuple(locations),
+        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
 
     plot = plot_types[plot_type]
@@ -165,4 +147,3 @@ def draw_figure(
     )
 
     return fig
-
