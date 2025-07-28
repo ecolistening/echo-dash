@@ -20,9 +20,11 @@ from utils.umap import umap_data
 
 DATASETS = DatasetLoader(root_dir)
 
+@functools.lru_cache(maxsize=1)
 def fetch_datasets():
     return [dataset.dataset_name for dataset in DATASETS]
 
+@functools.lru_cache(maxsize=3)
 def fetch_dataset(
     dataset_name: str
 ) -> Dataset:
@@ -34,6 +36,7 @@ def set_current_dataset(
 ) -> str:
     return dataset_name
 
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_config(
     dataset_name: str
 ) -> Dict[str, Any]:
@@ -43,6 +46,13 @@ def fetch_dataset_config(
         for section in dataset.config.sections()
     }
 
+@functools.lru_cache(maxsize=3)
+def fetch_sites_tree(
+    dataset_name: str,
+):
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.sites_tree
+
 def set_dataset_config(
     dataset_name: str,
     site_labels: List[str] = [],
@@ -51,43 +61,45 @@ def set_dataset_config(
     for i, label in enumerate(site_labels):
         dataset.config.set("Site Hierarchy", f"sitelevel_{i + 1}", label)
     dataset.save_config()
+    fetch_dataset_config.cache_clear()
+    fetch_sites_tree.cache_clear()
     return {
         section: dict(dataset.config.items(section))
         for section in dataset.config.sections()
     }
 
-def fetch_sites_tree(
-    dataset_name: str,
-):
-    dataset = DATASETS.get_dataset(dataset_name)
-    return dataset.sites_tree
-
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_categories(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).category_orders()
 
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_dropdown_options(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).drop_down_select_options()
 
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_categorical_dropdown_options(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).categorical_drop_down_select_options()
 
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_weather_options(dataset_name):
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).weather_drop_down_select_options()
 
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_spatial_dropdown_options(dataset_name):
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).spatial_drop_down_select_options()
 
+@functools.lru_cache(maxsize=3)
 def fetch_files(
     dataset_name: str,
     file_ids: List[str] | None = None,
@@ -109,12 +121,14 @@ def fetch_files(
     ).drop_duplicates()
     return filter_data(data, **filters)
 
+@functools.lru_cache(maxsize=3)
 def fetch_locations(
     dataset_name: str,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     return dataset.locations
 
+@functools.lru_cache(maxsize=3)
 def fetch_weather(
     dataset_name: str,
     **filters: Any,
@@ -166,34 +180,12 @@ def fetch_birdnet_species_richness(
 @functools.lru_cache(maxsize=4)
 def fetch_acoustic_features_umap(
     dataset_name: str,
-    sample_size: int,
     file_ids: frozenset = frozenset(),
     **filters: Any,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     dataset = DATASETS.get_dataset(dataset_name)
-    # ensure umap directory exists
-    (dataset.path / "umap").mkdir(exist_ok=True, parents=True)
-    # hash to get the umap id
-    umap_id = hashify(str(tuple([dataset_name] + list(filters.items()))))
-    # load from disk if its present
-    if (umap_path := (dataset.path / "umap" / f"{umap_id}.parquet")).exists():
-        logger.debug(f"Loading UMAP from {umap_path}")
-        data = pd.read_parquet(umap_path)
-        return data[~data["file_id"].isin(file_ids)]
-    data = dataset.acoustic_features
-    data = filter_data(data, file_ids=file_ids, **filters)
-    data = data.pivot(
-        index=data.columns[~data.columns.isin(["feature", "value"])],
-        columns='feature',
-        values='value',
-    )
-    sample = data.sample(min(sample_size, len(data)))
-    logger.debug(f"Running UMAP on subsample {len(sample)}/{len(data)} ")
-    proj = umap_data(sample)
-    logger.debug(f"Persisting UMAP to {umap_path}")
-    # persist so we don't need to recompute
-    proj.to_parquet(umap_path)
-    return proj
+    data = dataset.acoustic_features_umap
+    return filter_data(data, file_ids=file_ids, **filters)
 
 # NOTE:
 # Please use the dispatch pattern mapping a string to a function

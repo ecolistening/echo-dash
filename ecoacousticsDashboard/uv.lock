@@ -606,7 +606,7 @@ requires-dist = [
     { name = "traitlets", specifier = "==5.14.3" },
     { name = "typing-extensions", specifier = "==4.11.0" },
     { name = "tzdata", specifier = "==2024.1" },
-    { name = "umap-learn", extras = ["parametric-umap"], specifier = "==0.5.6" },
+    { name = "umap-learn", extras = ["parametric-umap"], specifier = ">=0.5.6" },
     { name = "uritemplate", specifier = "==4.1.1" },
     { name = "urllib3", specifier = "==2.2.1" },
     { name = "wcwidth", specifier = "==0.2.5" },

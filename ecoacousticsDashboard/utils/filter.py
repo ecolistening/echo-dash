@@ -40,10 +40,6 @@ def filter_data(
         # changed it from locations[-1] after unpacking nested list in list2tuple - Potential source for problems
         data = data[data['site'].isin([l.strip('/') for l in locations])]
 
-    if sample_size is not None:
-        sample_size = int(sample_size)
-        data = data.sample(n=sample_size, random_state=42)
-
     # FIXME: not a particularly dynamic or intelligent solution but its good enough
     # this should really be data-driven, not hard coded
     if temperature_2m is not None:
@@ -64,5 +60,8 @@ def filter_data(
         data = data[(data["wind_direction_100m"] >= min(wind_direction_100m)) & (data["wind_direction_100m"] <= max(wind_direction_100m))]
     if wind_gusts_10m is not None:
         data = data[(data["wind_gusts_10m"] >= min(wind_gusts_10m)) & (data["wind_gusts_10m"] <= max(wind_gusts_10m))]
+
+    if sample_size is not None and len(data) > sample_size:
+        data = data.sample(n=int(sample_size), random_state=42)
 
     return data

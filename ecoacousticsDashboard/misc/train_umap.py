@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import itertools
-import yaml
+import pickle
 
 from pathlib import Path
 from loguru import logger
@@ -48,20 +48,21 @@ def train_umap(
     # scale features using outlier-robust scaler
     scaler = RobustScaler()
     # a parametric model we can save and use to encode later
-    model = ParametricUMAP(**kwargs)
+    model = ParametricUMAP(parametric_reconstruction=True, **kwargs)
     # fit the graph and embedding function
     pipe = make_pipeline(scaler, model)
-    logger.debug(f"Fitting..")
+    logger.debug(f"Fitting...")
     pipe.fit(data)
-    # persist training scaler parameters for inference
+    # persist scaling parameters and feature list
     save_dir.mkdir(exist_ok=True, parents=True)
-    with open(save_dir / "config.yaml", "w+"):
-        yaml.dump(dict(
+    with open(save_dir / "config.yaml", "wb") as f:
+        config = dict(
             center_=scaler.center_,
             scale_=scaler.scale_,
             n_features_in_=scaler.n_features_in_,
-            feature_names_in_=scaler.features_names_in_,
-        ))
+            feature_names_in_=scaler.feature_names_in_,
+        )
+        pickle.dump(config, f)
         logger.debug(f"Scaler parameters saved to {save_dir / 'config.yaml'}")
     # persist the model
     model.save(save_dir)
