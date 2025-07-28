@@ -303,6 +303,65 @@ def update_active_file_filters(
     )
 
 @callback(
+    Output("weather-variable-filter-chips", "children"),
+    Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
+    Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
+    prevent_initial_call=True,
+)
+def update_active_weather_filters(
+    weather_variables: List[List[str]],
+    weather_ranges: List[List[float]],
+) -> dmc.Accordion:
+    weather_params = dict(zip(
+        map(lambda match: match["index"], weather_variables),
+        map(tuple, weather_ranges)
+    ))
+    return dmc.Accordion(
+        id="active-weather-variable-filters-accordion",
+        chevronPosition="right",
+        variant="separated",
+        radius="sm",
+        value=["weather-variable-filter"],
+        children=[
+            dmc.AccordionItem(
+                value="weather-variable-filter",
+                children=[
+                    dmc.AccordionControl("Environmental"),
+                    dmc.AccordionPanel(
+                        pb="1rem",
+                        children=[
+                            dmc.Box([
+                                dmc.Space(h="sm"),
+                                dmc.Text(
+                                    children=weather_variable,
+                                    size="sm",
+                                ),
+                                dmc.Space(h="sm"),
+                                dmc.ChipGroup(
+                                    id={"type": "weather-variable-chip-group", "index": weather_variable},
+                                    value=variable_range,
+                                    multiple=True,
+                                    children=[
+                                        dmc.Chip(
+                                            variant="outline",
+                                            icon=DashIconify(icon="bi-x-circle"),
+                                            value=value,
+                                            mt="xs",
+                                            children=f"{suffix}={value}",
+                                        )
+                                        for suffix, value in zip(["start_value", "end_value"], variable_range)
+                                    ],
+                                ),
+                            ])
+                            for weather_variable, variable_range in weather_params.items()
+                        ]
+                    )
+                ]
+            )
+        ]
+    )
+
+@callback(
     Output("umap-filter-store", "data"),
     State("umap-filter-store", "data"),
     Input({"type": "active-filter-chip-group", "index": "file"}, "value"),

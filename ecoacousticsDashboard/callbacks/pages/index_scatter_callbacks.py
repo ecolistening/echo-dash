@@ -31,6 +31,8 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Input("dataset-select", "value"),
     Input("date-range-current-bounds", "data"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
+    Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
     Input("acoustic-feature-current-bounds", "data"),
 )
@@ -38,6 +40,8 @@ def load_data(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
+    weather_variables: List[List[str]],
+    weather_ranges: List[List[float]],
     file_filter_groups: Dict[str, List],
     feature_params: Dict[str, Any],
 ) -> str:
@@ -48,6 +52,10 @@ def load_data(
         dates=list2tuple(dates),
         locations=list2tuple(locations),
         file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        **dict(zip(
+            map(lambda match: match["index"], weather_variables),
+            map(tuple, weather_ranges)
+        )),
         feature=feature,
         feature_range=(start_value, end_value),
     ).to_json(

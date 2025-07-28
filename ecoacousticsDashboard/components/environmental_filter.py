@@ -3,9 +3,50 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import datetime as dt
 
-from dash import dcc
+from dash import dcc, callback, no_update
+from dash import Input, Output, State
+from typing import Any, Dict, List, Tuple
 
-def EnvironmentalFilter():
+def EnvironmentalFilterSliderAccordion(
+    group: str,
+    items: List[Dict[str, str]],
+) -> dmc.Accordion:
+    return dmc.Accordion(
+        chevronPosition="right",
+        variant="separated",
+        radius="sm",
+        children=[
+            dmc.AccordionItem(
+                value=group,
+                children=[
+                    dmc.AccordionControl(group),
+                    dmc.AccordionPanel(
+                        children=dmc.Stack(
+                            justify="flex-start",
+                            children=[
+                                dmc.Box(
+                                    children=[
+                                        dmc.Text(option["label"], size="sm"),
+                                        dcc.RangeSlider(
+                                            id={"type": "weather-variable-range-slider", "index": option["value"]},
+                                            min=option["min"],
+                                            max=option["max"],
+                                            value=[option["min"], option["max"]],
+                                            allowCross=False,
+                                            persistence=True,
+                                        ),
+                                    ]
+                                )
+                                for option in items
+                            ]
+                        )
+                    )
+                ],
+            ),
+        ]
+    )
+
+def EnvironmentalFilter() -> dmc.Accordion:
     return dmc.Accordion(
         chevronPosition="right",
         variant="separated",
@@ -16,61 +57,11 @@ def EnvironmentalFilter():
                 children=[
                     dmc.AccordionControl("Environmental"),
                     dmc.AccordionPanel(
-                        children=[
-                            dmc.Stack(
-                                justify="flex-start",
-                                children=[
-                                    dmc.Box(
-                                        children=[
-                                            dmc.Text("Select a temperature range", size="sm"),
-                                            dcc.RangeSlider(
-                                                id="temperature-range-slider",
-                                                min=0,
-                                                max=100,
-                                                value=[0, 100],
-                                                allowCross=False,
-                                            ),
-                                        ]
-                                    ),
-                                    dmc.Box(
-                                        children=[
-                                            dmc.Text("Select a precipitation range", size="sm"),
-                                            dcc.RangeSlider(
-                                                id="precipitation-range-slider",
-                                                min=0,
-                                                max=100,
-                                                value=[0, 100],
-                                                allowCross=False,
-                                            ),
-                                        ]
-                                    ),
-                                    dmc.Box(
-                                        children=[
-                                            dmc.Text("Select a wind speed range", size="sm"),
-                                            dcc.RangeSlider(
-                                                id="wind-speed-range-slider",
-                                                min=0,
-                                                max=100,
-                                                value=[0, 100],
-                                                allowCross=False,
-                                            ),
-                                        ]
-                                    ),
-                                    dmc.Box(
-                                        children=[
-                                            dmc.Text("Select a snowfall range", size="sm"),
-                                            dcc.RangeSlider(
-                                                id="snowfall-range-slider",
-                                                min=0,
-                                                max=100,
-                                                value=[0, 100],
-                                                allowCross=False,
-                                            ),
-                                        ]
-                                    ),
-                                ]
-                            ),
-                        ]
+                        children=dmc.Stack(
+                            id="weather-variable-filter-groups",
+                            justify="flex-start",
+                            children=[]
+                        ),
                     )
                 ]
             )

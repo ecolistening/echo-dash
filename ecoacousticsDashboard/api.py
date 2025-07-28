@@ -20,9 +20,11 @@ from utils.umap import umap_data
 
 DATASETS = DatasetLoader(root_dir)
 
+@functools.lru_cache(maxsize=1)
 def fetch_datasets():
     return [dataset.dataset_name for dataset in DATASETS]
 
+@functools.lru_cache(maxsize=3)
 def fetch_dataset(
     dataset_name: str
 ) -> Dataset:
@@ -34,6 +36,7 @@ def set_current_dataset(
 ) -> str:
     return dataset_name
 
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_config(
     dataset_name: str
 ) -> Dict[str, Any]:
@@ -43,6 +46,13 @@ def fetch_dataset_config(
         for section in dataset.config.sections()
     }
 
+@functools.lru_cache(maxsize=3)
+def fetch_sites_tree(
+    dataset_name: str,
+):
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.sites_tree
+
 def set_dataset_config(
     dataset_name: str,
     site_labels: List[str] = [],
@@ -51,41 +61,50 @@ def set_dataset_config(
     for i, label in enumerate(site_labels):
         dataset.config.set("Site Hierarchy", f"sitelevel_{i + 1}", label)
     dataset.save_config()
+    fetch_dataset_config.cache_clear()
+    fetch_sites_tree.cache_clear()
     return {
         section: dict(dataset.config.items(section))
         for section in dataset.config.sections()
     }
 
-def fetch_sites_tree(
-    dataset_name: str,
-):
-    dataset = DATASETS.get_dataset(dataset_name)
-    return dataset.sites_tree
-
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_categories(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).category_orders()
 
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_dropdown_options(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).drop_down_select_options()
 
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_categorical_dropdown_options(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).categorical_drop_down_select_options()
 
+@functools.lru_cache(maxsize=3)
+def fetch_dataset_weather_options(dataset_name):
+    dataset = DATASETS.get_dataset(dataset_name)
+    return DatasetDecorator(dataset).weather_drop_down_select_options()
+
+@functools.lru_cache(maxsize=3)
+def fetch_dataset_spatial_dropdown_options(dataset_name):
+    dataset = DATASETS.get_dataset(dataset_name)
+    return DatasetDecorator(dataset).spatial_drop_down_select_options()
+
+@functools.lru_cache(maxsize=3)
 def fetch_files(
     dataset_name: str,
     file_ids: List[str] | None = None,
     **filters: Any,
 ) -> pd.DataFrame:
-    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
     dataset = DATASETS.get_dataset(dataset_name)
     # FIXME: another hack, we should just be able to get the files table
     # but we have two sources of truth at the moment
@@ -99,16 +118,44 @@ def fetch_files(
         right_on=["file", "site"],
         how="inner",
         suffixes=('', '_IGNORE'),
-    ).drop_duplicates()
-    logger.debug(f"Applying filters {filters}")
+    ).drop_duplicates().merge(
+        dataset.weather.reset_index(),
+        left_on=["nearest_hour", "site_id"],
+        right_on=["timestamp", "site_id"],
+        suffixes=("", "_weather"),
+    )
     return filter_data(data, **filters)
 
+@functools.lru_cache(maxsize=3)
 def fetch_locations(
     dataset_name: str,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
     return dataset.locations
+
+@functools.lru_cache(maxsize=3)
+def fetch_weather(
+    dataset_name: str,
+    **filters: Any,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.weather
+
+@functools.lru_cache(maxsize=10)
+def fetch_file_weather(
+    dataset_name: str,
+    variable: str,
+    **filters: Any,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    data = dataset.file_weather
+    id_vars = ["file_id", "site_id", "timestamp_weather", "timestamp"]
+    data = (
+        data[[*id_vars, variable]]
+        .melt(id_vars=id_vars, var_name="variable", value_name="value")
+        .join(dataset.locations, on="site_id", how="left")
+    )
+    return filter_data(data, **filters)
 
 @functools.lru_cache(maxsize=10)
 def fetch_acoustic_features(
@@ -116,10 +163,8 @@ def fetch_acoustic_features(
     **filters: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    logger.debug(f"Fetch acoustic feature data for dataset={dataset_name}")
-    data = dataset.acoustic_features
-    logger.debug(f"Applying filters {filters}")
-    return filter_data(data, **filters)
+    data = filter_data(dataset.acoustic_features, **filters)
+    return data
 
 @functools.lru_cache(maxsize=10)
 def fetch_birdnet_species_richness(
@@ -140,59 +185,12 @@ def fetch_birdnet_species_richness(
 @functools.lru_cache(maxsize=4)
 def fetch_acoustic_features_umap(
     dataset_name: str,
-    sample_size: int,
     file_ids: frozenset = frozenset(),
     **filters: Any,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    logger.debug(f"Fetch acoustic features for dataset={dataset_name}")
     dataset = DATASETS.get_dataset(dataset_name)
-    # ensure umap directory exists
-    (dataset.path / "umap").mkdir(exist_ok=True, parents=True)
-    # hash to get the umap id
-    umap_id = hashify(str(tuple([dataset_name] + list(filters.items()))))
-    # load from disk if its present
-    if (umap_path := (dataset.path / "umap" / f"{umap_id}.parquet")).exists():
-        logger.debug(f"Loading UMAP from {umap_path}")
-        data = pd.read_parquet(umap_path)
-        return data[~data["file_id"].isin(file_ids)]
-    data = dataset.acoustic_features
-    logger.debug(f"Applying filters {filters}")
-    data = filter_data(data, file_ids=file_ids, **filters)
-    logger.debug(f"Pivoting features")
-    data = data.pivot(
-        index=data.columns[~data.columns.isin(["feature", "value"])],
-        columns='feature',
-        values='value',
-    )
-    sample = data.sample(min(sample_size, len(data)))
-    logger.debug(f"Running UMAP on subsample {len(sample)}/{len(data)} ")
-    proj = umap_data(sample)
-    logger.debug(f"UMAP complete")
-    logger.debug(f"Persisting UMAP to {umap_path}")
-    # persist so we don't need to recompute
-    proj.to_parquet(umap_path)
-    return proj
-
-def setup():
-    """
-    Sets up the LRU cache for UMAP
-    Not a great solution
-    """
-    for dataset in DATASETS:
-        dates = (dataset.files.date.min(), dataset.files.date.max())
-        locations = list2tuple(dataset.locations.site_name.unique().tolist())
-        fetch_acoustic_features_umap(
-            dataset.dataset_name,
-            dates=dates,
-            locations=locations,
-            sample_size=len(fetch_files(
-                dataset.dataset_name,
-                dates=dates,
-                locations=locations,
-            ))
-        )
-
-setup()
+    data = dataset.acoustic_features_umap
+    return filter_data(data, file_ids=file_ids, **filters)
 
 # NOTE:
 # Please use the dispatch pattern mapping a string to a function
@@ -207,13 +205,20 @@ setup()
 # (2) less messy when rendering components in the front-end
 # (3) easier to switch to a service-based architecture at a later date
 
+from dash import exceptions
+
 def dispatch(
     action: str,
     default: Any | None = None,
     **payload: Dict[str, Any],
 ) -> Any:
-    triggered_id = ctx.triggered_id
+    try:
+        triggered_id = ctx.triggered_id
+    except exceptions.MissingCallbackContextException as e:
+        triggered_id = "preload"
+
     logger.debug(f"{triggered_id=} {action=} {payload=}")
+
     try:
         func = API[action]
         return func(**payload)
@@ -229,12 +234,16 @@ SET_DATASET_CONFIG = "set_dataset_config"
 FETCH_DATASET_SITES_TREE = "fetch_dataset_sites_tree"
 FETCH_DATASET_DROPDOWN_OPTIONS = "fetch_dataset_dropdown_options"
 FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS = "fetch_dataset_categorical_dropdown_options"
+FETCH_DATASET_WEATHER_OPTIONS = "fetch_dataset_weather_options"
 FETCH_FILES = "fetch_files"
 FETCH_LOCATIONS = "fetch_locations"
 FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
 FETCH_BIRDNET_SPECIES_RICHNESS = "fetch_birdnet_species_richness"
 FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
+FETCH_WEATHER = "fetch_weather"
+FETCH_FILE_WEATHER = "fetch_file_weather"
+FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS = "fetch_dataset_spatial_dropdown_options"
 
 API = {
     FETCH_DATASETS: fetch_datasets,
@@ -246,11 +255,15 @@ API = {
     FETCH_DATASET_CATEGORIES: fetch_dataset_categories,
     FETCH_DATASET_DROPDOWN_OPTIONS: fetch_dataset_dropdown_options,
     FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS: fetch_dataset_categorical_dropdown_options,
+    FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS: fetch_dataset_spatial_dropdown_options,
     FETCH_FILES: fetch_files,
     FETCH_LOCATIONS: fetch_locations,
     FETCH_ACOUSTIC_FEATURES: fetch_acoustic_features,
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
     FETCH_BIRDNET_SPECIES_RICHNESS: fetch_birdnet_species_richness,
+    FETCH_DATASET_WEATHER_OPTIONS: fetch_dataset_weather_options,
+    FETCH_WEATHER: fetch_weather,
+    FETCH_FILE_WEATHER: fetch_file_weather,
 }
 
 # TODO: switch to parametric UMAP so we simply load the model in the dataset class, no need to pre-cache

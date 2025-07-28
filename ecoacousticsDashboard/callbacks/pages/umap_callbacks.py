@@ -39,6 +39,8 @@ def toggle_page_info(
     Input("dataset-select", "value"),
     Input("date-range-current-bounds", "data"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
+    Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
     prevent_initial_call=True,
 )
@@ -46,26 +48,27 @@ def load_data(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
+    weather_variables: List[List[str]],
+    weather_ranges: List[List[float]],
     file_filter_groups: Dict[int, List[str]],
 ) -> str:
-    files = dispatch(
-        FETCH_FILES,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-    )
-
-    return dispatch(
+    data = dispatch(
         FETCH_ACOUSTIC_FEATURES_UMAP,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
         locations=list2tuple(locations),
-        sample_size=len(files),
+        sample_size=len(dispatch(FETCH_FILES, dataset_name=dataset_name)),
         file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-    ).to_json(
+        **dict(zip(
+            map(lambda match: match["index"], weather_variables),
+            map(tuple, weather_ranges)
+        )),
+    )
+    return data.to_json(
         date_format="iso",
         orient="table",
     )
+
 
 @callback(
     Output("umap-sample-slider", "max"),

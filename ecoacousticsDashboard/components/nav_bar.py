@@ -54,6 +54,7 @@ def Menu():
         'Overview',
         'Diel',
         'Seasonal',
+        "Weather",
     )
     for group in order:
         menu.append(children[group])
@@ -80,6 +81,8 @@ def NavBar():
                     dmc.Box(id="date-range-filter-chips"),
                     dmc.Space(h="sm"),
                     dmc.Box(id="acoustic-feature-range-filter-chips"),
+                    dmc.Space(h="sm"),
+                    dmc.Box(id="weather-variable-filter-chips"),
                     dmc.Space(h="sm"),
                     dmc.Box(id="file-filter-chips"),
                     dmc.Space(h="sm"),

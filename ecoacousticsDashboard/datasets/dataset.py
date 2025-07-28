@@ -4,12 +4,14 @@ import functools
 import numpy as np
 import pandas as pd
 import pathlib
+import pickle
 
 from configparser import ConfigParser
 from loguru import logger
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import RobustScaler
 from typing import Any, Callable, Dict, List, Tuple, Iterable
-
-from datasets.dataset_views import DatasetViews
+from umap.parametric_umap import load_ParametricUMAP
 
 @attrs.define
 class Dataset:
@@ -28,21 +30,16 @@ class Dataset:
         self.locations
         # cache solar data
         self.dates
+        self.weather
         # cache acoustic features and UMAP
         self.acoustic_features
         # cache species and birdet predictions
         self.species
         self.birdnet_species_probs
-        # load data views
-        self.views
 
     @property
     def path(self):
         return pathlib.Path.cwd().parent / "data" / self.dataset_path
-
-    @functools.cached_property
-    def views(self):
-        return DatasetViews(self)
 
     @functools.cached_property
     def config(self) -> ConfigParser:
@@ -68,8 +65,15 @@ class Dataset:
         data = pd.read_parquet(self.path / "indices.parquet")
         # TODO: my own hack to ensure temporal fields are on the acoustic indices (used in options / filters)
         # we will be able to do a simple table join once finished
+        files_sites_weather_df = self.files.join(
+            self.file_weather.set_index(["file_id", "site_id", "timestamp"]),
+            on=["file_id", "site_id", "timestamp"]
+        ).join(
+            self.locations,
+            on="site_id"
+        )
         data = data.merge(
-            self.files.join(self.locations, on="site_id").reset_index(),
+            files_sites_weather_df.reset_index(),
             left_on=["file", "site"],
             right_on=["file_name", "site_name"],
             how="left",
@@ -120,6 +124,27 @@ class Dataset:
             data['location'] = data['habitat code']
             logger.debug("Updated location with habitat code")
         return data
+
+    @functools.cached_property
+    def acoustic_features_umap(self) -> pd.DataFrame:
+        with open(self.path / "umap" / "config.yaml", "rb") as f:
+            config = pickle.load(f)
+        scaler = RobustScaler()
+        for attr_name, attr_value in config.items():
+            setattr(scaler, attr_name, attr_value)
+        model = load_ParametricUMAP(self.path / "umap")
+        feature_idx = self.acoustic_features.feature.isin(config["feature_names_in_"])
+        index = self.acoustic_features.columns[~self.acoustic_features.columns.isin(["feature", "value"])]
+        data = (
+            self.acoustic_features[feature_idx]
+            .pivot(index=index, columns="feature", values="value")
+        )
+        data["x"], data["y"] = np.split(
+            make_pipeline(scaler, model).transform(data),
+            indices_or_sections=2,
+            axis=1,
+        )
+        return data.reset_index()
 
     # TODO: problem with caching 10M rows! so switched out the larger version...
     # a better way needs to be designed for this... our data files can get very large
@@ -174,13 +199,14 @@ class Dataset:
         logger.debug(f"Loading & caching \"{files_path}\"..")
         data = pd.read_parquet(files_path)
         logger.debug(f"Compute temporal splits..")
-        data['minute'] = data.timestamp.dt.minute
-        data['hour'] = data.timestamp.dt.hour
-        data['weekday'] = data.timestamp.dt.day_name()
-        data['date'] = data.timestamp.dt.strftime('%Y-%m-%d')
-        data['month'] = data.timestamp.dt.month_name()
-        data['year'] = data.timestamp.dt.year
-        data["time"] = data.timestamp.dt.hour + data.timestamp.dt.minute / 60.0
+        data['minute'] = data["timestamp"].dt.minute
+        data['hour'] = data["timestamp"].dt.hour
+        data['weekday'] = data["timestamp"].dt.day_name()
+        data['date'] = data["timestamp"].dt.strftime('%Y-%m-%d')
+        data['month'] = data["timestamp"].dt.month_name()
+        data['year'] = data["timestamp"].dt.year
+        data["time"] = data["timestamp"].dt.hour + data.timestamp.dt.minute / 60.0
+        data["nearest_hour"] = data["timestamp"].dt.round("h")
         return data
 
     @functools.cached_property
@@ -189,6 +215,37 @@ class Dataset:
             dates_path = self.path / "dates_table.parquet"
             logger.debug(f"Loading & caching \"{dates_path}\"..")
             return pd.read_parquet(dates_path)
+        except Exception as e:
+            return pd.DataFrame()
+
+    @functools.cached_property
+    def weather(self) -> pd.DataFrame:
+        try:
+            weather_path = self.path / "weather_table.parquet"
+            logger.debug(f"Loading & caching \"{weather_path}\"..")
+            return pd.read_parquet(weather_path).set_index(["site_id", "timestamp"])
+        except Exception as e:
+            return pd.DataFrame()
+
+    @functools.cached_property
+    def file_weather(self) -> pd.DataFrame:
+        """
+        if we want to look at the weather for specific files,
+        we need to duplicate weather data for each file reference
+        Weather data is by the hour, but files can be snapshots at any temporal resolution
+        we round the file timestamp to the nearest hour, left join with weather on the timestamp
+        by preserving the weather timestamp, we throw away everything other than file_id
+        resulting df is same length as files table with weather data from the nearest hour
+        """
+        try:
+            return self.files.reset_index().merge(
+                self.weather.reset_index(),
+                left_on=["nearest_hour", "site_id"],
+                right_on=["timestamp", "site_id"],
+                suffixes=("", "_weather"),
+            ).filter(
+                items=[*["file_id", "site_id", "timestamp_weather", "timestamp"], *self.weather.columns],
+            )
         except Exception as e:
             return pd.DataFrame()
 

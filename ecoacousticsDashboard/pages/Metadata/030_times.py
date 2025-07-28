@@ -14,7 +14,7 @@ from io import StringIO
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_FILES
+from api import dispatch, FETCH_FILES, FETCH_DATASET_DROPDOWN_OPTIONS
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
@@ -57,18 +57,22 @@ layout = dmc.Box([
             children=[
                 DatasetOptionsSelect(
                     id="times-colour-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
                     label="Colour by"
                 ),
                 DatasetOptionsSelect(
                     id="times-symbol-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
                     label="Symbol by"
                 ),
                 DatasetOptionsSelect(
                     id="times-facet-row-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
                     label="Facet rows by"
                 ),
                 DatasetOptionsSelect(
                     id="times-facet-column-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
                     label="Facet columns by"
                 ),
                 dmc.Flex(
@@ -144,6 +148,8 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Input("dataset-select", "value"),
     Input("date-range-current-bounds", "data"),
     Input({'type': "checklist-locations-hierarchy", 'index': ALL}, 'value'),
+    Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
+    Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
     prevent_initial_call=True,
 )
@@ -151,6 +157,8 @@ def load_data(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
+    weather_variables: List[List[str]],
+    weather_ranges: List[List[float]],
     file_filter_groups: Dict[int, List[str]],
 ) -> str:
     return dispatch(
@@ -159,6 +167,10 @@ def load_data(
         dates=list2tuple(dates),
         locations=list2tuple(locations),
         file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        **dict(zip(
+            map(lambda match: match["index"], weather_variables),
+            map(tuple, weather_ranges)
+        )),
     ).to_json(
         date_format="iso",
         orient="table",

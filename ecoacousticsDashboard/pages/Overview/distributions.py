@@ -5,12 +5,13 @@ import dash_mantine_components as dmc
 from dash import dcc
 from dash_iconify import DashIconify
 
+from api import FETCH_DATASET_DROPDOWN_OPTIONS
 from callbacks.filter import date_filter_callbacks
 from callbacks.filter import file_filter_callbacks
 from callbacks.filter import site_level_filter_callbacks
 from callbacks.filter import acoustic_feature_filter_callbacks
+from callbacks.filter import environmental_filter_callbacks
 from callbacks.pages import distributions_callbacks
-
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
@@ -60,15 +61,18 @@ layout = dmc.Box([
             children=[
                 DatasetOptionsSelect(
                     id="distributions-colour-select",
-                    label="Colour by"
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
+                    label="Colour by",
                 ),
                 DatasetOptionsSelect(
                     id="distributions-facet-row-select",
-                    label="Facet rows by"
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
+                    label="Facet rows by",
                 ),
                 DatasetOptionsSelect(
                     id="distributions-facet-column-select",
-                    label="Facet columns by"
+                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
+                    label="Facet columns by",
                 ),
                 dmc.Box([
                     dmc.Chip(
