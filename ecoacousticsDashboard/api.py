@@ -118,7 +118,12 @@ def fetch_files(
         right_on=["file", "site"],
         how="inner",
         suffixes=('', '_IGNORE'),
-    ).drop_duplicates()
+    ).drop_duplicates().merge(
+        dataset.weather.reset_index(),
+        left_on=["nearest_hour", "site_id"],
+        right_on=["timestamp", "site_id"],
+        suffixes=("", "_weather"),
+    )
     return filter_data(data, **filters)
 
 @functools.lru_cache(maxsize=3)
