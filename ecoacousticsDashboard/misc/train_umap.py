@@ -48,6 +48,8 @@ def train_umap(
     # scale features using outlier-robust scaler
     scaler = RobustScaler()
     # a parametric model we can save and use to encode later
+    # FIXME: there appears to be a bug where if you don't specify a decoder, you cannot
+    # reload the pickled model. This fixes it, but a decoder is trained concurrently and separately
     model = ParametricUMAP(parametric_reconstruction=True, **kwargs)
     # fit the graph and embedding function
     pipe = make_pipeline(scaler, model)
