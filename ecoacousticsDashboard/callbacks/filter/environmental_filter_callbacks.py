@@ -4,13 +4,21 @@ from dash import MATCH, ALL
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_DATASET_WEATHER_OPTIONS
+from api import dispatch, FETCH_DATASET_DROPDOWN_OPTION_GROUPS
 from components.environmental_filter import EnvironmentalFilterSliderAccordion
+from utils import list2tuple
 
 @callback(
     Output("weather-variable-filter-groups", "children"),
     Input("dataset-select", "value"),
 )
 def populate_environmental_filter(dataset_name: str):
-    opt_groups = dispatch(FETCH_DATASET_WEATHER_OPTIONS, dataset_name=dataset_name)
-    return [EnvironmentalFilterSliderAccordion(**opt_group) for opt_group in opt_groups]
+    opt_groups = dispatch(
+        FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+        dataset_name=dataset_name,
+        options=list2tuple(["Temperature", "Precipitation", "Wind"]),
+    )
+    return [
+        EnvironmentalFilterSliderAccordion(**opt_group)
+        for opt_group in opt_groups
+    ]

@@ -16,7 +16,6 @@ from api import (
     dispatch,
     FETCH_FILES,
     FETCH_ACOUSTIC_FEATURES_UMAP,
-    FETCH_DATASET_CATEGORIES,
 )
 from utils import list2tuple, str2date
 

@@ -5,7 +5,7 @@ import dash_mantine_components as dmc
 from dash import dcc
 from dash_iconify import DashIconify
 
-from api import FETCH_DATASET_DROPDOWN_OPTIONS
+from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
 from callbacks.filter import date_filter_callbacks
 from callbacks.filter import file_filter_callbacks
 from callbacks.filter import site_level_filter_callbacks
@@ -61,17 +61,17 @@ layout = dmc.Box([
             children=[
                 DatasetOptionsSelect(
                     id="distributions-colour-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Colour by",
                 ),
                 DatasetOptionsSelect(
                     id="distributions-facet-row-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet rows by",
                 ),
                 DatasetOptionsSelect(
                     id="distributions-facet-column-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet columns by",
                 ),
                 dmc.Box([

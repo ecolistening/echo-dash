@@ -6,7 +6,7 @@ import numpy as np
 from dash import dcc
 from dash_iconify import DashIconify
 
-from api import FETCH_DATASET_DROPDOWN_OPTIONS
+from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
 from callbacks.pages import species_richness_callbacks
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
@@ -74,13 +74,13 @@ layout = dmc.Box([
                 ),
                 DatasetOptionsSelect(
                     id="species-richness-facet-row-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet rows by",
                     value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
                     id="species-richness-facet-column-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTIONS,
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet columns by",
                     value="dddn",
                 ),

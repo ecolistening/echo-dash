@@ -9,7 +9,7 @@ import plotly.graph_objs as go
 from dash import dcc
 from dash_iconify import DashIconify
 
-from api import FETCH_DATASET_WEATHER_OPTIONS, FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS
+from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
 from callbacks.pages import weather_hourly_callbacks
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
@@ -62,7 +62,8 @@ layout = dmc.Box([
             children=[
                 DatasetOptionsSelect(
                     id="weather-hourly-variable-select",
-                    action=FETCH_DATASET_WEATHER_OPTIONS,
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=["Temperature", "Precipitation", "Wind"],
                     label="Weather Variable",
                     value="temperature_2m",
                     clearable=False,
@@ -70,13 +71,15 @@ layout = dmc.Box([
                 ),
                 DatasetOptionsSelect(
                     id="weather-hourly-colour-select",
-                    action=FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS,
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=["Spatial"],
                     label="Colour by",
                     value="location",
                 ),
                 DatasetOptionsSelect(
                     id="weather-hourly-facet-row-select",
-                    action=FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS,
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=["Spatial"],
                     label="Facet rows by",
                     value="location",
                 ),

@@ -12,7 +12,8 @@ from api import (
     FETCH_DATASET_CONFIG,
     SET_DATASET_CONFIG,
     FETCH_DATASET_SITES_TREE,
-    FETCH_DATASET_CATEGORIES,
+    FETCH_DATASET_CATEGORY_ORDERS,
+    FETCH_DATASET_OPTIONS,
 )
 from store import DATASET_CONFIG_STORE
 
@@ -94,4 +95,14 @@ def toggle_settings_drawer(*args: Any):
 def load_categories(
     dataset_name: str,
 ) -> Dict[str, List[str]]:
-    return dispatch(FETCH_DATASET_CATEGORIES, dataset_name=dataset_name)
+    category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
+    return category_orders
+
+@callback(
+    Output("dataset-options", "data"),
+    Input("dataset-select", "value"),
+)
+def load_options(
+    dataset_name: str,
+) -> Dict[str, List[str]]:
+    return dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)

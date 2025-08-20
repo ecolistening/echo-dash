@@ -12,7 +12,7 @@ from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_ACOUSTIC_FEATURES, FETCH_DATASET_CATEGORIES
+from api import dispatch, FETCH_ACOUSTIC_FEATURES
 from utils import list2tuple
 
 PLOT_HEIGHT = 800

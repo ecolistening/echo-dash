@@ -162,8 +162,9 @@ class Dataset:
 
     @functools.cached_property
     def species_predictions(self) -> pd.DataFrame:
-        return (
-            self.birdnet_species_probs
+        data = self.birdnet_species_probs
+        data = (
+            data
             .join(self.species, on="species_id")
             .join(self.files, on="file_id")
             .join(self.locations, on="site_id")
@@ -176,6 +177,8 @@ class Dataset:
                 how="left",
             )
         )
+        data["species"] = data[["scientific_name", "common_name"]].agg("\n".join, axis=1)
+        return data
 
     @functools.cached_property
     def locations(self) -> pd.DataFrame:

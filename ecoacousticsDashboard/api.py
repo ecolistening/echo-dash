@@ -69,35 +69,26 @@ def set_dataset_config(
     }
 
 @functools.lru_cache(maxsize=3)
-def fetch_dataset_categories(
+def fetch_dataset_options(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
-    return DatasetDecorator(dataset).category_orders()
+    return DatasetDecorator(dataset).options
 
 @functools.lru_cache(maxsize=3)
-def fetch_dataset_dropdown_options(
+def fetch_dataset_dropdown_option_groups(
+    dataset_name: str,
+    options: List[str] | None = None,
+) -> Dict[str, Any]:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return DatasetDecorator(dataset).drop_down_select_option_groups(options)
+
+@functools.lru_cache(maxsize=3)
+def fetch_dataset_category_orders(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
-    return DatasetDecorator(dataset).drop_down_select_options()
-
-@functools.lru_cache(maxsize=3)
-def fetch_dataset_categorical_dropdown_options(
-    dataset_name: str
-) -> Dict[str, Any]:
-    dataset = DATASETS.get_dataset(dataset_name)
-    return DatasetDecorator(dataset).categorical_drop_down_select_options()
-
-@functools.lru_cache(maxsize=3)
-def fetch_dataset_weather_options(dataset_name):
-    dataset = DATASETS.get_dataset(dataset_name)
-    return DatasetDecorator(dataset).weather_drop_down_select_options()
-
-@functools.lru_cache(maxsize=3)
-def fetch_dataset_spatial_dropdown_options(dataset_name):
-    dataset = DATASETS.get_dataset(dataset_name)
-    return DatasetDecorator(dataset).spatial_drop_down_select_options()
+    return DatasetDecorator(dataset).category_orders
 
 @functools.lru_cache(maxsize=3)
 def fetch_files(
@@ -167,6 +158,14 @@ def fetch_acoustic_features(
     return data
 
 @functools.lru_cache(maxsize=10)
+def fetch_birdnet_species(
+    dataset_name: str,
+    **filters: Any,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return filter_data(dataset.species_predictions, **filters)
+
+@functools.lru_cache(maxsize=10)
 def fetch_birdnet_species_richness(
     dataset_name: str,
     threshold: float,
@@ -232,18 +231,19 @@ SET_CURRENT_DATASET = "set_current_dataset"
 FETCH_DATASET_CONFIG = "fetch_dataset_config"
 SET_DATASET_CONFIG = "set_dataset_config"
 FETCH_DATASET_SITES_TREE = "fetch_dataset_sites_tree"
-FETCH_DATASET_DROPDOWN_OPTIONS = "fetch_dataset_dropdown_options"
-FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS = "fetch_dataset_categorical_dropdown_options"
-FETCH_DATASET_WEATHER_OPTIONS = "fetch_dataset_weather_options"
+
+FETCH_DATASET_OPTIONS = "fetch_dataset_options"
+FETCH_DATASET_CATEGORY_ORDERS = "fetch_dataset_category_orders"
+FETCH_DATASET_DROPDOWN_OPTION_GROUPS = "fetch_dataset_dropdown_option_groups"
+
 FETCH_FILES = "fetch_files"
 FETCH_LOCATIONS = "fetch_locations"
 FETCH_ACOUSTIC_FEATURES = "fetch_acoustic_features"
 FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
+FETCH_BIRDNET_SPECIES = "fetch_birdnet_species"
 FETCH_BIRDNET_SPECIES_RICHNESS = "fetch_birdnet_species_richness"
-FETCH_DATASET_CATEGORIES = "fetch_dataset_categories"
 FETCH_WEATHER = "fetch_weather"
 FETCH_FILE_WEATHER = "fetch_file_weather"
-FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS = "fetch_dataset_spatial_dropdown_options"
 
 API = {
     FETCH_DATASETS: fetch_datasets,
@@ -252,16 +252,17 @@ API = {
     FETCH_DATASET_CONFIG: fetch_dataset_config,
     SET_DATASET_CONFIG: set_dataset_config,
     FETCH_DATASET_SITES_TREE: fetch_sites_tree,
-    FETCH_DATASET_CATEGORIES: fetch_dataset_categories,
-    FETCH_DATASET_DROPDOWN_OPTIONS: fetch_dataset_dropdown_options,
-    FETCH_DATASET_CATEGORICAL_DROPDOWN_OPTIONS: fetch_dataset_categorical_dropdown_options,
-    FETCH_DATASET_SPATIAL_DROPDOWN_OPTIONS: fetch_dataset_spatial_dropdown_options,
+
+    FETCH_DATASET_OPTIONS: fetch_dataset_options,
+    FETCH_DATASET_CATEGORY_ORDERS: fetch_dataset_category_orders,
+    FETCH_DATASET_DROPDOWN_OPTION_GROUPS: fetch_dataset_dropdown_option_groups,
+
     FETCH_FILES: fetch_files,
     FETCH_LOCATIONS: fetch_locations,
     FETCH_ACOUSTIC_FEATURES: fetch_acoustic_features,
     FETCH_ACOUSTIC_FEATURES_UMAP: fetch_acoustic_features_umap,
+    FETCH_BIRDNET_SPECIES: fetch_birdnet_species,
     FETCH_BIRDNET_SPECIES_RICHNESS: fetch_birdnet_species_richness,
-    FETCH_DATASET_WEATHER_OPTIONS: fetch_dataset_weather_options,
     FETCH_WEATHER: fetch_weather,
     FETCH_FILE_WEATHER: fetch_file_weather,
 }
