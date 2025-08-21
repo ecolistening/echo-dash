@@ -186,3 +186,54 @@ class DatasetDecorator:
                 "max": ceil(self.dataset.weather["wind_gusts_10m"].max()),
             },
         }
+
+    def functional_group_columns(self) -> Dict[str, List[Any]]:
+        return {
+            "habitat_type": {
+                "label": "Habitat Type",
+                "order": [
+                    "Desert",
+                    "Rock",
+                    "Grassland",
+                    "Shrubland",
+                    "Woodland",
+                    "Forest",
+                    "Wetland",
+                    "Riverine",
+                    "Coastal",
+                    "Marine"
+                ],
+            },
+            "habitat_density": {
+                "label": "Habitat Density",
+                "order": [
+                    "Dense",
+                    "Semi-open",
+                    "Open"
+                ],
+            },
+            "trophic_niche": {
+                "label": "Trophic Niche",
+                "order": [
+                    "Frugivore",
+                    "Granivore",
+                    "Nectarivore",
+                    "Herbivore",
+                    "Herbivore aquatic",
+                    "Invertivore",
+                    "Vertivore",
+                    "Aquatic Predator",
+                    "Scavenger",
+                ],
+            },
+            "primary_lifestyle": {
+                "label": "Primary Lifestyle",
+                "order": [
+                    "Aerial",
+                    "Terrestrial",
+                    "Insessorial",
+                    "Aquatic",
+                ],
+            },
+        }
+
