@@ -78,7 +78,7 @@ def fetch_dataset_options(
 @functools.lru_cache(maxsize=3)
 def fetch_dataset_dropdown_option_groups(
     dataset_name: str,
-    options: List[str] | None = None,
+    options: Tuple[str] = (),
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).drop_down_select_option_groups(options)

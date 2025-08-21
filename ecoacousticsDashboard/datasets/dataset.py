@@ -35,7 +35,7 @@ class Dataset:
         self.acoustic_features
         # cache species and birdet predictions
         self.species
-        self.birdnet_species_probs
+        self.species_predictions
 
     @property
     def path(self):
@@ -146,39 +146,38 @@ class Dataset:
         )
         return data.reset_index()
 
-    # TODO: problem with caching 10M rows! so switched out the larger version...
-    # a better way needs to be designed for this... our data files can get very large
-    @functools.cached_property
-    def birdnet_species_probs(self) -> pd.DataFrame:
-        birdnet_species_probs_path = self.path / "birdnet_species_probs_table.parquet"
-        logger.debug(f"Loading & caching \"{birdnet_species_probs_path}\"..")
-        return pd.read_parquet(birdnet_species_probs_path)
-
     @functools.cached_property
     def species(self) -> pd.DataFrame:
-        species_path = self.path / "species_table.parquet"
+        species_path = self.path.parent / "species_table.parquet"
         logger.debug(f"Loading & caching \"{species_path}\"..")
-        return pd.read_parquet(species_path)
+        species = pd.read_parquet(species_path)
+        species["common_name"] = species["common_name"].fillna("")
+        species["species"] = species[["scientific_name", "common_name"]].agg("\n".join, axis=1)
+        # HACK: FIXME prevent nulls in the front-end by populating missing values
+        species[species["habitat_type"].isna()] = "Unspecified"
+        species[species["trophic_level"].isna()] = "Unspecified"
+        species[species["trophic_niche"].isna()] = "Unspecified"
+        species[species["primary_lifestyle"].isna()] = "Unspecified"
+        return species
 
     @functools.cached_property
     def species_predictions(self) -> pd.DataFrame:
-        data = self.birdnet_species_probs
-        data = (
-            data
-            .join(self.species, on="species_id")
+        birdnet_species_probs_path = self.path / "birdnet_species_probs_table.parquet"
+        logger.debug(f"Loading & caching \"{birdnet_species_probs_path}\"..")
+        birdnet_species_probs = (
+            pd.read_parquet(birdnet_species_probs_path)
+            .join(self.species.set_index("scientific_name"), on="scientific_name")
             .join(self.files, on="file_id")
             .join(self.locations, on="site_id")
-            # HACK: site-level time data should really be separate
-            # because its shared across birdnet and acoustic features
-            .merge(
-                self.acoustic_features[["file", "dddn"]].drop_duplicates(),
-                left_on="file_name",
-                right_on="file",
-                how="left",
-            )
+            # FIXME
+            .merge(self.solar, left_on="file_name", right_on="file", how="left")
         )
-        data["species"] = data[["scientific_name", "common_name"]].agg("\n".join, axis=1)
-        return data
+        return birdnet_species_probs
+
+    # FIXME
+    @functools.cached_property
+    def solar(self) -> pd.DataFrame:
+        return self.acoustic_features[["file", "dddn"]].drop_duplicates()
 
     @functools.cached_property
     def locations(self) -> pd.DataFrame:

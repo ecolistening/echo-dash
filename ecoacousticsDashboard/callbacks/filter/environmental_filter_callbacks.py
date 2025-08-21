@@ -16,7 +16,8 @@ def populate_environmental_filter(dataset_name: str):
     opt_groups = dispatch(
         FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
         dataset_name=dataset_name,
-        options=list2tuple(["Temperature", "Precipitation", "Wind"]),
+        options=("Temperature", "Precipitation", "Wind"),
+        default=[],
     )
     return [
         EnvironmentalFilterSliderAccordion(**opt_group)

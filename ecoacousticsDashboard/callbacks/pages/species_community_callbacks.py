@@ -37,6 +37,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Input("species-community-threshold-slider", "value"),
     Input("species-community-axis-select", "value"),
     Input("species-community-facet-column-select", "value"),
+    Input("species-community-facet-row-select", "value"),
     Input("dataset-category-orders", "data"),
     Input("dataset-options", "data"),
     prevent_initial_call=True,
@@ -49,6 +50,7 @@ def draw_figure(
     threshold: float,
     axis_group: str,
     facet_col: str,
+    facet_row: str,
     category_orders: Dict[str, List[str]],
     options: Dict[str, List[str]],
 ) -> go.Figure:
@@ -75,6 +77,7 @@ def draw_figure(
         histnorm=None,
         text_auto=True,
         facet_col=facet_col,
+        facet_row=facet_row,
         color_continuous_scale="Greys",
         category_orders=category_orders,
         labels={
@@ -82,6 +85,7 @@ def draw_figure(
             "confidence": "Occurrence",
             axis_group: options.get(axis_group, {}).get("label", axis_group),
             facet_col: options.get(facet_col, {}).get("label", facet_col),
+            facet_row: options.get(facet_row, {}).get("label", facet_row),
         }
     )
     # remove prefix in the facet-wise annotations

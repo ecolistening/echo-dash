@@ -54,8 +54,8 @@ layout = dmc.Box([
                 DatasetOptionsSelect(
                     id="species-community-axis-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=["Site Level", "Spatial"],
-                    label="Set x-axis category",
+                    options=("Site Level", "Spatial"),
+                    label="Group columns by...",
                     value="location",
                     clearable=False,
                     allowDeselect=False,
@@ -63,8 +63,14 @@ layout = dmc.Box([
                 DatasetOptionsSelect(
                     id="species-community-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=["Time of Day", "Temporal"],
-                    label="Facet columns by",
+                    options=("Time of Day", "Temporal"),
+                    label="Facet columns by...",
+                ),
+                DatasetOptionsSelect(
+                    id="species-community-facet-row-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("Species Habitat", "Functional Groups"),
+                    label="Facet rows by...",
                 ),
                 dmc.Stack([
                     dmc.Text(

@@ -21,7 +21,7 @@ DEFAULT_SELECT_OPTIONS = dict(
 def DatasetOptionsSelect(
     id: str,
     action: str,
-    options: List[str] | None = None,
+    options: Tuple[str] = (),
     **kwargs: Any,
 ) -> dmc.Select:
     select_options = DEFAULT_SELECT_OPTIONS.copy()
@@ -32,10 +32,6 @@ def DatasetOptionsSelect(
         Input("dataset-select", "value"),
     )
     def init_select_options(dataset_name: str) -> List[Dict[str, str]]:
-        return dispatch(
-            action,
-            dataset_name=dataset_name,
-            options=list2tuple(options)
-        )
+        return dispatch(action, dataset_name=dataset_name, options=options)
 
     return dmc.Select(id=id, **select_options)
