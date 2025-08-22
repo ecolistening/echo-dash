@@ -95,8 +95,10 @@ def draw_figure(
         x=time_agg,
         y="value",
         hover_name="file_id",
-        hover_data=["file_name", "timestamp"],
-        height=PLOT_HEIGHT,
+        hover_data=[
+            "file_name",
+            "timestamp",
+        ],
         color=color,
         facet_row=facet_row,
         facet_col=facet_col,

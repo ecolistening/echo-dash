@@ -96,8 +96,8 @@ def draw_figure(
         # margin=dict(l=0, r=0, t=80, b=80),
         height=data["species"].nunique() * CELL_HEIGHT,
         title=dict(
-            automargin=True,
             text=f"Species by Site",
+            automargin=True,
             x=0.5,
             y=1.00,
             xanchor="center",

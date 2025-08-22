@@ -39,7 +39,6 @@ def train_umap(
     save_dir: str | Path | None = None,
     **kwargs: Any,
 ) -> None:
-    data = dedup_acoustic_features(data)
     data = data.pivot(
         index=data.columns[~data.columns.isin(["feature", "value"])],
         columns='feature',

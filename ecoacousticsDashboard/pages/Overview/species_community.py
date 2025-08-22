@@ -130,6 +130,7 @@ layout = dmc.Box([
         #     ],
         # ),
     ]),
+    dmc.Space(h="sm"),
     dcc.Loading(
         dcc.Graph(
             id="species-community-graph",

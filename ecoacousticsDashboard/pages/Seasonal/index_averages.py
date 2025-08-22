@@ -118,6 +118,7 @@ layout = dmc.Box([
             ],
         ),
     ]),
+    dmc.Space(h="sm"),
     dcc.Loading(
         dcc.Graph(id="index-averages-graph"),
     ),

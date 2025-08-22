@@ -70,6 +70,7 @@ layout = dmc.Box([
             ],
         ),
     ]),
+    dmc.Space(h="sm"),
     dcc.Loading(
         dcc.Graph(id="dates-graph"),
     ),
@@ -135,21 +136,24 @@ def draw_figure(
 
     data = (
         pd.read_json(StringIO(json_data), orient="table")
-        .groupby('date')
-        .agg('count')
+        .groupby("date")
+        .agg("count")
         .reset_index()
     )
     fig = calplot(
         data,
-        x='date',
-        y='file'
+        x="date",
+        y="file_name"
     )
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(
             text=PAGE_TITLE,
+            automargin=True,
             x=0.5,
-            y=0.97,
+            y=1.00,
+            xanchor="center",
+            yanchor="top",
             font=dict(size=24),
         )
     )

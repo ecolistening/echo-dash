@@ -123,7 +123,12 @@ def draw_figure(
         y="y",
         opacity=opacity / 100.0,
         hover_name="file_id",
-        hover_data=["file", "site", "dddn", "timestamp"],
+        hover_data=[
+            "file_name",
+            "site_name",
+            "dddn",
+            "timestamp"
+        ],
         color=color,
         symbol=symbol,
         facet_row=facet_row,

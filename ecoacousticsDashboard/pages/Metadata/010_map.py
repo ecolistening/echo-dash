@@ -49,6 +49,7 @@ layout = html.Div([
             ],
         ),
     ]),
+    dmc.Space(h="sm"),
     dcc.Loading(
         dcc.Graph(id="map-graph"),
     ),

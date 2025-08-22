@@ -97,25 +97,8 @@ def fetch_files(
     **filters: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    # FIXME: another hack, we should just be able to get the files table
-    # but we have two sources of truth at the moment
     file_ids = file_ids or dataset.files.index
-    data = dataset.files.loc[file_ids].join(
-        dataset.locations,
-        on="site_id",
-    ).reset_index().merge(
-        dataset.acoustic_features[["file", "site"]],
-        left_on=["file_name", "site_name"],
-        right_on=["file", "site"],
-        how="inner",
-        suffixes=('', '_IGNORE'),
-    ).drop_duplicates().merge(
-        dataset.weather.reset_index(),
-        left_on=["nearest_hour", "site_id"],
-        right_on=["timestamp", "site_id"],
-        suffixes=("", "_weather"),
-    )
-    return filter_data(data, **filters)
+    return filter_data(dataset.files.loc[file_ids], **filters)
 
 @functools.lru_cache(maxsize=3)
 def fetch_locations(
@@ -139,14 +122,13 @@ def fetch_file_weather(
     **filters: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    data = dataset.file_weather
     id_vars = ["file_id", "site_id", "timestamp_weather", "timestamp"]
-    data = (
-        data[[*id_vars, variable]]
+    return filter_data((
+        dataset.files
+        .filter(items=[*id_vars, variable])
         .melt(id_vars=id_vars, var_name="variable", value_name="value")
         .join(dataset.locations, on="site_id", how="left")
-    )
-    return filter_data(data, **filters)
+    ), **filters)
 
 @functools.lru_cache(maxsize=10)
 def fetch_acoustic_features(

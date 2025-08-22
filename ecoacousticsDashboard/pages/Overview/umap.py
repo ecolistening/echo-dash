@@ -171,6 +171,7 @@ layout = dmc.Box([
             ]
         ),
     ]),
+    dmc.Space(h="sm"),
     # Note: this is slightly hacky but it works
     # the file selection sidebar changes the span of the
     # sibling column span to make itself visible
