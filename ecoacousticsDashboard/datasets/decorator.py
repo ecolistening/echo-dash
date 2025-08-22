@@ -17,7 +17,6 @@ class DatasetDecorator:
     def drop_down_select_option_groups(self, option_groups: Tuple[str] = ()):
         if not len(option_groups):
             option_groups = DEFAULT_OPTION_GROUPS
-        logger.info(option_groups)
         opt_groups = []
         column_groups = zip(option_groups, [self.option_groups_mapping[s] for s in option_groups])
         for group_name, column_group in column_groups:
@@ -28,7 +27,6 @@ class DatasetDecorator:
                     for value, params in column_group.items()
                 ],
             })
-        logger.info(opt_groups)
         return opt_groups
 
     @property

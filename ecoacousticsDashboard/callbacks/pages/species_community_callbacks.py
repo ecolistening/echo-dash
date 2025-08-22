@@ -93,12 +93,13 @@ def draw_figure(
     fig.update_yaxes(categoryorder="array", categoryarray=order)
     fig.update_layout(
         barmode='stack',
-        margin=dict(l=20, r=20, t=80, b=40),
+        # margin=dict(l=0, r=0, t=80, b=80),
         height=data["species"].nunique() * CELL_HEIGHT,
         title=dict(
+            automargin=True,
             text=f"Species by Site",
             x=0.5,
-            y=0.97,
+            y=1.00,
             xanchor="center",
             yanchor="top",
             font=dict(size=24),
