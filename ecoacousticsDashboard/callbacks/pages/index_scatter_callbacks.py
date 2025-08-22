@@ -27,7 +27,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
 
 @callback(
-    Output("index-scatter-graph-data", "data"),
+    Output("index-scatter-graph", "figure"),
     Input("dataset-select", "value"),
     Input("date-range-current-bounds", "data"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
@@ -35,8 +35,14 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
     Input("acoustic-feature-current-bounds", "data"),
+    Input("index-scatter-size-slider", "value"),
+    Input("index-scatter-colour-select", "value"),
+    Input("index-scatter-symbol-select", "value"),
+    Input("index-scatter-facet-row-select", "value"),
+    Input("index-scatter-facet-column-select", "value"),
+    Input("dataset-category-orders", "data"),
 )
-def load_data(
+def draw_figure(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
@@ -44,9 +50,15 @@ def load_data(
     weather_ranges: List[List[float]],
     file_filter_groups: Dict[str, List],
     feature_params: Dict[str, Any],
-) -> str:
+    dot_size: int,
+    color: str,
+    symbol: str,
+    facet_row: str,
+    facet_col: str,
+    category_orders: Dict[str, List[str]],
+) -> go.Figure:
     feature, start_value, end_value = feature_params.values()
-    return dispatch(
+    data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
@@ -58,38 +70,9 @@ def load_data(
         )),
         feature=feature,
         feature_range=(start_value, end_value),
-    ).to_json(
-        date_format="iso",
-        orient="table",
     )
-
-@callback(
-    Output("index-scatter-graph", "figure"),
-    Input("index-scatter-graph-data", "data"),
-    Input("acoustic-feature-current-bounds", "data"),
-    Input("index-scatter-size-slider", "value"),
-    Input("index-scatter-colour-select", "value"),
-    Input("index-scatter-symbol-select", "value"),
-    Input("index-scatter-facet-row-select", "value"),
-    Input("index-scatter-facet-column-select", "value"),
-    Input("dataset-category-orders", "data"),
-)
-def draw_figure(
-    json_data: str,
-    feature_state: Dict[str, Any],
-    dot_size: int,
-    color: str,
-    symbol: str,
-    facet_row: str,
-    facet_col: str,
-    category_orders: Dict[str, List[str]],
-) -> go.Figure:
-    feature = feature_state["feature"]
     fig = px.scatter(
-        data_frame=pd.read_json(
-            StringIO(json_data),
-            orient="table"
-        ),
+        data_frame=data,
         x='hour',
         y='value',
         hover_name="file_id",
@@ -105,7 +88,7 @@ def draw_figure(
         ),
         category_orders=category_orders,
     )
-
+    fig.update_traces(marker=dict(size=dot_size))
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(
@@ -115,7 +98,4 @@ def draw_figure(
             font=dict(size=24),
         )
     )
-
-    fig.update_traces(marker=dict(size=dot_size))
-
     return fig

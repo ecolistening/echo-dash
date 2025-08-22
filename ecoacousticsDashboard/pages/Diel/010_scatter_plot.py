@@ -30,7 +30,6 @@ dash.register_page(
 PLOT_HEIGHT = 800
 
 layout = dmc.Box([
-    dcc.Store(id="index-scatter-graph-data"),
     FilterPanel([
         dmc.Group(
             align="start",
@@ -87,6 +86,10 @@ layout = dmc.Box([
                                 DataDownloadWidget(
                                     graph_data="index-scatter-graph-data",
                                 ),
+                                # DataDownloadWidget(
+                                #     id="index-scatter-data-download",
+                                #     action=FETCH_ACOUSTIC_FEATURES,
+                                # ),
                                 FigureDownloadWidget(
                                     plot_name="index-scatter-graph",
                                 ),

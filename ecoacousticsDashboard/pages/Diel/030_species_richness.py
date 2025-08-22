@@ -33,7 +33,6 @@ PLOT_HEIGHT = 800
 plot_types = species_richness_callbacks.plot_types
 
 layout = dmc.Box([
-    dcc.Store(id="species-richness-graph-data"),
     FilterPanel([
         dmc.Group(
             align="start",

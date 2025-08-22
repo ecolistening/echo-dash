@@ -54,7 +54,6 @@ def FileSelectionSidebarIcon():
     )
 
 layout = dmc.Box([
-    dcc.Store(id="umap-graph-data"),
     FilterPanel([
         dmc.Group(
             align="start",
@@ -154,20 +153,20 @@ layout = dmc.Box([
                         ],
                     )
                 ]),
-                dmc.Stack([
-                    dmc.Text(
-                        "Sample Size",
-                        size="sm",
-                        ta="left",
-                    ),
-                    dmc.Slider(
-                        id=f"umap-sample-slider",
-                        persistence=True,
-                        min=1,
-                        value=None,
-                        step=1,
-                    )
-                ]),
+                # dmc.Stack([
+                #     dmc.Text(
+                #         "Sample Size",
+                #         size="sm",
+                #         ta="left",
+                #     ),
+                #     dmc.Slider(
+                #         id=f"umap-sample-slider",
+                #         persistence=True,
+                #         min=1,
+                #         value=None,
+                #         step=1,
+                #     )
+                # ]),
             ]
         ),
     ]),
@@ -190,7 +189,6 @@ layout = dmc.Box([
             ],
         ),
         FileSelectionSidebar(
-            graph_data="umap-graph-data",
             filter_data="umap-filter-store",
             graph="umap-graph",
             sibling="umap-graph-container",

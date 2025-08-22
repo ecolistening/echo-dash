@@ -106,6 +106,7 @@ class Dataset:
         self.species[self.species["primary_lifestyle"].isna()] = "Unspecified"
 
     def _add_fields_to_files_table(self):
+        self.files["file_path"] = self.files["local_file_path"]
         self.files["minute"] = self.files["timestamp"].dt.minute
         self.files["hour"] = self.files["timestamp"].dt.hour
         self.files["weekday"] = self.files["timestamp"].dt.day_name()

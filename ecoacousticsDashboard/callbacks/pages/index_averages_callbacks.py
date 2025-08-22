@@ -27,7 +27,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
 
 @callback(
-    Output("index-averages-graph-data", "data"),
+    Output("index-averages-graph", "figure"),
     Input("dataset-select", "value"),
     Input("date-range-current-bounds", "data"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
@@ -35,9 +35,14 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
     Input("acoustic-feature-current-bounds", "data"),
+    Input("index-averages-time-aggregation", "value"),
+    # Input(outliers_tickbox, "checked"),
+    # Input(colours_tickbox, "checked"),
+    # Input(separate_plots_tickbox, "checked"),
+    Input("dataset-category-orders", "data"),
     prevent_initial_call=True,
 )
-def load_data(
+def draw_figure(
     dataset_name: str,
     dates: List[str],
     locations: List[str],
@@ -45,9 +50,14 @@ def load_data(
     weather_ranges: List[List[float]],
     file_filter_groups: Dict[str, List],
     feature_params: Dict[str, Any],
-) -> str:
+    time_agg: str,
+    # outliers,
+    # colour_locations,
+    # separate_plots,
+    category_orders: Dict[str, List[str]],
+) -> go.Figure:
     feature, start_value, end_value = feature_params.values()
-    return dispatch(
+    data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
         dates=list2tuple(dates),
@@ -59,34 +69,9 @@ def load_data(
         )),
         feature=feature,
         feature_range=(start_value, end_value),
-    ).to_json(
-        date_format="iso",
-        orient="table",
     )
-
-@callback(
-    Output("index-averages-graph", "figure"),
-    Input("index-averages-graph-data", "data"),
-    Input("acoustic-feature-current-bounds", "data"),
-    Input("index-averages-time-aggregation", "value"),
-    # Input(outliers_tickbox, "checked"),
-    # Input(colours_tickbox, "checked"),
-    # Input(separate_plots_tickbox, "checked"),
-    Input("dataset-category-orders", "data"),
-    prevent_initial_call=True,
-)
-def draw_figure(
-    json_data: str,
-    feature_state: Dict[str, Any],
-    time_agg: str,
-    # outliers,
-    # colour_locations,
-    # separate_plots,
-    category_orders: Dict[str, List[str]],
-) -> go.Figure:
-    feature = feature_state["feature"]
     data = (
-        pd.read_json(StringIO(json_data), orient="table")
+        data
         .sort_values("timestamp")
         .groupby(by=[
             "location",
@@ -102,7 +87,6 @@ def draw_figure(
         "_".join(filter(None, col_levels))
         for col_levels in data.columns.to_flat_index()
     ]
-
     fig = px.line(
         data_frame=data,
         x="timestamp",
@@ -117,9 +101,7 @@ def draw_figure(
         ),
         category_orders=category_orders,
     )
-
     fig.update_traces(marker=dict(size=4))
-
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(
@@ -129,5 +111,4 @@ def draw_figure(
             font=dict(size=24),
         )
     )
-
     return fig

@@ -19,7 +19,6 @@ from utils.webhost import AudioAPI
 PAGE_LIMIT = 10
 
 def FileSelectionSidebar(
-    graph_data: str,
     filter_data: str,
     graph: str,
     sibling: str,
@@ -30,8 +29,6 @@ def FileSelectionSidebar(
 
     Parameters
     ----------
-    graph_data: str
-        The element ID for a dcc.Store containing json graph data
     filter_data: str
         The element ID for a dcc.Store containing a discluded list of file IDs
     graph: str
@@ -263,12 +260,8 @@ def FileSelectionSidebar(
         data = dispatch(
             FETCH_FILES,
             dataset_name=dataset_name,
-            file_ids=[
-                point["hovertext"] # file_id should be the hover text
-                for point in points
-            ],
+            file_ids=tuple([point["hovertext"] for point in points]),
         )
-
         total = len(data)
         start = 1
         end = min(total, PAGE_LIMIT * start)
@@ -401,14 +394,14 @@ def FileSelectionSidebar(
 
     @callback(
         Output(filter_data, "data", allow_duplicate=True),
-        State(graph_data, "data"),
+        State("dataset-select", "value"),
         State("file-sidebar-store", "data"),
         State(filter_data, "data"),
         Input("file-sidebar-include-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def include_file_selection(
-        graph_json_data: str,
+        dataset_name: str,
         selected_json_data: str,
         filter_groups: Dict[str, List[str]],
         n_clicks: int,
@@ -417,8 +410,6 @@ def FileSelectionSidebar(
 
         Parameters
         ----------
-        graph_json_data: str
-            The graph data as JSON parsable as a table using pandas
         selected_json_data: str
             The file data as JSON parsable as a table using pandas
         filtered_file_ids: list
@@ -431,8 +422,8 @@ def FileSelectionSidebar(
         """
         if not n_clicks: return no_update
         selected_file_ids = pd.read_json(StringIO(selected_json_data), orient="table")["file_id"]
-        graph_data = pd.read_json(StringIO(graph_json_data), orient="table")
-        file_ids = set(graph_data.loc[~graph_data["file_id"].isin(selected_file_ids), "file_id"].tolist())
+        data = dispatch(FETCH_FILES, dataset_name=dataset_name)
+        file_ids = set(data.loc[~data["file_id"].isin(selected_file_ids), "file_id"].tolist())
         selection_id = len(filter_groups.keys()) + 1
         filter_groups[selection_id] = list(file_ids)
         return filter_groups

@@ -12,12 +12,8 @@ from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
-from api import (
-    dispatch,
-    FETCH_FILES,
-    FETCH_ACOUSTIC_FEATURES_UMAP,
-)
-from utils import list2tuple, str2date
+from api import dispatch, FETCH_ACOUSTIC_FEATURES_UMAP
+from utils import list2tuple
 
 PLOT_HEIGHT = 800
 
@@ -34,62 +30,13 @@ def toggle_page_info(
     return not is_open
 
 @callback(
-    Output("umap-graph-data", "data"),
+    Output("umap-graph", "figure"),
     Input("dataset-select", "value"),
     Input("date-range-current-bounds", "data"),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
     Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
     Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
     Input("umap-filter-store", "data"),
-    prevent_initial_call=True,
-)
-def load_data(
-    dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    weather_variables: List[List[str]],
-    weather_ranges: List[List[float]],
-    file_filter_groups: Dict[int, List[str]],
-) -> str:
-    data = dispatch(
-        FETCH_ACOUSTIC_FEATURES_UMAP,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        sample_size=len(dispatch(FETCH_FILES, dataset_name=dataset_name)),
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        **dict(zip(
-            map(lambda match: match["index"], weather_variables),
-            map(tuple, weather_ranges)
-        )),
-    )
-    return data.to_json(
-        date_format="iso",
-        orient="table",
-    )
-
-
-@callback(
-    Output("umap-sample-slider", "max"),
-    Output("umap-sample-slider", "value"),
-    Output("umap-sample-slider", "marks"),
-    Input("umap-graph-data", "data"),
-    prevent_initial_call=True,
-)
-def set_slider_range(
-    json_data: str
-) -> str:
-    data = pd.read_json(StringIO(json_data), orient="table")
-    max_samples = len(data)
-    sample_size = max_samples
-    mark_range = np.linspace(1, max_samples, 5, endpoint=True, dtype=int)
-    marks = [dict(value=mark, label=f"{mark}") for mark in mark_range]
-    return max_samples, sample_size, marks
-
-@callback(
-    Output("umap-graph", "figure"),
-    Input("umap-graph-data", "data"),
-    Input("umap-sample-slider", "value"),
     Input("umap-opacity-slider", "value"),
     Input("umap-size-slider", "value"),
     Input("umap-colour-select", "value"),
@@ -100,8 +47,12 @@ def set_slider_range(
     prevent_initial_call=True,
 )
 def draw_figure(
-    json_data: str,
-    sample_size: int,
+    dataset_name: str,
+    dates: List[str],
+    locations: List[str],
+    weather_variables: List[List[str]],
+    weather_ranges: List[List[float]],
+    file_filter_groups: Dict[int, List[str]],
     opacity: int,
     dot_size: int,
     color: str,
@@ -110,15 +61,19 @@ def draw_figure(
     facet_col: str,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
-    if json_data is None or not len(json_data):
-        return no_update
-
-    data = pd.read_json(
-        StringIO(json_data),
-        orient="table",
+    data = dispatch(
+        FETCH_ACOUSTIC_FEATURES_UMAP,
+        dataset_name=dataset_name,
+        dates=list2tuple(dates),
+        locations=list2tuple(locations),
+        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        **dict(zip(
+            map(lambda match: match["index"], weather_variables),
+            map(tuple, weather_ranges)
+        )),
     )
     fig = px.scatter(
-        data_frame=data.sample(min(len(data), sample_size)),
+        data_frame=data,
         x="x",
         y="y",
         opacity=opacity / 100.0,
@@ -139,7 +94,7 @@ def draw_figure(
         ),
         category_orders=category_orders,
     )
-
+    fig.update_traces(marker=dict(size=dot_size))
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(
@@ -149,9 +104,4 @@ def draw_figure(
             font=dict(size=24),
         )
     )
-
-    fig.update_traces(
-        marker=dict(size=dot_size)
-    )
-
     return fig

@@ -93,12 +93,12 @@ def fetch_dataset_category_orders(
 @functools.lru_cache(maxsize=3)
 def fetch_files(
     dataset_name: str,
-    file_ids: List[str] | None = None,
+    file_ids: Tuple[str] | None = None,
     **filters: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    file_ids = file_ids or dataset.files.index
-    return filter_data(dataset.files.loc[file_ids], **filters)
+    files = dataset.files
+    return filter_data(files[files["file_id"].isin(file_ids or files["file_id"])], **filters)
 
 @functools.lru_cache(maxsize=3)
 def fetch_locations(
@@ -248,17 +248,3 @@ API = {
     FETCH_WEATHER: fetch_weather,
     FETCH_FILE_WEATHER: fetch_file_weather,
 }
-
-# TODO: switch to parametric UMAP so we simply load the model in the dataset class, no need to pre-cache
-def setup():
-    for dataset in DATASETS:
-        dispatch(
-            FETCH_ACOUSTIC_FEATURES_UMAP,
-            dataset_name=dataset.dataset_name,
-            dates=(dataset.files.date.min(), dataset.files.date.max()),
-            locations=list2tuple(dataset.locations.site_name.unique().tolist()),
-            sample_size=len(dispatch(FETCH_FILES, dataset_name=dataset.dataset_name)),
-            file_ids=frozenset(),
-        )
-
-setup()

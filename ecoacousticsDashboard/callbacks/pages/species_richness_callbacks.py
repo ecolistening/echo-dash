@@ -126,15 +126,12 @@ def draw_figure(
         locations=list2tuple(locations),
         file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
-
-    plot = plot_types[plot_type]
-    fig = plot(
+    fig = plot_types[plot_type](
         data_frame=data,
         facet_row=facet_row,
         facet_col=facet_col,
         category_orders=category_orders,
     )
-
     fig.update_layout(
         barmode='stack',
         height=PLOT_HEIGHT,
@@ -145,5 +142,4 @@ def draw_figure(
             font=dict(size=24),
         )
     )
-
     return fig

@@ -33,7 +33,7 @@ class DatasetLoader(Iterable):
         datasets = {}
         for dataset in datasets_table.reset_index().to_dict(orient="records"):
             try:
-                logger.debug(f"Loading and caching {dataset['dataset_name']}")
+                logger.debug(f"Loading {dataset['dataset_name']}")
                 ds = Dataset(**dataset)
                 datasets[ds.dataset_name] = ds
             except Exception as e:

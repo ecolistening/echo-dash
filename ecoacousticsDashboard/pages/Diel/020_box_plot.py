@@ -30,7 +30,6 @@ dash.register_page(
 PLOT_HEIGHT = 800
 
 layout = dmc.Box([
-    dcc.Store(id="index-box-graph-data"),
     FilterPanel([
         dmc.Group(
             align="start",
