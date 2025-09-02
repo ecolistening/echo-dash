@@ -101,7 +101,7 @@ def update_filters(
         filters["current_feature_range"] = selected_feature_range
         logger.debug(filters)
         return (
-            no_update, features, no_update, no_update, selected_feature_range,
+            no_update, no_update, no_update, no_update, selected_feature_range,
             no_update, no_update, no_update,
             filters,
         )
@@ -230,6 +230,49 @@ def update_description_text_from_slider(
 #     )
 
 @callback(
+    Output("date-picker", "value", allow_duplicate=True),
+    Output("feature-range-slider", "value", allow_duplicate=True),
+    Output("filter-store", "data", allow_duplicate=True),
+    Input({"type": "active-filter-chip-group", "index": "date-range"}, "value"),
+    Input({"type": "active-filter-chip-group", "index": "acoustic-feature"}, "value"),
+    State("filter-store", "data"),
+    prevent_initial_call=True,
+)
+def reset_active_filters(
+    date_values: List[str],
+    feature_values: List[float],
+    filters: Dict[str, Any],
+) -> Dict[str, dt.date]:
+    # resetting dates
+    if ctx.triggered_id == {"type": "active-filter-chip-group", "index": "date-range"}:
+        min_date, max_date = filters["date_range_bounds"]
+        selected_dates = {}
+        for value in date_values:
+            prefix, date_str = value.split("=")
+            selected_dates[prefix] = dt.datetime.strptime(date_str, "%Y-%m-%d").date()
+        date_range = [
+            selected_dates.get("start_date", dt.datetime.strptime(min_date, "%Y-%m-%d").date()),
+            selected_dates.get("end_date", dt.datetime.strptime(max_date, "%Y-%m-%d").date()),
+        ]
+        filters["date_range"] = date_range
+        return date_range, no_update, filters
+    # resetting acoustic feature range
+    if ctx.triggered_id == {"type": "active-filter-chip-group", "index": "acoustic-feature"}:
+        current_feature = filters["current_feature"]
+        feature_min, feature_max = filters["acoustic_features"][current_feature]
+        selected_values = {}
+        for value in feature_values:
+            prefix, value = value.split("=")
+            selected_values[prefix] = float(value)
+        feature_range = [
+            selected_values.get("start_value", feature_min),
+            selected_values.get("end_value", feature_max),
+        ]
+        filters["current_feature_range"] = feature_range
+        return no_update, feature_range, filters
+    return no_update, no_update, no_update
+
+@callback(
     Output("date-range-filter-chips", "children"),
     Input("filter-store", "data"),
     prevent_initial_call=True,
@@ -279,29 +322,6 @@ def update_active_date_filters(
     )
 
 @callback(
-    Output("date-picker", "value", allow_duplicate=True),
-    Output("filter-store", "data", allow_duplicate=True),
-    Input({"type": "active-filter-chip-group", "index": "date-range"}, "value"),
-    State("filter-store", "data"),
-    prevent_initial_call=True,
-)
-def reset_date_range_selection(
-    values: List[str],
-    filters: Dict[str, Any],
-) -> Dict[str, dt.date]:
-    min_date, max_date = filters["date_range_bounds"]
-    selected_dates = {}
-    for value in values:
-        prefix, date_str = value.split("=")
-        selected_dates[prefix] = dt.datetime.strptime(date_str, "%Y-%m-%d").date()
-    date_range = [
-        selected_dates.get("start_date", dt.datetime.strptime(min_date, "%Y-%m-%d").date()),
-        selected_dates.get("end_date", dt.datetime.strptime(max_date, "%Y-%m-%d").date()),
-    ]
-    filters["date_range"] = date_range
-    return date_range, filters
-
-@callback(
     Output("acoustic-feature-range-filter-chips", "children"),
     Input("filter-store", "data"),
     prevent_initial_call=True,
@@ -309,10 +329,11 @@ def reset_date_range_selection(
 def update_active_acoustic_range_filters(
     filters: Dict[str, Any],
 ) -> dmc.Accordion:
+    feature = filters["current_feature"]
     feature_range = filters["current_feature_range"]
     feature_range = [
         f"{key}={floor(feature_range[i], precision=2)}"
-        for key in enumerate(["start_value", "end_value"])
+        for i, key in enumerate(["start_value", "end_value"])
     ]
     return dmc.Accordion(
         id="active-acoustic-range-filters-accordion",
@@ -329,7 +350,7 @@ def update_active_acoustic_range_filters(
                         pb="1rem",
                         children=[
                             dmc.Text(
-                                children=state["feature"],
+                                children=feature,
                                 size="sm",
                             ),
                             dmc.Space(h="sm"),
@@ -355,29 +376,6 @@ def update_active_acoustic_range_filters(
         ]
     )
 
-@callback(
-    Output("feature-range-slider", "value"),
-    Output("filter-store", "data", allow_duplicate=True),
-    Input({"type": "active-filter-chip-group", "index": "acoustic-feature"}, "value"),
-    State("filter-store", "data"),
-    prevent_initial_call=True,
-)
-def reset_acoustic_feature_range_selection(
-    values: List[str],
-    filters: Dict[str, Any],
-) -> Dict[str, Any]:
-    current_feature = filters["current_feature"]
-    feature_min, feature_max = filters["acoustic_features"][current_feature]
-    selected_values = {}
-    for value in values:
-        prefix, value = value.split("=")
-        selected_values[prefix] = float(value)
-    feature_range = [
-        selected_values.get("start_value", feature_min),
-        selected_values.get("end_value", feature_max),
-    ]
-    filters["current_feature_range"] = feature_range
-    return feature_range, filters
 
 # @callback(
 #     Output("file-filter-chips", "children"),
