@@ -14,7 +14,7 @@ from io import StringIO
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
-from utils import list2tuple
+from utils import list2tuple, capitalise_each
 
 PLOT_HEIGHT = 800
 
@@ -84,12 +84,12 @@ def draw_figure(
         facet_col=facet_col,
         histnorm="percent" if normalised else None,
         labels=dict(
-            value=filters["current_feature"].capitalize(),
+            value=capitalise_each(filters["current_feature"]),
         ),
         category_orders=category_orders,
     )
     title_text = (
-        f"{filters['current_feature'].capitalize()} | "
+        f"{capitalise_each(filters['current_feature'])} | "
         f"{filters['date_range'][0]} - {filters['date_range'][1]}"
     )
     fig.update_layout(

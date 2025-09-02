@@ -72,3 +72,6 @@ def audio_bytes_to_enc(
     else:
         enc = f"data:audio/{filetype};base64," + enc
     return enc
+
+def capitalise_each(string: str) -> str:
+    return ' '.join([s.capitalize() for s in string.split(' ')])
