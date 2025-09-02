@@ -13,71 +13,103 @@ from typing import Any, Dict, List, Tuple
 from api import dispatch, FETCH_DATASETS, FETCH_FILES, FETCH_ACOUSTIC_FEATURES
 from utils import ceil, floor
 
-# @callback(
-#     Output("filter-store", "data"),
-#     Input("dataset-select", "value"),
-#     State("filter-store", "data"),
-# )
-# def init_filter_store(
-#     dataset_name: str,
-#     filters: Dict[str, Any],
-# ) -> Dict[str, Any]:
-#     data = dispatch(FETCH_FILES, dataset_name=dataset_name)
-#     filters["date_range"] = (data.timestamp.dt.date.min(), data.timestamp.dt.date.max())
-#     filters["date_range_bounds"] = tuple(filters["date_range"])
-#     data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
-#     features = data["feature"].unique()
-#     filters["acoustic_features"] = {}
-#     for feature in features:
-#         df = data.loc[data["feature"] == feature, "value"]
-#         filters["acoustic_features"][feature] = (floor(df.min(), precision=2), ceil(df.max(), precision=2))
-#     current_feature = features[0]
-#     filters["current_feature"] = current_feature
-#     filters["current_feature_range"] = tuple(filters["acoustic_features"][current_feature])
-#     logger.debug(filters)
-#     return filters
-
 @callback(
     Output("feature-select", "value"),
     Output("feature-select", "data"),
     Output("feature-range-slider", "min"),
     Output("feature-range-slider", "max"),
     Output("feature-range-slider", "value"),
+    Output("date-picker", "minDate"),
+    Output("date-picker", "maxDate"),
+    Output("date-picker", "value"),
     Output("filter-store", "data"),
     Input("dataset-select", "value"),
+    Input("date-picker", "value"),
     Input("feature-select", "value"),
     Input("feature-range-slider", "value"),
     State("filter-store", "data"),
+    prevent_initial_call=True,
 )
-def init_feature_select(
+def update_filters(
     dataset_name: str,
+    selected_dates: List[str],
     selected_feature: str,
     selected_feature_range: List[float],
     filters: Dict[str, Any],
 ):
-    # might need to use ctx.triggered_id to get working properly
-    data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
-    features = data["feature"].unique()
-    current_feature = selected_feature or features[0]
-    feature_data = data.loc[data["feature"] == current_feature, "value"]
-    feature_min = floor(feature_data.min(), precision=2)
-    feature_max = ceil(feature_data.max(), precision=2)
-
-    acoustic_features = filters.get("acoustic_features", {})
-    if not len(acoustic_features):
+    # if setting dataset
+    if ctx.triggered_id == "dataset-select":
+        # reset dates and date range
+        data = dispatch(FETCH_FILES, dataset_name=dataset_name)
+        min_date = data.timestamp.dt.date.min()
+        max_date = data.timestamp.dt.date.max()
+        date_range = (min_date, max_date)
+        filters["date_range_bounds"] = date_range
+        filters["date_range"] = date_range
+        # reset feature and feature range
+        data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
+        features = data["feature"].unique()
+        current_feature = selected_feature or features[0]
+        feature_data = data.loc[data["feature"] == current_feature, "value"]
+        feature_min = floor(feature_data.min(), precision=2)
+        feature_max = ceil(feature_data.max(), precision=2)
+        acoustic_features = {}
         for feature in features:
             df = data.loc[data["feature"] == feature, "value"]
             acoustic_features[feature] = (floor(df.min(), precision=2), ceil(df.max(), precision=2))
         filters["acoustic_features"] = acoustic_features
-
-    filters["current_feature"] = current_feature
-    if ctx.triggered_id == "feature-select" or selected_feature_range is None:
+        filters["current_feature"] = current_feature
         filters["current_feature_range"] = tuple(filters["acoustic_features"][current_feature])
         selected_feature_range = tuple(filters["acoustic_features"][current_feature])
-    else:
+        return (
+            current_feature, features, feature_min, feature_max, selected_feature_range,
+            min_date, max_date, date_range,
+            filters,
+        )
+    # if changing dates
+    if ctx.triggered_id == "date-picker":
+        if selected_dates is not None and len(list(filter(None, selected_dates))) < 2:
+            # THE HORROR
+            return (
+                no_update, no_update, no_update, no_update, no_update,
+                no_update, no_update, no_update,
+                no_update,
+            )
+        min_date, max_date = filters["date_range_bounds"]
+        filters["date_range"] = selected_dates
+        logger.debug(filters)
+        return (
+            no_update, no_update, no_update, no_update, no_update,
+            min_date, max_date, selected_dates,
+            filters
+        )
+    # if changing feature
+    if ctx.triggered_id == "feature-select":
+        feature_range = tuple(filters["acoustic_features"][selected_feature])
+        features = list(filters["acoustic_features"].keys())
+        feature_min, feature_max = feature_range
+        filters["current_feature"] = selected_feature
+        filters["current_feature_range"] = feature_range
+        logger.debug(filters)
+        return (
+            selected_feature, no_update, feature_min, feature_max, feature_range,
+            no_update, no_update, no_update,
+            filters,
+        )
+    # if changing feature range
+    if ctx.triggered_id == "feature-range-slider":
         filters["current_feature_range"] = selected_feature_range
-
-    return current_feature, features, feature_min, feature_max, selected_feature_range, filters
+        logger.debug(filters)
+        return (
+            no_update, features, no_update, no_update, selected_feature_range,
+            no_update, no_update, no_update,
+            filters,
+        )
+    return (
+        no_update, no_update, no_update, no_update, no_update,
+        no_update, no_update, no_update,
+        no_update,
+    )
 
 # @callback(
 #     Output("feature-range-slider", "value"),
@@ -125,32 +157,6 @@ def update_description_text_from_slider(
 ) -> str:
     selected_min, selected_max = values
     return f"{selected_min} - {selected_max}"
-
-# @callback(
-#     Output("date-picker", "minDate"),
-#     Output("date-picker", "maxDate"),
-#     Output("date-picker", "value"),
-#     Input("dataset-select", "value"),
-#     prevent_initial_call=True,
-# )
-# def init_date_picker(dataset_name: str):
-#     data = dispatch(FETCH_FILES, dataset_name=dataset_name)
-#     min_date = data.timestamp.dt.date.min()
-#     max_date = data.timestamp.dt.date.max()
-#     values = (min_date, max_date)
-#     return min_date, max_date, values
-
-# @callback(
-#     Output("filter-store", "data", allow_duplicate=True),
-#     Input("date-picker", "value"),
-#     State("filter-store", "data"),
-#     prevent_initial_call=True,
-# )
-# def update_current_date_range(selected_dates: str, filters: Dict[str, Any]):
-#     if selected_dates is None or len(list(filter(None, selected_dates))) < 2:
-#         return no_update
-#     filters["date_range"] = selected_dates
-#     return filters
 
 # @callback(
 #     Output("filter-state", "children"),
@@ -223,54 +229,77 @@ def update_description_text_from_slider(
 #         ]
 #     )
 
+@callback(
+    Output("date-range-filter-chips", "children"),
+    Input("filter-store", "data"),
+    prevent_initial_call=True,
+)
+def update_active_date_filters(
+    filters: List[str],
+) -> dmc.Accordion:
+    selected_dates = filters["date_range"]
+    if not len(selected_dates):
+        return []
+    date_range = [
+        f"{key}={selected_dates[i]}"
+        for i, key in enumerate(["start_date", "end_date"])
+    ]
+    return dmc.Accordion(
+        id="date-range-filters-accordion",
+        chevronPosition="right",
+        variant="separated",
+        radius="sm",
+        value=["dates-filter"],
+        children=[
+            dmc.AccordionItem(
+                value="dates-filter",
+                children=[
+                    dmc.AccordionControl("Date Range"),
+                    dmc.AccordionPanel(
+                        pb="1rem",
+                        children=dmc.ChipGroup(
+                            id={"type": "active-filter-chip-group", "index": "date-range"},
+                            value=date_range,
+                            multiple=True,
+                            children=[
+                                dmc.Chip(
+                                    variant="outline",
+                                    icon=DashIconify(icon="bi-x-circle"),
+                                    value=value,
+                                    mt="xs",
+                                    children=value,
+                                )
+                                for value in date_range
+                            ]
+                        )
+                    )
+                ]
+            )
+        ]
+    )
 
-# @callback(
-#     Output("date-range-filter-chips", "children"),
-#     Input("date-range-current-bounds", "data"),
-#     prevent_initial_call=True,
-# )
-# def update_active_date_filters(
-#     selected_dates: List[str],
-# ) -> dmc.Accordion:
-#     if not len(selected_dates):
-#         return []
-#     date_range = [
-#         f"{key}={selected_dates[i]}"
-#         for i, key in enumerate(["start_date", "end_date"])
-#     ]
-#     return dmc.Accordion(
-#         id="date-range-filters-accordion",
-#         chevronPosition="right",
-#         variant="separated",
-#         radius="sm",
-#         value=["dates-filter"],
-#         children=[
-#             dmc.AccordionItem(
-#                 value="dates-filter",
-#                 children=[
-#                     dmc.AccordionControl("Date Range"),
-#                     dmc.AccordionPanel(
-#                         pb="1rem",
-#                         children=dmc.ChipGroup(
-#                             id={"type": "active-filter-chip-group", "index": "date-range"},
-#                             value=date_range,
-#                             multiple=True,
-#                             children=[
-#                                 dmc.Chip(
-#                                     variant="outline",
-#                                     icon=DashIconify(icon="bi-x-circle"),
-#                                     value=value,
-#                                     mt="xs",
-#                                     children=value,
-#                                 )
-#                                 for value in date_range
-#                             ]
-#                         )
-#                     )
-#                 ]
-#             )
-#         ]
-#     )
+@callback(
+    Output("date-picker", "value", allow_duplicate=True),
+    Output("filter-store", "data", allow_duplicate=True),
+    State("filter-store", "data"),
+    Input({"type": "active-filter-chip-group", "index": "date-range"}, "value"),
+    prevent_initial_call=True,
+)
+def reset_date_range_selection(
+    filters: Dict[str, Any],
+    values: List[str],
+) -> Dict[str, dt.date]:
+    min_date, max_date = filters["date_range_bounds"]
+    selected_dates = {}
+    for value in values:
+        prefix, date_str = value.split("=")
+        selected_dates[prefix] = dt.datetime.strptime(date_str, "%Y-%m-%d").date()
+    date_range = [
+        selected_dates.get("start_date", dt.datetime.strptime(min_date, "%Y-%m-%d").date()),
+        selected_dates.get("end_date", dt.datetime.strptime(max_date, "%Y-%m-%d").date()),
+    ]
+    filters["date_range"] = date_range
+    return date_range, filters
 
 # @callback(
 #     Output("acoustic-feature-range-filter-chips", "children"),
@@ -439,25 +468,6 @@ def update_description_text_from_slider(
 #     values: bool,
 # ) -> Dict[str, List[str]]:
 #     return { value: file_filter_groups[value] for value in values }
-
-# @callback(
-#     Output("date-range-current-bounds", "data", allow_duplicate=True),
-#     State("date-range-store", "data"),
-#     Input({"type": "active-filter-chip-group", "index": "date-range"}, "value"),
-#     prevent_initial_call=True,
-# )
-# def reset_date_range_selection(
-#     current_date_store: Dict[str, dt.date],
-#     values: List[str],
-# ) -> Dict[str, dt.date]:
-#     selected_dates = {}
-#     for value in values:
-#         prefix, date_str = value.split("=")
-#         selected_dates[prefix] = dt.datetime.strptime(date_str, "%Y-%m-%d").date()
-#     return [
-#         selected_dates.get("start_date", dt.datetime.strptime(current_date_store["min"], "%Y-%m-%d").date()),
-#         selected_dates.get("end_date", dt.datetime.strptime(current_date_store["max"], "%Y-%m-%d").date()),
-#     ]
 
 # @callback(
 #     Output("acoustic-feature-current-bounds", "data", allow_duplicate=True),

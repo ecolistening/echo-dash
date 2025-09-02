@@ -62,10 +62,9 @@ def draw_figure(
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
-        # dates=list2tuple(filters["date_range"]),
+        dates=list2tuple(filters["date_range"]),
         feature=filters["current_feature"],
         feature_range=list2tuple(filters["current_feature_range"]),
-        # dates=list2tuple(dates),
         # locations=list2tuple(locations),
         # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
         # **dict(zip(
@@ -89,10 +88,14 @@ def draw_figure(
         ),
         category_orders=category_orders,
     )
+    title_text = (
+        f"{filters['current_feature'].capitalize()} | "
+        f"{filters['date_range'][0]} - {filters['date_range'][1]}"
+    )
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(
-            text=f"Soundscape Descriptor Distributions",
+            text=title_text,
             x=0.5,
             y=0.97,
             font=dict(size=24),
