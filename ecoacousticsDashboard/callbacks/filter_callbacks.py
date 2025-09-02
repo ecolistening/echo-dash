@@ -281,13 +281,13 @@ def update_active_date_filters(
 @callback(
     Output("date-picker", "value", allow_duplicate=True),
     Output("filter-store", "data", allow_duplicate=True),
-    State("filter-store", "data"),
     Input({"type": "active-filter-chip-group", "index": "date-range"}, "value"),
+    State("filter-store", "data"),
     prevent_initial_call=True,
 )
 def reset_date_range_selection(
-    filters: Dict[str, Any],
     values: List[str],
+    filters: Dict[str, Any],
 ) -> Dict[str, dt.date]:
     min_date, max_date = filters["date_range_bounds"]
     selected_dates = {}
@@ -301,58 +301,83 @@ def reset_date_range_selection(
     filters["date_range"] = date_range
     return date_range, filters
 
-# @callback(
-#     Output("acoustic-feature-range-filter-chips", "children"),
-#     Input("acoustic-feature-current-bounds", "data"),
-#     prevent_initial_call=True,
-# )
-# def update_active_acoustic_range_filters(
-#     state: Dict[str, Any],
-# ) -> dmc.Accordion:
-#     feature_range = [
-#         f"{key}={floor(state[key], precision=2)}"
-#         for key in ["start_value", "end_value"]
-#     ]
-#     return dmc.Accordion(
-#         id="active-acoustic-range-filters-accordion",
-#         chevronPosition="right",
-#         variant="separated",
-#         value=["acoustic-range-filter"],
-#         radius="sm",
-#         children=[
-#             dmc.AccordionItem(
-#                 value="acoustic-range-filter",
-#                 children=[
-#                     dmc.AccordionControl("Acoustic Feature Range"),
-#                     dmc.AccordionPanel(
-#                         pb="1rem",
-#                         children=[
-#                             dmc.Text(
-#                                 children=state["feature"],
-#                                 size="sm",
-#                             ),
-#                             dmc.Space(h="sm"),
-#                             dmc.ChipGroup(
-#                                 id={"type": "active-filter-chip-group", "index": "acoustic-feature"},
-#                                 value=feature_range,
-#                                 multiple=True,
-#                                 children=[
-#                                     dmc.Chip(
-#                                         variant="outline",
-#                                         icon=DashIconify(icon="bi-x-circle"),
-#                                         value=value,
-#                                         mt="xs",
-#                                         children=value,
-#                                     )
-#                                     for value in feature_range
-#                                 ]
-#                             ),
-#                         ]
-#                     )
-#                 ]
-#             )
-#         ]
-#     )
+@callback(
+    Output("acoustic-feature-range-filter-chips", "children"),
+    Input("filter-store", "data"),
+    prevent_initial_call=True,
+)
+def update_active_acoustic_range_filters(
+    filters: Dict[str, Any],
+) -> dmc.Accordion:
+    feature_range = filters["current_feature_range"]
+    feature_range = [
+        f"{key}={floor(feature_range[i], precision=2)}"
+        for key in enumerate(["start_value", "end_value"])
+    ]
+    return dmc.Accordion(
+        id="active-acoustic-range-filters-accordion",
+        chevronPosition="right",
+        variant="separated",
+        value=["acoustic-range-filter"],
+        radius="sm",
+        children=[
+            dmc.AccordionItem(
+                value="acoustic-range-filter",
+                children=[
+                    dmc.AccordionControl("Acoustic Feature Range"),
+                    dmc.AccordionPanel(
+                        pb="1rem",
+                        children=[
+                            dmc.Text(
+                                children=state["feature"],
+                                size="sm",
+                            ),
+                            dmc.Space(h="sm"),
+                            dmc.ChipGroup(
+                                id={"type": "active-filter-chip-group", "index": "acoustic-feature"},
+                                value=feature_range,
+                                multiple=True,
+                                children=[
+                                    dmc.Chip(
+                                        variant="outline",
+                                        icon=DashIconify(icon="bi-x-circle"),
+                                        value=value,
+                                        mt="xs",
+                                        children=value,
+                                    )
+                                    for value in feature_range
+                                ]
+                            ),
+                        ]
+                    )
+                ]
+            )
+        ]
+    )
+
+@callback(
+    Output("feature-range-slider", "value"),
+    Output("filter-store", "data", allow_duplicate=True),
+    Input({"type": "active-filter-chip-group", "index": "acoustic-feature"}, "value"),
+    State("filter-store", "data"),
+    prevent_initial_call=True,
+)
+def reset_acoustic_feature_range_selection(
+    values: List[str],
+    filters: Dict[str, Any],
+) -> Dict[str, Any]:
+    current_feature = filters["current_feature"]
+    feature_min, feature_max = filters["acoustic_features"][current_feature]
+    selected_values = {}
+    for value in values:
+        prefix, value = value.split("=")
+        selected_values[prefix] = float(value)
+    feature_range = [
+        selected_values.get("start_value", feature_min),
+        selected_values.get("end_value", feature_max),
+    ]
+    filters["current_feature_range"] = feature_range
+    return feature_range, filters
 
 # @callback(
 #     Output("file-filter-chips", "children"),
@@ -469,25 +494,3 @@ def reset_date_range_selection(
 # ) -> Dict[str, List[str]]:
 #     return { value: file_filter_groups[value] for value in values }
 
-# @callback(
-#     Output("acoustic-feature-current-bounds", "data", allow_duplicate=True),
-#     State("acoustic-feature-store", "data"),
-#     State("acoustic-feature-current-bounds", "data"),
-#     Input({"type": "active-filter-chip-group", "index": "acoustic-feature"}, "value"),
-#     prevent_initial_call=True,
-# )
-# def reset_acoustic_feature_range_selection(
-#     store: Dict[str, Any],
-#     state: Dict[str, Any],
-#     values: List[str],
-# ) -> Dict[str, Any]:
-#     selected_values = {}
-#     for value in values:
-#         prefix, value = value.split("=")
-#         selected_values[prefix] = float(value)
-#     feature = state["feature"]
-#     return {
-#         "feature": feature,
-#         "start_value": selected_values.get("start_value", store[feature]["min"]),
-#         "end_value": selected_values.get("end_value", store[feature]["max"]),
-#     }
