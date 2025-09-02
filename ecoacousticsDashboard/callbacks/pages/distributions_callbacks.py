@@ -62,7 +62,7 @@ def draw_figure(
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
-        dates=list2tuple(filters["date_range"]),
+        # dates=list2tuple(filters["date_range"]),
         feature=filters["current_feature"],
         feature_range=list2tuple(filters["current_feature_range"]),
         # dates=list2tuple(dates),

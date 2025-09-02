@@ -13,61 +13,106 @@ from typing import Any, Dict, List, Tuple
 from api import dispatch, FETCH_DATASETS, FETCH_FILES, FETCH_ACOUSTIC_FEATURES
 from utils import ceil, floor
 
-@callback(
-    Output("filter-store", "data"),
-    Input("dataset-select", "value"),
-    State("filter-store", "data"),
-)
-def init_filter_store(
-    dataset_name: str,
-    filters: Dict[str, Any],
-) -> Dict[str, Any]:
-    data = dispatch(FETCH_FILES, dataset_name=dataset_name)
-    filters["date_range"] = (data.timestamp.dt.date.min(), data.timestamp.dt.date.max())
-    filters["date_range_bounds"] = tuple(filters["date_range"])
-    data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
-    features = data["feature"].unique()
-    filters["acoustic_features"] = {}
-    for feature in features:
-        df = data.loc[data["feature"] == feature, "value"]
-        filters["acoustic_features"][feature] = (floor(df.min(), precision=2), ceil(df.max(), precision=2))
-    current_feature = features[0]
-    filters["current_feature"] = current_feature
-    filters["current_feature_range"] = tuple(filters["acoustic_features"][current_feature])
-    logger.debug(filters)
-    return filters
+# @callback(
+#     Output("filter-store", "data"),
+#     Input("dataset-select", "value"),
+#     State("filter-store", "data"),
+# )
+# def init_filter_store(
+#     dataset_name: str,
+#     filters: Dict[str, Any],
+# ) -> Dict[str, Any]:
+#     data = dispatch(FETCH_FILES, dataset_name=dataset_name)
+#     filters["date_range"] = (data.timestamp.dt.date.min(), data.timestamp.dt.date.max())
+#     filters["date_range_bounds"] = tuple(filters["date_range"])
+#     data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
+#     features = data["feature"].unique()
+#     filters["acoustic_features"] = {}
+#     for feature in features:
+#         df = data.loc[data["feature"] == feature, "value"]
+#         filters["acoustic_features"][feature] = (floor(df.min(), precision=2), ceil(df.max(), precision=2))
+#     current_feature = features[0]
+#     filters["current_feature"] = current_feature
+#     filters["current_feature_range"] = tuple(filters["acoustic_features"][current_feature])
+#     logger.debug(filters)
+#     return filters
 
 @callback(
     Output("feature-select", "value"),
     Output("feature-select", "data"),
     Output("feature-range-slider", "min"),
     Output("feature-range-slider", "max"),
+    Output("feature-range-slider", "value"),
+    Output("filter-store", "data"),
     Input("dataset-select", "value"),
-    prevent_initial_call=True,
+    Input("feature-select", "value"),
+    Input("feature-range-slider", "value"),
+    State("filter-store", "data"),
 )
-def init_feature_select_range(dataset_name: str):
+def init_feature_select(
+    dataset_name: str,
+    selected_feature: str,
+    selected_feature_range: List[float],
+    filters: Dict[str, Any],
+):
+    # might need to use ctx.triggered_id to get working properly
     data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
     features = data["feature"].unique()
-    current_feature = features[0]
+    current_feature = selected_feature or features[0]
     feature_data = data.loc[data["feature"] == current_feature, "value"]
     feature_min = floor(feature_data.min(), precision=2)
     feature_max = ceil(feature_data.max(), precision=2)
-    return current_feature, features, feature_min, feature_max
 
-@callback(
-    Output("filter-store", "data", allow_duplicate=True),
-    Output("feature-range-slider", "value"),
-    Output("feature-range-slider", "min"),
-    Output("feature-range-slider", "max"),
-    Input("feature-select", "value"),
-    State("filter-store", "data"),
-    prevent_initial_call=True,
-)
-def update_current_feature(feature: str, filters: Dict[str, Any]):
-    logger.debug(feature, filters)
-    filters["current_feature"] = feature
-    feature_range = filters["acoustic_features"][feature]
-    return filters, feature_range, feature_range[0], feature_range[1]
+    acoustic_features = filters.get("acoustic_features", {})
+    if not len(acoustic_features):
+        for feature in features:
+            df = data.loc[data["feature"] == feature, "value"]
+            acoustic_features[feature] = (floor(df.min(), precision=2), ceil(df.max(), precision=2))
+        filters["acoustic_features"] = acoustic_features
+
+    filters["current_feature"] = current_feature
+    if selected_feature_range is not None:
+        filters["current_feature_range"] = selected_feature_range
+    else:
+        filters["current_feature_range"] = tuple(filters["acoustic_features"][current_feature])
+
+    return current_feature, features, feature_min, feature_max, (feature_min, feature_max), filters
+
+# @callback(
+#     Output("feature-range-slider", "value"),
+#     Input("feature-select", "value"),
+#     State("filter-store", "data"),
+#     prevent_initial_call=True,
+# )
+# def update_current_feature(feature: str, filters: Dict[str, Any]):
+#     return filters["acoustic_features"][feature]
+
+# @callback(
+#     Output("filter-store", "data", allow_duplicate=True),
+#     Output("feature-range-slider", "min", allow_duplicate=True),
+#     Output("feature-range-slider", "max", allow_duplicate=True),
+#     Output("feature-range-slider", "value", allow_duplicate=True),
+#     Input("feature-select", "value"),
+#     State("filter-store", "data"),
+#     prevent_initial_call=True,
+# )
+# def update_current_feature(feature: str, filters: Dict[str, Any]):
+#     logger.debug("help", feature, filters)
+#     if feature is None:
+#         return no_update, no_update, no_update, no_update
+#     filters["current_feature"] = feature
+#     feature_min, feature_max = filters["acoustic_features"][feature]
+#     return filters, feature_min, feature_max, (feature_min, feature_max)
+
+# @callback(
+#     Output("filter-store", "data", allow_duplicate=True),
+#     Input("feature-range-slider", "value"),
+#     State("filter-store", "data"),
+#     prevent_initial_call=True,
+# )
+# def update_current_feature_range(value: str, filters: Dict[str, Any]):
+#     filters["current_feature_range"] = value
+#     return filters
 
 @callback(
     Output("feature-range-bounds", "children"),
@@ -80,31 +125,31 @@ def update_description_text_from_slider(
     selected_min, selected_max = values
     return f"{selected_min} - {selected_max}"
 
-@callback(
-    Output("date-picker", "minDate"),
-    Output("date-picker", "maxDate"),
-    Output("date-picker", "value"),
-    Input("dataset-select", "value"),
-    prevent_initial_call=True,
-)
-def init_date_picker(dataset_name: str):
-    data = dispatch(FETCH_FILES, dataset_name=dataset_name)
-    min_date = data.timestamp.dt.date.min()
-    max_date = data.timestamp.dt.date.max()
-    values = (min_date, max_date)
-    return min_date, max_date, values
+# @callback(
+#     Output("date-picker", "minDate"),
+#     Output("date-picker", "maxDate"),
+#     Output("date-picker", "value"),
+#     Input("dataset-select", "value"),
+#     prevent_initial_call=True,
+# )
+# def init_date_picker(dataset_name: str):
+#     data = dispatch(FETCH_FILES, dataset_name=dataset_name)
+#     min_date = data.timestamp.dt.date.min()
+#     max_date = data.timestamp.dt.date.max()
+#     values = (min_date, max_date)
+#     return min_date, max_date, values
 
-@callback(
-    Output("filter-store", "data", allow_duplicate=True),
-    Input("date-picker", "value"),
-    State("filter-store", "data"),
-    prevent_initial_call=True,
-)
-def update_current_date_range(selected_dates: str, filters: Dict[str, Any]):
-    if selected_dates is None or len(list(filter(None, selected_dates))) < 2:
-        return no_update
-    filters["date_range"] = selected_dates
-    return filters
+# @callback(
+#     Output("filter-store", "data", allow_duplicate=True),
+#     Input("date-picker", "value"),
+#     State("filter-store", "data"),
+#     prevent_initial_call=True,
+# )
+# def update_current_date_range(selected_dates: str, filters: Dict[str, Any]):
+#     if selected_dates is None or len(list(filter(None, selected_dates))) < 2:
+#         return no_update
+#     filters["date_range"] = selected_dates
+#     return filters
 
 # @callback(
 #     Output("filter-state", "children"),

@@ -38,16 +38,20 @@ class Dataset:
 
     def __attrs_post_init__(self) -> None:
         self.config = self._read_or_build_config(self.path / "config.ini")
+        logger.info({ "dataset_name": self.dataset_name, "message": "loaded config" })
         # cache species table
         self.species = pd.read_parquet(self.path.parent / "species_table.parquet")
         self._add_fields_to_species_table()
+        logger.info({ "dataset_name": self.dataset_name, "message": "loaded species" })
         # cache locations table and site hierarchy
         self.locations = pd.read_parquet(self.path / "locations_table.parquet")
         self._add_fields_to_locations_table()
         self.sites_tree = bt.dataframe_to_tree(self.locations, path_col="site")
+        logger.info({ "dataset_name": self.dataset_name, "message": "loaded locations" })
         # cache solar and weather data
         self.solar = pd.read_parquet(self.path / "solar_table.parquet").set_index(["site_id", "date"])
         self.weather = pd.read_parquet(self.path / "weather_table.parquet").set_index(["site_id", "timestamp"])
+        logger.info({ "dataset_name": self.dataset_name, "message": "loaded solar / weather" })
         # cache file index, merge solar and weather data
         self.files = pd.read_parquet(self.path / "files_table.parquet")
         self._add_fields_to_files_table()
@@ -58,11 +62,13 @@ class Dataset:
             .join(self.solar, on=["site_id", "date"])
             .join(self.locations, on="site_id")
         )
+        logger.info({ "dataset_name": self.dataset_name, "message": "loaded files" })
         # cache acoustic features, merge file, solar, weather and location data
         self.acoustic_features = (
             pd.read_parquet(self.path / "recording_acoustic_features_table.parquet")
             .join(self.files.set_index("file_id"), on="file_id", rsuffix="_files")
         )
+        logger.info({ "dataset_name": self.dataset_name, "message": "loaded acoustic features" })
         # cache birdnet predictions, merge file, solar, weather and location data
         self.species_predictions = (
             pd.read_parquet(self.path / "birdnet_species_probs_table.parquet")
@@ -70,6 +76,7 @@ class Dataset:
             .join(self.species.set_index("scientific_name"), on="scientific_name")
             .join(self.files.set_index("file_id"), on="file_id", rsuffix="_files")
         )
+        logger.info({ "dataset_name": self.dataset_name, "message": "loaded species probs" })
 
     def save_config(self):
         with open(self.path / "config.ini", "w") as f:
