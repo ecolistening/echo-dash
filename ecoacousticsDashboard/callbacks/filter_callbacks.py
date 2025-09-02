@@ -71,12 +71,13 @@ def init_feature_select(
         filters["acoustic_features"] = acoustic_features
 
     filters["current_feature"] = current_feature
-    if selected_feature_range is not None:
-        filters["current_feature_range"] = selected_feature_range
-    else:
+    if ctx.triggered_id == "feature-select" or selected_feature_range is None:
         filters["current_feature_range"] = tuple(filters["acoustic_features"][current_feature])
+        selected_feature_range = tuple(filters["acoustic_features"][current_feature])
+    else:
+        filters["current_feature_range"] = selected_feature_range
 
-    return current_feature, features, feature_min, feature_max, (feature_min, feature_max), filters
+    return current_feature, features, feature_min, feature_max, selected_feature_range, filters
 
 # @callback(
 #     Output("feature-range-slider", "value"),
