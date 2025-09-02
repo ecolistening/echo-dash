@@ -15,10 +15,9 @@ from api import (
     FETCH_DATASET_CATEGORY_ORDERS,
     FETCH_DATASET_OPTIONS,
 )
-from store import DATASET_CONFIG_STORE
 
 @callback(
-    Output(DATASET_CONFIG_STORE, "data"),
+    Output("dataset-config", "data"),
     Input("dataset-select", "value"),
     prevent_initial_call=True,
 )
@@ -30,7 +29,7 @@ def get_dataset_config(dataset_name: str) -> Dict[str, Any]:
     return dispatch(action, dataset_name=dataset_name)
 
 @callback(
-    Output(DATASET_CONFIG_STORE, "data", allow_duplicate=True),
+    Output("dataset-config", "data", allow_duplicate=True),
     State("dataset-select", "value"),
     State({"type": "sitelevel_label", "index": ALL}, "value"),
     Input("dataset-settings-save-button", "n_clicks"),
@@ -78,7 +77,7 @@ def set_dataset_settings_text(dataset_name: str):
     Output("settings-drawer", "opened"),
     Input("dataset-settings-button", "n_clicks"),
     Input("dataset-settings-cancel-button", "n_clicks"),
-    Input(DATASET_CONFIG_STORE, "data"),
+    Input("dataset-config", "data"),
     prevent_initial_call=True,
 )
 def toggle_settings_drawer(*args: Any):

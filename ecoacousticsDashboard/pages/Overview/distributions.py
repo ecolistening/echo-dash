@@ -6,10 +6,8 @@ from dash import dcc
 from dash_iconify import DashIconify
 
 from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
-from callbacks.filter import date_filter_callbacks
 from callbacks.filter import file_filter_callbacks
 from callbacks.filter import site_level_filter_callbacks
-from callbacks.filter import acoustic_feature_filter_callbacks
 from callbacks.filter import environmental_filter_callbacks
 from callbacks.pages import distributions_callbacks
 from components.dataset_options_select import DatasetOptionsSelect

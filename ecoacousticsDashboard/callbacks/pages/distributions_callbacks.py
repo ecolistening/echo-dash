@@ -9,6 +9,7 @@ import plotly.graph_objs as go
 
 from dash import html, dcc, callback, ctx, no_update
 from dash import Output, Input, State, ALL, MATCH
+from loguru import logger
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
@@ -29,12 +30,11 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 @callback(
     Output("distributions-graph", "figure"),
     Input("dataset-select", "value"),
-    Input("date-range-current-bounds", "data"),
-    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
-    Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
-    Input("umap-filter-store", "data"),
-    Input("acoustic-feature-current-bounds", "data"),
+    Input("filter-store", "data"),
+    # Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    # Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
+    # Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
+    # Input("umap-filter-store", "data"),
     Input("distributions-colour-select", "value"),
     Input("distributions-facet-row-select", "value"),
     Input("distributions-facet-column-select", "value"),
@@ -44,32 +44,36 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 )
 def draw_figure(
     dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    weather_variables: List[List[str]],
-    weather_ranges: List[List[float]],
-    file_filter_groups: Dict[str, List],
-    feature_params: Dict[str, Any],
+    filters: Dict[str, Any],
+    # dates: List[str],
+    # locations: List[str],
+    # weather_variables: List[List[str]],
+    # weather_ranges: List[List[float]],
+    # file_filter_groups: Dict[str, List],
+    # feature_params: Dict[str, Any],
     color: str,
     facet_row: str,
     facet_col: str,
     normalised: bool,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
-    weather_params = dict(zip(
-        map(lambda match: match["index"], weather_variables),
-        map(tuple, weather_ranges)
-    ))
-    feature, start_value, end_value = feature_params.values()
+    logger.debug(filters)
+    # feature, start_value, end_value = feature_params.values()
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        **weather_params,
-        feature=feature,
-        feature_range=(start_value, end_value),
+        dates=list2tuple(filters["date_range"]),
+        feature=filters["current_feature"],
+        feature_range=list2tuple(filters["current_feature_range"]),
+        # dates=list2tuple(dates),
+        # locations=list2tuple(locations),
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        # **dict(zip(
+        #     map(lambda match: match["index"], weather_variables),
+        #     map(tuple, weather_ranges)
+        # )),
+        # feature=feature,
+        # feature_range=(start_value, end_value),
     )
     fig = px.histogram(
         data_frame=data,
@@ -81,7 +85,7 @@ def draw_figure(
         facet_col=facet_col,
         histnorm="percent" if normalised else None,
         labels=dict(
-            value=feature.capitalize(),
+            value=filters["current_feature"].capitalize(),
         ),
         category_orders=category_orders,
     )

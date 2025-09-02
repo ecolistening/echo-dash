@@ -2,10 +2,14 @@ import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 
-from dash import dcc
+from dash import dcc, callback
+from dash import Input, Output
+from typing import List
+
+from api import dispatch, FETCH_ACOUSTIC_FEATURES
 
 def AcousticFeatureFilter():
-    return dmc.Accordion(
+    component = dmc.Accordion(
         chevronPosition="right",
         variant="separated",
         radius="sm",
@@ -22,10 +26,11 @@ def AcousticFeatureFilter():
                                     dmc.Box([
                                         dmc.Text("Select an acoustic feature", size="sm"),
                                         dmc.Select(
-                                            id="feature-dropdown",
+                                            id="feature-select",
                                             searchable=True,
                                             clearable=False,
                                             allowDeselect=False,
+                                            persistence=True,
                                             nothingFoundMessage="No options found...",
                                         ),
                                     ]),
@@ -38,9 +43,10 @@ def AcousticFeatureFilter():
                                         children=[
                                             dmc.Text("Select a value range", size="sm"),
                                             dcc.RangeSlider(
-                                                id="acoustic-feature-range-slider",
+                                                id="feature-range-slider",
                                                 min=0,
                                                 max=100,
+                                                persistence=True,
                                                 allowCross=False,
                                             ),
                                             dmc.Box(
@@ -51,7 +57,7 @@ def AcousticFeatureFilter():
                                                         span=True
                                                     ),
                                                     dmc.Text(
-                                                        id="acoustic-feature-range-bounds",
+                                                        id="feature-range-bounds",
                                                         size="sm",
                                                         span=True
                                                     ),
@@ -67,3 +73,4 @@ def AcousticFeatureFilter():
             )
         ],
     )
+    return component

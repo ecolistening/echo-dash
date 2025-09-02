@@ -39,6 +39,7 @@ def create_dash_app() -> dash.Dash:
     )
 
     from callbacks import nav_bar_callbacks
+    from callbacks import filter_callbacks
     from callbacks import dataset_config_callbacks
 
     from components.header import Header, HEADER_CONFIG
