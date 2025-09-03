@@ -45,10 +45,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 def draw_figure(
     dataset_name: str,
     filters: Dict[str, Any],
-    # dates: List[str],
     # locations: List[str],
-    # weather_variables: List[List[str]],
-    # weather_ranges: List[List[float]],
     # file_filter_groups: Dict[str, List],
     # feature_params: Dict[str, Any],
     color: str,
@@ -60,13 +57,13 @@ def draw_figure(
     if not len(filters):
         return no_update
     logger.debug(filters)
-    # feature, start_value, end_value = feature_params.values()
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
         dates=list2tuple(filters["date_range"]),
         feature=filters["current_feature"],
         feature_range=list2tuple(filters["current_feature_range"]),
+        **{variable: list2tuple(params["current_variable_range"]) for variable, params in filters["weather_variables"].items()},
         # locations=list2tuple(locations),
         # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
         # **dict(zip(

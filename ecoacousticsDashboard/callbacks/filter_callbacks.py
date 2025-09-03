@@ -3,7 +3,7 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import datetime as dt
 
-from dash import callback, ctx, no_update
+from dash import callback, ctx, no_update, dcc
 from dash import Output, Input, State
 from dash import ALL, MATCH
 from dash_iconify import DashIconify
@@ -176,17 +176,54 @@ def update_acoustic_feature_slider(
     return feature_min, feature_max, feature_range, range_description
 
 @callback(
+    Output("weather-variable-filter-groups", "children"),
+    Input("filter-store", "data"),
+)
+def render_weather_sliders(
+    filters: Filters,
+) -> List[dmc.Box]:
+    components = []
+    for variable_name, variable_params in filters["weather_variables"].items():
+        minimum, maximum = variable_params["variable_range_bounds"]
+        components.append(dmc.Box(
+            children=[
+                dmc.Text(variable_name, size="sm"),
+                dcc.RangeSlider(
+                    id={"type": "weather-variable-range-slider", "index": variable_name},
+                    min=minimum,
+                    max=maximum,
+                    value=[minimum, maximum],
+                    allowCross=False,
+                    persistence=True,
+                ),
+            ]
+        ))
+    return components
+
+@callback(
     Output("filter-store", "data", allow_duplicate=True),
     Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
+    State({"type": "weather-variable-range-slider", "index": ALL}, "id"),
     State("filter-store", "data"),
     prevent_initial_call=True,
 )
 def update_weather_filter(
     values: List[str],
+    ids: List[str],
     filters: Filters,
 ) -> Filters:
-    import code; code.interact(local=locals())
-    return no_update
+    triggered_id = ctx.triggered_id
+    variable_name = triggered_id["index"]
+    context = [
+        (id["index"], current_range)
+        for id, current_range in zip(ids, values)
+        if id["index"] == ctx.triggered_id["index"]
+    ]
+    if not len(context):
+        return no_update
+    variable_name, current_range = context[0]
+    filters["weather_variables"][variable_name]["current_variable_range"] = current_range
+    return filters
 
 # @callback(
 #     Output("filter-state", "children"),
