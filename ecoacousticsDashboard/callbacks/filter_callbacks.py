@@ -19,6 +19,7 @@ from utils import ceil, floor
     Output("feature-range-slider", "min"),
     Output("feature-range-slider", "max"),
     Output("feature-range-slider", "value"),
+    Output("feature-range-bounds", "children"),
     Output("date-picker", "minDate"),
     Output("date-picker", "maxDate"),
     Output("date-picker", "value"),
@@ -28,7 +29,6 @@ from utils import ceil, floor
     Input("feature-select", "value"),
     Input("feature-range-slider", "value"),
     State("filter-store", "data"),
-    prevent_initial_call=True,
 )
 def update_filters(
     dataset_name: str,
@@ -63,8 +63,9 @@ def update_filters(
         filters["current_feature"] = current_feature
         filters["current_feature_range"] = tuple(filters["acoustic_features"][current_feature])
         selected_feature_range = tuple(filters["acoustic_features"][current_feature])
+        range_description = f"{feature_min} - {feature_max}"
         return (
-            current_feature, features, feature_min, feature_max, selected_feature_range,
+            current_feature, features, feature_min, feature_max, selected_feature_range, range_description,
             min_date, max_date, date_range,
             filters,
         )
@@ -73,14 +74,14 @@ def update_filters(
         if selected_dates is not None and len(list(filter(None, selected_dates))) < 2:
             # THE HORROR
             return (
-                no_update, no_update, no_update, no_update, no_update,
+                no_update, no_update, no_update, no_update, no_update, no_update,
                 no_update, no_update, no_update,
                 filters,
             )
         min_date, max_date = filters["date_range_bounds"]
         filters["date_range"] = selected_dates
         return (
-            no_update, no_update, no_update, no_update, no_update,
+            no_update, no_update, no_update, no_update, no_update, no_update,
             min_date, max_date, selected_dates,
             filters
         )
@@ -92,35 +93,27 @@ def update_filters(
         feature_min, feature_max = feature_range
         filters["current_feature"] = selected_feature
         filters["current_feature_range"] = feature_range
+        range_description = f"{feature_min} - {feature_max}"
         return (
-            selected_feature, features, feature_min, feature_max, feature_range,
+            selected_feature, features, feature_min, feature_max, feature_range, range_description,
             no_update, no_update, no_update,
             filters,
         )
     # if changing feature range
     if ctx.triggered_id == "feature-range-slider":
         filters["current_feature_range"] = selected_feature_range
+        feature_min, feature_max = selected_feature_range
+        range_description = f"{feature_min} - {feature_max}"
         return (
-            no_update, no_update, no_update, no_update, selected_feature_range,
+            no_update, no_update, no_update, no_update, selected_feature_range, range_description,
             no_update, no_update, no_update,
             filters,
         )
     return (
-        no_update, no_update, no_update, no_update, no_update,
+        no_update, no_update, no_update, no_update, no_update, no_update,
         no_update, no_update, no_update,
         filters,
     )
-
-@callback(
-    Output("feature-range-bounds", "children"),
-    Input("feature-range-slider", "value"),
-    prevent_initial_call=True,
-)
-def update_description_text_from_slider(
-    values: List[float],
-) -> str:
-    selected_min, selected_max = values
-    return f"{selected_min} - {selected_max}"
 
 # @callback(
 #     Output("filter-state", "children"),
@@ -218,6 +211,7 @@ def reset_active_date_filters(
 
 @callback(
     Output("feature-range-slider", "value", allow_duplicate=True),
+    Output("feature-range-bounds", "children", allow_duplicate=True),
     Output("filter-store", "data", allow_duplicate=True),
     Input({"type": "active-filter-chip-group", "index": "acoustic-feature"}, "value"),
     State("filter-store", "data"),
@@ -238,7 +232,8 @@ def reset_active_feature_filters(
         selected_values.get("end_value", feature_max),
     ]
     filters["current_feature_range"] = feature_range
-    return feature_range, filters
+    range_description = f"{feature_min} - {feature_max}"
+    return feature_range, range_description, filters
 
 @callback(
     Output("date-range-filter-chips", "children"),
