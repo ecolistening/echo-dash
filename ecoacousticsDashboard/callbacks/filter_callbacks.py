@@ -10,7 +10,13 @@ from dash_iconify import DashIconify
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_DATASETS, FETCH_FILES, FETCH_ACOUSTIC_FEATURES
+from api import (
+    dispatch,
+    FETCH_DATASETS,
+    FETCH_FILES,
+    FETCH_ACOUSTIC_FEATURES,
+    FETCH_WEATHER,
+)
 from utils import ceil, floor
 
 Filters = Dict[str, Any]
@@ -20,20 +26,20 @@ Filters = Dict[str, Any]
     Input("dataset-select", "value"),
     State("filter-store", "data"),
 )
-def init_filters(
+def init_dataset_filters(
     dataset_name: str,
     filters: Filters,
 ) -> Filters:
     logger.debug(filters)
     filters = {} if filters is None else filters
-    # reset dates and date range
+    # set dates and date range
     data = dispatch(FETCH_FILES, dataset_name=dataset_name)
     min_date = data.timestamp.dt.date.min()
     max_date = data.timestamp.dt.date.max()
     date_range = (min_date, max_date)
     filters["date_range_bounds"] = date_range
     filters["date_range"] = date_range
-    # reset feature and feature range
+    # set feature and feature range
     data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
     features = data["feature"].unique()
     current_feature = filters.get("current_feature", features[0])
@@ -47,6 +53,17 @@ def init_filters(
     filters["acoustic_features"] = acoustic_features
     filters["current_feature"] = current_feature
     filters["current_feature_range"] = tuple(filters["acoustic_features"][current_feature])
+    # set weather variables and default ranges
+    data = dispatch(FETCH_WEATHER, dataset_name=dataset_name)
+    weather_variables = {}
+    for variable in data.variable.unique():
+        df = data.loc[data["variable"] == variable, "value"]
+        variable_ranges = {}
+        variable_range = (floor(df.min(), precision=2), ceil(df.max(), precision=2))
+        variable_ranges["variable_range_bounds"] = variable_range
+        variable_ranges["current_variable_range"] = variable_range
+        weather_variables[variable] = variable_ranges
+    filters["weather_variables"] = weather_variables
     return filters
 
 @callback(
@@ -157,6 +174,19 @@ def update_acoustic_feature_slider(
     feature_min, feature_max = feature_bounds
     range_description = f"{feature_min} - {feature_max}"
     return feature_min, feature_max, feature_range, range_description
+
+@callback(
+    Output("filter-store", "data", allow_duplicate=True),
+    Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
+    State("filter-store", "data"),
+    prevent_initial_call=True,
+)
+def update_weather_filter(
+    values: List[str],
+    filters: Filters,
+) -> Filters:
+    import code; code.interact(local=locals())
+    return no_update
 
 # @callback(
 #     Output("filter-state", "children"),

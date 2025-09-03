@@ -113,7 +113,13 @@ def fetch_weather(
     **filters: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    return dataset.weather
+    data = dataset.weather
+    return dataset.weather.melt(
+        value_vars=data.columns,
+        var_name="variable",
+        value_name="value",
+        ignore_index=False
+    )
 
 @functools.lru_cache(maxsize=10)
 def fetch_file_weather(
