@@ -32,11 +32,11 @@ def toggle_page_info(
 @callback(
     Output("umap-graph", "figure"),
     Input("dataset-select", "value"),
-    Input("date-range-current-bounds", "data"),
-    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
-    Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
-    Input("umap-filter-store", "data"),
+    Input("filter-store", "data"),
+    # Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    # Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
+    # Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
+    # Input("umap-filter-store", "data"),
     Input("umap-opacity-slider", "value"),
     Input("umap-size-slider", "value"),
     Input("umap-colour-select", "value"),
@@ -48,11 +48,12 @@ def toggle_page_info(
 )
 def draw_figure(
     dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    weather_variables: List[List[str]],
-    weather_ranges: List[List[float]],
-    file_filter_groups: Dict[int, List[str]],
+    filters: Dict[str, Any],
+    # dates: List[str],
+    # locations: List[str],
+    # weather_variables: List[List[str]],
+    # weather_ranges: List[List[float]],
+    # file_filter_groups: Dict[int, List[str]],
     opacity: int,
     dot_size: int,
     color: str,
@@ -64,13 +65,13 @@ def draw_figure(
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES_UMAP,
         dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        **dict(zip(
-            map(lambda match: match["index"], weather_variables),
-            map(tuple, weather_ranges)
-        )),
+        dates=list2tuple(filters["date_range"]),
+        # locations=list2tuple(locations),
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        # **dict(zip(
+        #     map(lambda match: match["index"], weather_variables),
+        #     map(tuple, weather_ranges)
+        # )),
     )
     fig = px.scatter(
         data_frame=data,
