@@ -57,6 +57,8 @@ def draw_figure(
     normalised: bool,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
+    if not len(filters):
+        return no_update
     logger.debug(filters)
     # feature, start_value, end_value = feature_params.values()
     data = dispatch(
