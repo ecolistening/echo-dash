@@ -141,17 +141,17 @@ class DatasetDecorator:
         return {
             "precipitation": {
                 "label": "Total Precipitation (cm)",
-                "min": 0.0,
+                "min": floor(self.dataset.weather["precipitation"].min()),
                 "max": ceil(self.dataset.weather["precipitation"].max()),
             },
             "rain": {
                 "label": "Rain (cm)",
-                "min": 0.0,
+                "min": floor(self.dataset.weather["rain"].min()),
                 "max": ceil(self.dataset.weather["rain"].max()),
             },
             "snowfall": {
                 "label": "Snowfall (cm)",
-                "min": 0.0,
+                "min": floor(self.dataset.weather["snowfall"].min()),
                 "max": ceil(self.dataset.weather["snowfall"].max()),
             },
         }
@@ -161,27 +161,27 @@ class DatasetDecorator:
         return {
             "wind_speed_10m": {
                 "label": "Wind Speed at 10m elevation (kph)",
-                "min": 0.0,
+                "min": floor(self.dataset.weather["wind_speed_10m"].min()),
                 "max": ceil(self.dataset.weather["wind_speed_10m"].max()),
             },
             "wind_speed_100m": {
                 "label": "Wind Speed at 100m elevation (kph)",
-                "min": 0.0,
+                "min": floor(self.dataset.weather["wind_speed_100m"].min()),
                 "max": ceil(self.dataset.weather["wind_speed_100m"].max()),
             },
             "wind_direction_10m": {
                 "label": "Wind Direction at 10m elevation (°)",
-                "min": 0.0,
+                "min": floor(self.dataset.weather["wind_direction_10m"].min()),
                 "max": ceil(self.dataset.weather["wind_direction_10m"].max()),
             },
             "wind_direction_100m": {
                 "label": "Wind Direction at 100m elevation (°)",
-                "min": 0.0,
+                "min": floor(self.dataset.weather["wind_direction_100m"].min()),
                 "max": ceil(self.dataset.weather["wind_direction_100m"].max()),
             },
             "wind_gusts_10m": {
                 "label": "Wind Gusts at 10m elevation (kph)",
-                "min": 0.0,
+                "min": floor(self.dataset.weather["wind_gusts_10m"].min()),
                 "max": ceil(self.dataset.weather["wind_gusts_10m"].max()),
             },
         }

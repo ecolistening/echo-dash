@@ -59,9 +59,9 @@ def init_dataset_filters(
     for variable in data.variable.unique():
         df = data.loc[data["variable"] == variable, "value"]
         variable_ranges = {}
-        variable_range = (floor(df.min(), precision=2), ceil(df.max(), precision=2))
+        variable_range = (floor(df.min()), ceil(df.max()))
         variable_ranges["variable_range_bounds"] = variable_range
-        variable_ranges["current_variable_range"] = variable_range
+        variable_ranges["variable_range"] = variable_range
         weather_variables[variable] = variable_ranges
     filters["weather_variables"] = weather_variables
     return filters
@@ -176,54 +176,59 @@ def update_acoustic_feature_slider(
     return feature_min, feature_max, feature_range, range_description
 
 @callback(
-    Output("weather-variable-filter-groups", "children"),
-    Input("filter-store", "data"),
-)
-def render_weather_sliders(
-    filters: Filters,
-) -> List[dmc.Box]:
-    components = []
-    for variable_name, variable_params in filters["weather_variables"].items():
-        minimum, maximum = variable_params["variable_range_bounds"]
-        components.append(dmc.Box(
-            children=[
-                dmc.Text(variable_name, size="sm"),
-                dcc.RangeSlider(
-                    id={"type": "weather-variable-range-slider", "index": variable_name},
-                    min=minimum,
-                    max=maximum,
-                    value=[minimum, maximum],
-                    allowCross=False,
-                    persistence=True,
-                ),
-            ]
-        ))
-    return components
-
-@callback(
     Output("filter-store", "data", allow_duplicate=True),
     Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
     State({"type": "weather-variable-range-slider", "index": ALL}, "id"),
+    Input({"type": "weather-variable-chip-group", "index": ALL}, "value"),
+    State({"type": "weather-variable-chip-group", "index": ALL}, "id"),
     State("filter-store", "data"),
     prevent_initial_call=True,
 )
 def update_weather_filter(
-    values: List[str],
-    ids: List[str],
+    slider_values: List[str],
+    slider_ids: List[str],
+    chip_values: List[str],
+    chip_ids: List[str],
     filters: Filters,
 ) -> Filters:
     triggered_id = ctx.triggered_id
-    variable_name = triggered_id["index"]
-    context = [
-        (id["index"], current_range)
-        for id, current_range in zip(ids, values)
-        if id["index"] == ctx.triggered_id["index"]
-    ]
-    if not len(context):
-        return no_update
-    variable_name, current_range = context[0]
-    filters["weather_variables"][variable_name]["current_variable_range"] = current_range
-    return filters
+    variable_name = ctx.triggered_id["index"]
+    variable_params = filters["weather_variables"][variable_name]
+    if triggered_id["type"] == "weather-variable-range-slider":
+        ids, values = slider_ids, slider_values
+        context = [(id["index"], current_range) for id, current_range in zip(ids, values) if id["index"] == variable_name]
+        if not len(context):
+            return no_update
+        _, current_range = context[0]
+        update = current_range != variable_params['variable_range']
+        if not update:
+            return no_update
+        filters["weather_variables"][variable_name]["variable_range"] = current_range
+        return filters
+    elif triggered_id["type"] == "weather-variable-chip-group":
+        ids, values = chip_ids, chip_values
+        context = [(id["index"], current_range) for id, current_range in zip(ids, values) if id["index"] == variable_name]
+        if not len(context):
+            return no_update
+        _, current_range = context[0]
+        selected_values = {prefix: float(value) for prefix, value in map(lambda s: s.split("="), current_range)}
+        variable_min, variable_max = variable_params["variable_range_bounds"]
+        current_range = [selected_values.get("start_value", variable_min), selected_values.get("end_value", variable_max)]
+        update = current_range != variable_params['variable_range']
+        if not update:
+            return no_update
+        filters["weather_variables"][variable_name]["variable_range"] = current_range
+        return filters
+    return no_update
+
+# @callback(
+#     Output({"type": "weather-variable-range-slider", "index": ALL}, "value"),
+#     Input("filter-store", "data")
+# )
+# def update_weather_variable_slider(
+#     filters: Filters
+# ) -> Tuple[str, List[str]]:
+#     return list(map(lambda params: params["variable_range"], filters["weather_variables"].values()))
 
 # @callback(
 #     Output("filter-state", "children"),
@@ -301,8 +306,8 @@ def update_weather_filter(
     Input("filter-store", "data"),
     prevent_initial_call=True,
 )
-def update_active_date_filters(
-    filters: List[str],
+def update_date_filter_chips(
+    filters: Filters,
 ) -> dmc.Accordion:
     selected_dates = filters["date_range"]
     if not len(selected_dates):
@@ -350,8 +355,8 @@ def update_active_date_filters(
     Input("filter-store", "data"),
     prevent_initial_call=True,
 )
-def update_active_acoustic_range_filters(
-    filters: Dict[str, Any],
+def update_acoustic_range_filter_chips(
+    filters: Filters,
 ) -> dmc.Accordion:
     feature = filters["current_feature"]
     feature_range = filters["current_feature_range"]
@@ -400,6 +405,59 @@ def update_active_acoustic_range_filters(
         ]
     )
 
+@callback(
+    Output("weather-variable-filter-chips", "children"),
+    Input("filter-store", "data"),
+    prevent_initial_call=True,
+)
+def update_weather_filter_chips(
+    filters: Filters,
+) -> dmc.Accordion:
+    return dmc.Accordion(
+        id="active-weather-variable-filters-accordion",
+        chevronPosition="right",
+        variant="separated",
+        radius="sm",
+        value=["weather-variable-filter"],
+        children=[
+            dmc.AccordionItem(
+                value="weather-variable-filter",
+                children=[
+                    dmc.AccordionControl("Environmental"),
+                    dmc.AccordionPanel(
+                        pb="1rem",
+                        children=[
+                            dmc.Box([
+                                dmc.Space(h="sm"),
+                                dmc.Text(
+                                    children=variable_name,
+                                    size="sm",
+                                ),
+                                dmc.Space(h="sm"),
+                                dmc.ChipGroup(
+                                    id={"type": "weather-variable-chip-group", "index": variable_name },
+                                    value=list(map(lambda s: "=".join(map(str, s)), zip(["start_value", "end_value"], variable_params["variable_range"]))),
+                                    multiple=True,
+                                    children=[
+                                        dmc.Chip(
+                                            variant="outline",
+                                            icon=DashIconify(icon="bi-x-circle"),
+                                            value=f"{suffix}={value}",
+                                            mt="xs",
+                                            children=f"{suffix}={value}",
+                                        )
+                                        for suffix, value in zip(["start_value", "end_value"], variable_params["variable_range"])
+                                    ],
+                                ),
+                            ])
+                            for variable_name, variable_params in filters["weather_variables"].items()
+                        ]
+                    )
+                ]
+            )
+        ]
+    )
+
 
 # @callback(
 #     Output("file-filter-chips", "children"),
@@ -439,65 +497,6 @@ def update_active_acoustic_range_filters(
 #                                 for selection_id, file_ids in file_filter_groups.items()
 #                             ]
 #                         )
-#                     )
-#                 ]
-#             )
-#         ]
-#     )
-
-# @callback(
-#     Output("weather-variable-filter-chips", "children"),
-#     Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
-#     Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
-#     prevent_initial_call=True,
-# )
-# def update_active_weather_filters(
-#     weather_variables: List[List[str]],
-#     weather_ranges: List[List[float]],
-# ) -> dmc.Accordion:
-#     weather_params = dict(zip(
-#         map(lambda match: match["index"], weather_variables),
-#         map(tuple, weather_ranges)
-#     ))
-#     return dmc.Accordion(
-#         id="active-weather-variable-filters-accordion",
-#         chevronPosition="right",
-#         variant="separated",
-#         radius="sm",
-#         value=["weather-variable-filter"],
-#         children=[
-#             dmc.AccordionItem(
-#                 value="weather-variable-filter",
-#                 children=[
-#                     dmc.AccordionControl("Environmental"),
-#                     dmc.AccordionPanel(
-#                         pb="1rem",
-#                         children=[
-#                             dmc.Box([
-#                                 dmc.Space(h="sm"),
-#                                 dmc.Text(
-#                                     children=weather_variable,
-#                                     size="sm",
-#                                 ),
-#                                 dmc.Space(h="sm"),
-#                                 dmc.ChipGroup(
-#                                     id={"type": "weather-variable-chip-group", "index": weather_variable},
-#                                     value=variable_range,
-#                                     multiple=True,
-#                                     children=[
-#                                         dmc.Chip(
-#                                             variant="outline",
-#                                             icon=DashIconify(icon="bi-x-circle"),
-#                                             value=value,
-#                                             mt="xs",
-#                                             children=f"{suffix}={value}",
-#                                         )
-#                                         for suffix, value in zip(["start_value", "end_value"], variable_range)
-#                                     ],
-#                                 ),
-#                             ])
-#                             for weather_variable, variable_range in weather_params.items()
-#                         ]
 #                     )
 #                 ]
 #             )

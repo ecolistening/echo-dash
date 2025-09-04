@@ -63,15 +63,9 @@ def draw_figure(
         dates=list2tuple(filters["date_range"]),
         feature=filters["current_feature"],
         feature_range=list2tuple(filters["current_feature_range"]),
-        **{variable: list2tuple(params["current_variable_range"]) for variable, params in filters["weather_variables"].items()},
+        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
         # locations=list2tuple(locations),
         # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        # **dict(zip(
-        #     map(lambda match: match["index"], weather_variables),
-        #     map(tuple, weather_ranges)
-        # )),
-        # feature=feature,
-        # feature_range=(start_value, end_value),
     )
     fig = px.histogram(
         data_frame=data,
