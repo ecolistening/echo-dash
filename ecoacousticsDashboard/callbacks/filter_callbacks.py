@@ -175,6 +175,8 @@ def update_acoustic_feature_slider(
     range_description = f"{feature_min} - {feature_max}"
     return feature_min, feature_max, feature_range, range_description
 
+# FIXME:
+# we're getting a double update here for some reason, coupled to acoustic feature range slider somehow?
 @callback(
     Output("filter-store", "data", allow_duplicate=True),
     Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
@@ -221,14 +223,14 @@ def update_weather_filter(
         return filters
     return no_update
 
-# @callback(
-#     Output({"type": "weather-variable-range-slider", "index": ALL}, "value"),
-#     Input("filter-store", "data")
-# )
-# def update_weather_variable_slider(
-#     filters: Filters
-# ) -> Tuple[str, List[str]]:
-#     return list(map(lambda params: params["variable_range"], filters["weather_variables"].values()))
+@callback(
+    Output({"type": "weather-variable-range-slider", "index": ALL}, "value"),
+    Input("filter-store", "data")
+)
+def update_weather_variable_slider(
+    filters: Filters
+) -> Tuple[str, List[str]]:
+    return list(map(lambda params: params["variable_range"], filters["weather_variables"].values()))
 
 # @callback(
 #     Output("filter-state", "children"),
