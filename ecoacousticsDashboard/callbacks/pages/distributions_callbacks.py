@@ -64,7 +64,7 @@ def draw_figure(
         feature=filters["current_feature"],
         feature_range=list2tuple(filters["current_feature_range"]),
         **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-        # locations=list2tuple(locations),
+        locations=list2tuple(filters["current_sites"]),
         # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
     fig = px.histogram(

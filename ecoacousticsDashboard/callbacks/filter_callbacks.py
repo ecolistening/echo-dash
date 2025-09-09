@@ -1,7 +1,9 @@
+import bigtree as bt
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import datetime as dt
+import itertools
 
 from dash import callback, ctx, no_update, dcc
 from dash import Output, Input, State
@@ -12,11 +14,16 @@ from typing import Any, Dict, List, Tuple
 
 from api import (
     dispatch,
-    FETCH_DATASETS,
+    FETCH_DATASET_SITES_TREE,
+    FETCH_DATASET_CONFIG,
+    FETCH_DATASET_SITES_TREE,
     FETCH_FILES,
     FETCH_ACOUSTIC_FEATURES,
     FETCH_WEATHER,
+    FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
 )
+from components.environmental_filter import EnvironmentalFilterSliderAccordion
+from components.site_level_filter import SiteLevelHierarchyAccordion, TreeNodeChip
 from utils import ceil, floor
 
 Filters = Dict[str, Any]
@@ -30,17 +37,18 @@ def init_dataset_filters(
     dataset_name: str,
     filters: Filters,
 ) -> Filters:
-    logger.debug(filters)
     filters = {} if filters is None else filters
+    params = dict(dataset_name=dataset_name)
+    filters["current_dataset"] = dataset_name
     # set dates and date range
-    data = dispatch(FETCH_FILES, dataset_name=dataset_name)
-    min_date = data.timestamp.dt.date.min()
-    max_date = data.timestamp.dt.date.max()
-    date_range = (min_date, max_date)
+    data = dispatch(FETCH_FILES, **params)
+    min_date = data.timestamp.dt.date.min().strftime("%Y-%m-%d")
+    max_date = data.timestamp.dt.date.max().strftime("%Y-%m-%d")
+    date_range = [min_date, max_date]
     filters["date_range_bounds"] = date_range
     filters["date_range"] = date_range
     # set feature and feature range
-    data = dispatch(FETCH_ACOUSTIC_FEATURES, dataset_name=dataset_name)
+    data = dispatch(FETCH_ACOUSTIC_FEATURES, **params)
     features = data["feature"].unique()
     current_feature = filters.get("current_feature", features[0])
     feature_data = data.loc[data["feature"] == current_feature, "value"]
@@ -49,21 +57,27 @@ def init_dataset_filters(
     acoustic_features = {}
     for feature in features:
         df = data.loc[data["feature"] == feature, "value"]
-        acoustic_features[feature] = (floor(df.min(), precision=2), ceil(df.max(), precision=2))
+        acoustic_features[feature] = [floor(df.min(), precision=2), ceil(df.max(), precision=2)]
     filters["acoustic_features"] = acoustic_features
     filters["current_feature"] = current_feature
-    filters["current_feature_range"] = tuple(filters["acoustic_features"][current_feature])
+    filters["current_feature_range"] = list(filters["acoustic_features"][current_feature])
     # set weather variables and default ranges
-    data = dispatch(FETCH_WEATHER, dataset_name=dataset_name)
+    data = dispatch(FETCH_WEATHER, **params)
     weather_variables = {}
     for variable in data.variable.unique():
         df = data.loc[data["variable"] == variable, "value"]
         variable_ranges = {}
-        variable_range = (floor(df.min()), ceil(df.max()))
+        variable_range = [floor(df.min()), ceil(df.max())]
         variable_ranges["variable_range_bounds"] = variable_range
         variable_ranges["variable_range"] = variable_range
         weather_variables[variable] = variable_ranges
     filters["weather_variables"] = weather_variables
+    # set site filters
+    config = dispatch(FETCH_DATASET_CONFIG, **params)
+    root_node = dispatch(FETCH_DATASET_SITES_TREE, **params)
+    sites = list(bt.tree_to_dict(root_node).keys())
+    filters["current_sites"] = sites
+    logger.debug(filters)
     return filters
 
 @callback(
@@ -176,7 +190,25 @@ def update_acoustic_feature_slider(
     return feature_min, feature_max, feature_range, range_description
 
 # FIXME:
-# we're getting a double update here for some reason, coupled to acoustic feature range slider somehow?
+# we're getting a double update for some reason, coupled to acoustic feature range slider somehow?
+
+@callback(
+    Output("weather-variable-filter-groups", "children"),
+    Input("dataset-select", "data"),
+)
+def init_environmental_filters(
+    dataset_name: str
+) -> List[dmc.Box]:
+    return [
+        EnvironmentalFilterSliderAccordion(**opt_group)
+        for opt_group in dispatch(
+            FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+            dataset_name=dataset_name,
+            options=("Temperature", "Precipitation", "Wind"),
+            default=[],
+        )
+    ]
+
 @callback(
     Output("filter-store", "data", allow_duplicate=True),
     Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
@@ -194,9 +226,9 @@ def update_weather_filter(
     filters: Filters,
 ) -> Filters:
     triggered_id = ctx.triggered_id
-    variable_name = ctx.triggered_id["index"]
-    variable_params = filters["weather_variables"][variable_name]
-    if triggered_id["type"] == "weather-variable-range-slider":
+    if isinstance(ctx.triggered_id, dict) and triggered_id["type"] == "weather-variable-range-slider":
+        variable_name = ctx.triggered_id["index"]
+        variable_params = filters["weather_variables"][variable_name]
         ids, values = slider_ids, slider_values
         context = [(id["index"], current_range) for id, current_range in zip(ids, values) if id["index"] == variable_name]
         if not len(context):
@@ -207,7 +239,9 @@ def update_weather_filter(
             return no_update
         filters["weather_variables"][variable_name]["variable_range"] = current_range
         return filters
-    elif triggered_id["type"] == "weather-variable-chip-group":
+    elif isinstance(ctx.triggered_id, dict) and triggered_id["type"] == "weather-variable-chip-group":
+        variable_name = ctx.triggered_id["index"]
+        variable_params = filters["weather_variables"][variable_name]
         ids, values = chip_ids, chip_values
         context = [(id["index"], current_range) for id, current_range in zip(ids, values) if id["index"] == variable_name]
         if not len(context):
@@ -231,6 +265,89 @@ def update_weather_variable_slider(
     filters: Filters
 ) -> Tuple[str, List[str]]:
     return list(map(lambda params: params["variable_range"], filters["weather_variables"].values()))
+
+@callback(
+    Output("site-level-filter-group", "children"),
+    Input("dataset-select", "value"),
+)
+def init_site_level_filters(
+    dataset_name: str,
+) -> dmc.Stack:
+    tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
+    config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name).get("Site Hierarchy", {})
+    return SiteLevelHierarchyAccordion(tree=tree, config=config)
+
+# TODO: revisit - we need this to update the opposite direction too, i.e.
+# when you re-check a parent, it should update all children
+# how can we know this in a two-stage process if we're missing those values?
+@callback(
+    Output("filter-store", "data", allow_duplicate=True),
+    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    State("filter-store", "data"),
+    State("dataset-select", "value"),
+    prevent_initial_call=True,
+)
+def update_site_level_filter(
+    values: List[str],
+    filters: Filters,
+    dataset_name: str,
+) -> Filters:
+    flat_values = list(itertools.chain(*values))
+    current_tree = bt.list_to_tree(filters["current_sites"])
+    # FIXME: hack as this is triggering before filters are updated after dataset change
+    if not len(flat_values) or current_tree.path_name != bt.list_to_tree(flat_values).path_name:
+        return no_update
+    # prevents update when nodes haven't changed
+    current_nodes = sorted([node.path_name for node in current_tree.descendants])
+    if current_nodes == flat_values:
+        return no_update
+    # rebuild the tree omitting children where the parent is not in selected values
+    tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
+    kept = set()
+    allow_list = sorted([node_path.strip("/") for node_path in flat_values], key=lambda s: s.count('/'))
+    for node_path in allow_list:
+        parent = '/'.join(node_path.split('/')[:-1])
+        if parent == tree.path_name.strip('/') or parent in kept:
+            kept.add(node_path)
+    paths = []
+    for node_path in sorted(kept, key=lambda s: s.count('/')):
+        node = bt.find_full_path(tree, node_path)
+        if node is not None:
+            paths.append(node_path)
+    if not len(paths):
+        return no_update
+    filters["current_sites"] = paths
+    return filters
+
+@callback(
+    Output({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
+    Input("filter-store", "data"),
+    State("dataset-select", "value"),
+    prevent_initial_call=True,
+)
+def update_site_level_filters(
+    filters: str,
+    dataset_name: str,
+) -> Tuple[List[TreeNodeChip], List[str]]:
+    tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
+    config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name).get("Site Hierarchy", {})
+    sites = filters["current_sites"]
+    if not len(sites):
+        groups = []
+        for depth in range(1, tree.max_depth):
+            nodes = sorted(bt.levelorder_iter(tree, filter_condition=lambda node: node.depth == depth + 1), key=lambda node: node.path_name)
+            groups.append([node.path_name for node in nodes])
+        return groups
+    current_tree = bt.list_to_tree(sites)
+    groups = []
+    for depth in range(1, tree.max_depth):
+        values = []
+        nodes = sorted(bt.levelorder_iter(tree, filter_condition=lambda node: node.depth == depth + 1), key=lambda node: node.path_name)
+        for node in nodes:
+            if bool(bt.find_full_path(current_tree, node.path_name)):
+                values.append(node.path_name)
+        groups.append(values)
+    return groups
 
 # @callback(
 #     Output("filter-state", "children"),

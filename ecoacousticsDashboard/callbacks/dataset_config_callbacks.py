@@ -19,7 +19,6 @@ from api import (
 @callback(
     Output("dataset-config", "data"),
     Input("dataset-select", "value"),
-    prevent_initial_call=True,
 )
 def get_dataset_config(dataset_name: str) -> Dict[str, Any]:
     trigger_id = ctx.triggered_id
@@ -68,7 +67,6 @@ def set_sites_form(
 @callback(
     Output("dataset-settings-dataset-name", "children"),
     Input("dataset-select", "value"),
-    prevent_initial_call=True,
 )
 def set_dataset_settings_text(dataset_name: str):
     return f"Settings for the {dataset_name} dataset"
@@ -78,7 +76,6 @@ def set_dataset_settings_text(dataset_name: str):
     Input("dataset-settings-button", "n_clicks"),
     Input("dataset-settings-cancel-button", "n_clicks"),
     Input("dataset-config", "data"),
-    prevent_initial_call=True,
 )
 def toggle_settings_drawer(*args: Any):
     if ctx.triggered_id == "dataset-settings-button":

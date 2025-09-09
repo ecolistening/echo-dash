@@ -121,7 +121,7 @@ class DatasetDecorator:
                 "label": "Site"
             },
             "recorder": {
-                "order": self.dataset.locations["recorder"].unique(),
+                # "order": self.dataset.locations["recorder"].unique(),
                 "label": "Recorder"
             },
         }
