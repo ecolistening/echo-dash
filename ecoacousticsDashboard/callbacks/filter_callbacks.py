@@ -75,7 +75,7 @@ def init_dataset_filters(
     # set site filters
     config = dispatch(FETCH_DATASET_CONFIG, **params)
     root_node = dispatch(FETCH_DATASET_SITES_TREE, **params)
-    sites = list(bt.tree_to_dict(root_node).keys())
+    sites = list(bt.tree_to_dict(root_node).keys())[1:]
     filters["current_sites"] = sites
     logger.debug(filters)
     return filters
@@ -278,7 +278,7 @@ def init_site_level_filters(
     return SiteLevelHierarchyAccordion(tree=tree, config=config)
 
 # TODO: revisit - we need this to update the opposite direction too, i.e.
-# when you re-check a parent, it should update all children
+# when you re-check a parent, it should re-check all children
 # how can we know this in a two-stage process if we're missing those values?
 @callback(
     Output("filter-store", "data", allow_duplicate=True),
@@ -301,22 +301,18 @@ def update_site_level_filter(
     current_nodes = sorted([node.path_name for node in current_tree.descendants])
     if current_nodes == flat_values:
         return no_update
-    # rebuild the tree omitting children where the parent is not in selected values
     tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
-    kept = set()
-    allow_list = sorted([node_path.strip("/") for node_path in flat_values], key=lambda s: s.count('/'))
-    for node_path in allow_list:
-        parent = '/'.join(node_path.split('/')[:-1])
-        if parent == tree.path_name.strip('/') or parent in kept:
-            kept.add(node_path)
-    paths = []
-    for node_path in sorted(kept, key=lambda s: s.count('/')):
-        node = bt.find_full_path(tree, node_path)
-        if node is not None:
-            paths.append(node_path)
-    if not len(paths):
-        return no_update
-    filters["current_sites"] = paths
+    # find child nodes at specified depth
+    depth = ctx.triggered_id["index"]
+    nodes = bt.levelorder_iter(tree, filter_condition=lambda node: node.depth == len(values[depth:]) + 1)
+    # remove all nodes where the parent is not present in selected values
+    nodes = filter(lambda node: node.parent and node.parent.path_name in flat_values, nodes)
+    nodes = sorted(nodes, key=lambda node: node.path_name)
+    # recursively build out child list using each preserved child node
+    children = [list(bt.tree_to_dict(node).keys()) for node in nodes]
+    # preserve tree up to depth, rebuild children based on filtering
+    values = values[:depth] + children
+    filters["current_sites"] = list(itertools.chain(*values))
     return filters
 
 @callback(
@@ -332,22 +328,20 @@ def update_site_level_filters(
     tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
     config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name).get("Site Hierarchy", {})
     sites = filters["current_sites"]
+    # if all sites have been de-selected, re-select all of them
+    values = []
     if not len(sites):
-        groups = []
         for depth in range(1, tree.max_depth):
             nodes = sorted(bt.levelorder_iter(tree, filter_condition=lambda node: node.depth == depth + 1), key=lambda node: node.path_name)
-            groups.append([node.path_name for node in nodes])
-        return groups
-    current_tree = bt.list_to_tree(sites)
-    groups = []
-    for depth in range(1, tree.max_depth):
-        values = []
-        nodes = sorted(bt.levelorder_iter(tree, filter_condition=lambda node: node.depth == depth + 1), key=lambda node: node.path_name)
-        for node in nodes:
-            if bool(bt.find_full_path(current_tree, node.path_name)):
-                values.append(node.path_name)
-        groups.append(values)
-    return groups
+            values.append([node.path_name for node in nodes])
+    # otherwise return only the values of selected sites
+    else:
+        current_tree = bt.list_to_tree(sites)
+        for depth in range(1, tree.max_depth):
+            condition = lambda node: node.depth == depth + 1
+            nodes = sorted(bt.levelorder_iter(tree, filter_condition=condition), key=lambda node: node.path_name)
+            values.append([node.path_name for node in nodes if bool(bt.find_full_path(current_tree, node.path_name))])
+    return values
 
 # @callback(
 #     Output("filter-state", "children"),
