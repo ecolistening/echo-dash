@@ -53,7 +53,7 @@ def draw_figure(
         variable=variable,
         dates=list2tuple(filters["date_range"]),
         locations=list2tuple(filters["current_sites"]),
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
     if not len(data):
         return {}
