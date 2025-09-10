@@ -136,6 +136,7 @@ def update_acoustic_feature_filter(
     chip_values: List[str],
     filters: Filters,
 ) -> Filters:
+    triggered_id = ctx.triggered_id
     if ctx.triggered_id == "feature-select":
         if selected_feature == filters.get("current_feature", None):
             return no_update
@@ -189,24 +190,22 @@ def update_acoustic_feature_slider(
     range_description = f"{feature_min} - {feature_max}"
     return feature_min, feature_max, feature_range, range_description
 
-# FIXME:
-# we're getting a double update for some reason, coupled to acoustic feature range slider somehow?
-
 @callback(
     Output("weather-variable-filter-groups", "children"),
-    Input("dataset-select", "data"),
+    Input("dataset-select", "value"),
 )
-def init_environmental_filters(
+def init_weather_filters(
     dataset_name: str
 ) -> List[dmc.Box]:
+    opt_groups = dispatch(
+        FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+        dataset_name=dataset_name,
+        options=("Temperature", "Precipitation", "Wind"),
+        default=[],
+    )
     return [
         EnvironmentalFilterSliderAccordion(**opt_group)
-        for opt_group in dispatch(
-            FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-            dataset_name=dataset_name,
-            options=("Temperature", "Precipitation", "Wind"),
-            default=[],
-        )
+        for opt_group in opt_groups
     ]
 
 @callback(
@@ -277,9 +276,6 @@ def init_site_level_filters(
     config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name).get("Site Hierarchy", {})
     return SiteLevelHierarchyAccordion(tree=tree, config=config)
 
-# TODO: revisit - we need this to update the opposite direction too, i.e.
-# when you re-check a parent, it should re-check all children
-# how can we know this in a two-stage process if we're missing those values?
 @callback(
     Output("filter-store", "data", allow_duplicate=True),
     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
@@ -295,9 +291,12 @@ def update_site_level_filter(
     flat_values = list(itertools.chain(*values))
     current_tree = bt.list_to_tree(filters["current_sites"])
     # FIXME: hack as this is triggering before filters are updated after dataset change
-    if not len(flat_values) or current_tree.path_name != bt.list_to_tree(flat_values).path_name:
+    if current_tree.path_name != bt.list_to_tree(flat_values).path_name:
         return no_update
-    # prevents update when nodes haven't changed
+    # this shouldn't happen, but a guard will prevent bugs
+    if not len(flat_values):
+        return no_update
+    # when nodes haven't changed, prevent update to stop graph reload triggering
     current_nodes = sorted([node.path_name for node in current_tree.descendants])
     if current_nodes == flat_values:
         return no_update
@@ -328,14 +327,14 @@ def update_site_level_filters(
     tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
     config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name).get("Site Hierarchy", {})
     sites = filters["current_sites"]
-    # if all sites have been de-selected, re-select all of them
     values = []
     if not len(sites):
+        # if all sites have been de-selected, re-select all of them
         for depth in range(1, tree.max_depth):
             nodes = sorted(bt.levelorder_iter(tree, filter_condition=lambda node: node.depth == depth + 1), key=lambda node: node.path_name)
             values.append([node.path_name for node in nodes])
-    # otherwise return only the values of selected sites
     else:
+        # otherwise return only the values of selected sites
         current_tree = bt.list_to_tree(sites)
         for depth in range(1, tree.max_depth):
             condition = lambda node: node.depth == depth + 1
@@ -363,56 +362,67 @@ def update_site_level_filters(
 #         return "No filters currently active"
 #     return ""
 
-# @callback(
-#     Output("site-filter-chips", "children"),
-#     State("dataset-config", "data"),
-#     Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-#     prevent_initial_call=True,
-# )
-# def update_active_site_filters(
-#     config: Dict[str, str],
-#     locations: List[str],
-# ) -> dmc.Accordion:
-#     if not len(config):
-#         return []
-#     sites = [
-#         f"{config.get('Site Hierarchy', {}).get(f'sitelevel_{i+1}', f'sitelevel_{i+1}')}={value}"
-#         for i, group in enumerate(locations)
-#         for value in group
-#     ]
-#     return dmc.Accordion(
-#         id="site-filters-accordion",
-#         chevronPosition="right",
-#         variant="separated",
-#         radius="sm",
-#         value=["site-filter"],
-#         children=[
-#             dmc.AccordionItem(
-#                 value="sites-filter",
-#                 children=[
-#                     dmc.AccordionControl("Site Level"),
-#                     dmc.AccordionPanel(
-#                         pb="1rem",
-#                         children=dmc.ChipGroup(
-#                             id={"type": "active-filter-chip-group", "index": "site-level"},
-#                             value=sites,
-#                             multiple=True,
-#                             children=[
-#                                 dmc.Chip(
-#                                     variant="outline",
-#                                     icon=DashIconify(icon="bi-x-circle"),
-#                                     value=value,
-#                                     mt="xs",
-#                                     children=value,
-#                                 )
-#                                 for value in sites
-#                             ]
-#                         )
-#                     )
-#                 ]
-#             )
-#         ]
-#     )
+@callback(
+    Output("site-filter-chips", "children"),
+    Input("filter-store", "data"),
+    State("dataset-select", "value"),
+    prevent_initial_call=True,
+)
+def update_active_site_filters(
+    filters: List[str],
+    dataset_name: str,
+) -> dmc.Accordion:
+    tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
+    site_hierarchy = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name).get("Site Hierarchy", {})
+    active_sites = filters["current_sites"]
+    absent_sites = []
+    for depth in range(1, tree.max_depth):
+        condition = lambda node: node.depth == depth + 1
+        nodes = sorted(bt.levelorder_iter(tree, filter_condition=condition), key=lambda node: node.path_name)
+        nodes = filter(lambda node: node.path_name not in active_sites, nodes)
+        absent_sites.append([node.path_name for node in nodes])
+    return dmc.Accordion(
+        id="site-filters-accordion",
+        chevronPosition="right",
+        variant="separated",
+        radius="sm",
+        value=["site-filter"],
+        children=[
+            dmc.AccordionItem(
+                value="sites-filter",
+                children=[
+                    dmc.AccordionControl("Site Level"),
+                    dmc.AccordionPanel(
+                        pb="1rem",
+                        children=[
+                            dmc.Box([
+                                dmc.Space(h="sm"),
+                                dmc.Text(
+                                    children=site_hierarchy.get(f'sitelevel_{depth + 1}', f'site_level_{depth + 1}'),
+                                    size="sm",
+                                ),
+                                dmc.ChipGroup(
+                                    id={"type": "active-filter-chip-group", "index": "site-level"},
+                                    value=values,
+                                    multiple=True,
+                                    children=[
+                                        dmc.Chip(
+                                            variant="outline",
+                                            icon=DashIconify(icon="bi-x-circle"),
+                                            value=value,
+                                            children=value,
+                                        )
+                                        for value in values
+                                    ],
+                                ),
+                            ])
+                            for depth, values in enumerate(absent_sites)
+                        ]
+                    )
+                ]
+            )
+        ]
+    )
 
 @callback(
     Output("date-range-filter-chips", "children"),
@@ -474,7 +484,7 @@ def update_acoustic_range_filter_chips(
     feature = filters["current_feature"]
     feature_range = filters["current_feature_range"]
     feature_range = [
-        f"{key}={floor(feature_range[i], precision=2)}"
+        f"{key}={feature_range[i]}"
         for i, key in enumerate(["start_value", "end_value"])
     ]
     return dmc.Accordion(
