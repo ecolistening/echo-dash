@@ -29,36 +29,36 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 @callback(
     Output("weather-hourly-graph", "figure"),
     Input("dataset-select", "value"),
-    Input("date-range-current-bounds", "data"),
-    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input("umap-filter-store", "data"),
+    Input("filter-store", "data"),
+    # Input("umap-filter-store", "data"),
     Input("weather-hourly-variable-select", "value"),
     Input("weather-hourly-time-aggregation", "value"),
     Input("weather-hourly-colour-select", "value"),
     Input("weather-hourly-facet-row-select", "value"),
     Input("dataset-category-orders", "data"),
-    prevent_initial_call=True,
 )
 def draw_figure(
     dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    file_filter_groups: Dict[int, List[str]],
+    filters: Dict[str, Any],
+    # file_filter_groups: Dict[int, List[str]],
     variable: str,
     time_agg: str,
     color: str,
     facet_row: str,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
+    data = dispatch(
+        FETCH_FILE_WEATHER,
+        dataset_name=dataset_name,
+        variable=variable,
+        dates=list2tuple(filters["date_range"]),
+        locations=list2tuple(filters["current_sites"]),
+        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+    )
+    if not len(data):
+        return {}
     data = (
-        dispatch(
-            FETCH_FILE_WEATHER,
-            dataset_name=dataset_name,
-            variable=variable,
-            dates=list2tuple(dates),
-            locations=list2tuple(locations),
-            file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        )
+        data
         .drop_duplicates(["timestamp_weather", "site_id"])
         .sort_values("timestamp_weather")
         .groupby([*list(set(filter(None, [color, facet_row]))), pd.Grouper(key="timestamp_weather", freq=time_agg)])

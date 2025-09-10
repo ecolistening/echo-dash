@@ -13,7 +13,7 @@ from io import StringIO
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
-from utils import list2tuple
+from utils import list2tuple, capitalise_each
 
 PLOT_HEIGHT = 800
 
@@ -29,28 +29,19 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 @callback(
     Output("index-box-graph", "figure"),
     Input("dataset-select", "value"),
-    Input("date-range-current-bounds", "data"),
-    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
-    Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
-    Input("umap-filter-store", "data"),
-    Input("acoustic-feature-current-bounds", "data"),
+    Input("filter-store", "data"),
+    # Input("umap-filter-store", "data"),
     Input("index-box-time-aggregation", "value"),
     Input("index-box-outliers-tickbox", "checked"),
     Input("index-box-colour-select", "value"),
     Input("index-box-facet-row-select", "value"),
     Input("index-box-facet-column-select", "value"),
     Input("dataset-category-orders", "data"),
-    prevent_initial_call=True,
 )
 def draw_figure(
     dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    weather_variables: List[List[str]],
-    weather_ranges: List[List[float]],
-    file_filter_groups: Dict[str, List],
-    feature_params: Dict[str, Any],
+    filters: Dict[str, Any],
+    # file_filter_groups: Dict[str, List],
     time_agg: str,
     outliers: bool,
     color: str,
@@ -58,19 +49,15 @@ def draw_figure(
     facet_col: str,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
-    feature, start_value, end_value = feature_params.values()
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        **dict(zip(
-            map(lambda match: match["index"], weather_variables),
-            map(tuple, weather_ranges)
-        )),
-        feature=feature,
-        feature_range=(start_value, end_value),
+        dates=list2tuple(filters["date_range"]),
+        feature=filters["current_feature"],
+        feature_range=list2tuple(filters["current_feature_range"]),
+        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
+        locations=list2tuple(filters["current_sites"]),
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
     fig = px.box(
         data_frame=data,
@@ -86,7 +73,7 @@ def draw_figure(
         facet_col=facet_col,
         # facet_col_wrap=4,
         labels=dict(
-            value=feature.capitalize(),
+            value=capitalise_each(filters["current_feature"]),
         ),
         points="outliers" if outliers else False,
         category_orders=category_orders,

@@ -96,21 +96,18 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 @callback(
     Output("species-richness-graph", "figure"),
     Input("dataset-select", "value"),
-    Input("date-range-current-bounds", "data"),
-    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input("umap-filter-store", "data"),
+    Input("filter-store", "data"),
+    # Input("umap-filter-store", "data"),
     Input("species-richness-plot-type-select", "value"),
     Input("species-richness-threshold-slider", "value"),
     Input("species-richness-facet-row-select", "value"),
     Input("species-richness-facet-column-select", "value"),
     Input("dataset-category-orders", "data"),
-    prevent_initial_call=True,
 )
 def draw_figure(
     dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    file_filter_groups: Dict[str, List],
+    filters: Dict[str, Any],
+    # file_filter_groups: Dict[str, List],
     plot_type: str,
     threshold: str,
     facet_row: str,
@@ -122,10 +119,14 @@ def draw_figure(
         dataset_name=dataset_name,
         threshold=threshold,
         group_by=list2tuple(list(filter(None, set(["hour", facet_row, facet_col])))),
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        dates=list2tuple(filters["date_range"]),
+        locations=list2tuple(filters["current_sites"]),
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
+    # if none are present within the threshold, return an empty plot
+    if not len(data):
+        return {}
+
     fig = plot_types[plot_type](
         data_frame=data,
         facet_row=facet_row,

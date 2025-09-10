@@ -13,7 +13,7 @@ from io import StringIO
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
-from utils import list2tuple
+from utils import list2tuple, capitalise_each
 
 PLOT_HEIGHT = 800
 
@@ -29,46 +29,33 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 @callback(
     Output("index-averages-graph", "figure"),
     Input("dataset-select", "value"),
-    Input("date-range-current-bounds", "data"),
-    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
-    Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
-    Input("umap-filter-store", "data"),
-    Input("acoustic-feature-current-bounds", "data"),
+    Input("filter-store", "data"),
+    # Input("umap-filter-store", "data"),
     Input("index-averages-time-aggregation", "value"),
     # Input(outliers_tickbox, "checked"),
     # Input(colours_tickbox, "checked"),
     # Input(separate_plots_tickbox, "checked"),
     Input("dataset-category-orders", "data"),
-    prevent_initial_call=True,
 )
 def draw_figure(
     dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    weather_variables: List[List[str]],
-    weather_ranges: List[List[float]],
-    file_filter_groups: Dict[str, List],
-    feature_params: Dict[str, Any],
+    filters: Dict[str, Any],
+    # file_filter_groups: Dict[str, List],
     time_agg: str,
     # outliers,
     # colour_locations,
     # separate_plots,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
-    feature, start_value, end_value = feature_params.values()
     data = dispatch(
         FETCH_ACOUSTIC_FEATURES,
         dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        **dict(zip(
-            map(lambda match: match["index"], weather_variables),
-            map(tuple, weather_ranges)
-        )),
-        feature=feature,
-        feature_range=(start_value, end_value),
+        dates=list2tuple(filters["date_range"]),
+        feature=filters["current_feature"],
+        feature_range=list2tuple(filters["current_feature_range"]),
+        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
+        locations=list2tuple(filters["current_sites"]),
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
     data = (
         data
@@ -97,7 +84,7 @@ def draw_figure(
         markers=True,
         labels=dict(
             timestamp="Time",
-            value_mean="</br></br>".join(map(str.capitalize, feature.split(" "))),
+            value=capitalise_each(filters["current_feature"]),
         ),
         category_orders=category_orders,
     )

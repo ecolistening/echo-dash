@@ -16,7 +16,6 @@ from datasets.dataset import Dataset
 from datasets.decorator import DatasetDecorator
 from utils import list2tuple, hashify
 from utils.filter import filter_data
-from utils.umap import umap_data
 
 DATASETS = DatasetLoader(root_dir)
 
@@ -164,7 +163,7 @@ def fetch_birdnet_species_richness(
     data = filter_data(dataset.species_predictions, **filters)
     return (
         data[data["confidence"] >= threshold]
-        .groupby(list(group_by))["species_id"]
+        .groupby(list(group_by))["species"]
         .nunique()
         .reset_index(name="richness")
     )

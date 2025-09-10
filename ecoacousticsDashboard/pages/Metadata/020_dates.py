@@ -92,50 +92,26 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
 
 @callback(
-    Output("dates-graph-data", "data"),
-    Input("dataset-select", "value"),
-    Input("date-range-current-bounds", "data"),
-    Input({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
-    Input({"type": "weather-variable-range-slider", "index": ALL}, "id"),
-    Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
-    Input("umap-filter-store", "data"),
-    prevent_initial_call=True,
-)
-def load_data(
-    dataset_name: str,
-    dates: List[str],
-    locations: List[str],
-    weather_variables: List[List[str]],
-    weather_ranges: List[List[float]],
-    file_filter_groups: Dict[int, List[str]],
-) -> str:
-    return dispatch(
-        FETCH_FILES,
-        dataset_name=dataset_name,
-        dates=list2tuple(dates),
-        locations=list2tuple(locations),
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        **dict(zip(
-            map(lambda match: match["index"], weather_variables),
-            map(tuple, weather_ranges)
-        )),
-    ).to_json(
-        date_format="iso",
-        orient="table",
-    )
-
-@callback(
     Output("dates-graph", "figure"),
-    Input("dates-graph-data", "data"),
+    State("dataset-select", "value"),
+    Input("filter-store", "data"),
+    # Input("umap-filter-store", "data"),
 )
 def draw_figure(
-    json_data: str,
+    dataset_name: str,
+    filters: Dict[str, Any],
+    # file_filter_groups: Dict[int, List[str]],
 ) -> go.Figure:
-    if json_data is None or not len(json_data):
-        return no_update
-
+    data = dispatch(
+        FETCH_FILES,
+        dataset_name=dataset_name,
+        dates=list2tuple(filters["date_range"]),
+        locations=list2tuple(filters["current_sites"]),
+        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+    )
     data = (
-        pd.read_json(StringIO(json_data), orient="table")
+        data
         .groupby("date")
         .agg("count")
         .reset_index()

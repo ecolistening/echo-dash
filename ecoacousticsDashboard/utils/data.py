@@ -19,7 +19,6 @@ from configparser import ConfigParser
 from config import root_dir
 from utils import list2tuple
 from utils import query as Q
-from utils.umap import umap_data
 
 from typing import Any, Callable, Dict, List, Tuple, Iterable
 

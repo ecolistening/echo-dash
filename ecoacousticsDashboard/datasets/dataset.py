@@ -58,7 +58,6 @@ class Dataset:
         self.files = (
             self.files
             .merge(self.weather, left_on=["site_id", "nearest_hour"], right_on=["site_id", "timestamp"], suffixes=("", "_weather"))
-            .drop("solar_id", axis=1) # FIXME: we don't need solar_id, we just join on site and date
             .join(self.solar, on=["site_id", "date"])
             .join(self.locations, on="site_id")
         )
@@ -70,6 +69,19 @@ class Dataset:
         )
         logger.info({ "dataset_name": self.dataset_name, "message": "loaded acoustic features" })
         # cache birdnet predictions, merge file, solar, weather and location data
+        # for every unique detection, pad with zeros for all other species
+        # birdnet_probs = (
+        #     pd.read_parquet(self.path / "birdnet_species_probs_table.parquet")
+        #     .drop(["common_name", "label"], axis=1) # superfluous, exists on species table
+        # )
+        # indices = birdnet_probs.columns[~birdnet_probs.columns.isin(["scientific_name", "confidence"])]
+        # self.species_predictions = (
+        #     birdnet_probs[indices].drop_duplicates()
+        #     .merge(self.species.reset_index(), how="cross")
+        #     .merge(birdnet_probs, on=[*indices, "scientific_name"], how="left")
+        #     .fillna(0.0)
+        #     .join(self.files.set_index("file_id"), on="file_id", rsuffix="_files")
+        # )
         self.species_predictions = (
             pd.read_parquet(self.path / "birdnet_species_probs_table.parquet")
             .drop(["common_name", "label"], axis=1) # superfluous, exists on species table
