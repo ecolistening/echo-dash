@@ -82,7 +82,7 @@ def draw_figure(
     col_categories = counts[facet_col].unique()
     categories = list(itertools.product(row_categories, col_categories))
     subplot_titles = [
-        f"{r if r != 'All' else ''} | {c if c != 'All' else ''}"
+        f"{r if r != 'All' else ''} {c if c != 'All' else ''}"
         for r in row_categories
         for c in col_categories
     ]
