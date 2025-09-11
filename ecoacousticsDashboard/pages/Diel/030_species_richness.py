@@ -7,8 +7,6 @@ from dash import dcc
 from dash_iconify import DashIconify
 
 from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
-from callbacks.filter import acoustic_feature_filter_callbacks
-from callbacks.pages import species_richness_callbacks
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
@@ -31,7 +29,7 @@ dash.register_page(
 
 PLOT_HEIGHT = 800
 
-plot_types = species_richness_callbacks.plot_types
+plot_types = ["Scatter", "Scatter Polar", "Bar Polar"]
 
 layout = dmc.Box([
     FilterPanel([
@@ -65,7 +63,7 @@ layout = dmc.Box([
                     value="Bar Polar",
                     data=[
                         dict(value=plot_type, label=plot_type)
-                        for plot_type in plot_types.keys()
+                        for plot_type in plot_types
                     ],
                     searchable=True,
                     clearable=False,
@@ -139,3 +137,5 @@ layout = dmc.Box([
         children=Footer("species-richness"),
     ),
 ])
+
+from callbacks.pages import species_richness_callbacks

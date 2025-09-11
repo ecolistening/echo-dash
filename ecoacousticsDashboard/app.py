@@ -31,16 +31,13 @@ def create_dash_app() -> dash.Dash:
     app = dash.Dash(
         __name__,
         use_pages=True,
+        suppress_callback_exceptions=True,
         external_stylesheets=[
             dbc.themes.LITERA,
             dbc.icons.BOOTSTRAP,
             "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;900&display=swap",
         ]
     )
-
-    from callbacks import nav_bar_callbacks
-    from callbacks import filter_callbacks
-    from callbacks import dataset_config_callbacks
 
     from components.header import Header, HEADER_CONFIG
     from components.nav_bar import NavBar, NAVBAR_CONFIG
@@ -72,6 +69,10 @@ def create_dash_app() -> dash.Dash:
             ],
         )
     )
+
+    from callbacks import nav_bar_callbacks
+    from callbacks import dataset_config_callbacks
+    from callbacks import filter_callbacks
 
     return app
 

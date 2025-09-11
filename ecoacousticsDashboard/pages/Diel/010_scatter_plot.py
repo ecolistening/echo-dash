@@ -6,8 +6,6 @@ from dash import dcc
 from dash_iconify import DashIconify
 
 from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
-from callbacks.filter import acoustic_feature_filter_callbacks
-from callbacks.pages import index_scatter_callbacks
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
@@ -134,3 +132,5 @@ layout = dmc.Box([
         children=Footer("index-scatter"),
     ),
 ])
+
+from callbacks.pages import index_scatter_callbacks

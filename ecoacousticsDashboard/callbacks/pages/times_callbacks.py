@@ -9,33 +9,34 @@ import plotly.graph_objs as go
 
 from dash import html, dcc, callback, ctx, no_update
 from dash import Output, Input, State, ALL, MATCH
+from loguru import logger
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_ACOUSTIC_FEATURES
-from utils import list2tuple, capitalise_each
+from api import dispatch, FETCH_FILES
+from utils import list2tuple
 
 PLOT_HEIGHT = 800
 
 @callback(
-    Output("index-scatter-page-info", "is_open"),
+    Output("times-page-info", "is_open"),
     Input("info-icon", "n_clicks"),
-    State("index-scatter-page-info", "is_open"),
+    State("times-page-info", "is_open"),
     prevent_initial_call=True,
 )
 def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
 
 @callback(
-    Output("index-scatter-graph", "figure"),
+    Output("times-graph", "figure"),
     State("dataset-select", "value"),
     Input("filter-store", "data"),
     # Input("umap-filter-store", "data"),
-    Input("index-scatter-size-slider", "value"),
-    Input("index-scatter-colour-select", "value"),
-    Input("index-scatter-symbol-select", "value"),
-    Input("index-scatter-facet-row-select", "value"),
-    Input("index-scatter-facet-column-select", "value"),
+    Input("times-size-slider", "value"),
+    Input("times-colour-select", "value"),
+    Input("times-symbol-select", "value"),
+    Input("times-facet-row-select", "value"),
+    Input("times-facet-column-select", "value"),
     Input("dataset-category-orders", "data"),
 )
 def draw_figure(
@@ -50,40 +51,43 @@ def draw_figure(
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
     data = dispatch(
-        FETCH_ACOUSTIC_FEATURES,
+        FETCH_FILES,
         dataset_name=dataset_name,
         dates=list2tuple(filters["date_range"]),
-        feature=filters["current_feature"],
-        feature_range=list2tuple(filters["current_feature_range"]),
-        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
         locations=list2tuple(filters["current_sites"]),
+        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
         # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
     fig = px.scatter(
         data_frame=data,
-        x='hour',
-        y='value',
-        hover_name="file_id",
-        hover_data=["file_name", "timestamp"],
-        opacity=0.5,
+        x="date",
+        y="time",
+        opacity=0.25,
+        hover_name="file_name",
+        hover_data=["file_id", "timestamp"],
         color=color,
         symbol=symbol,
         facet_row=facet_row,
         facet_col=facet_col,
         labels=dict(
-            hour="Hour",
-            value=capitalise_each(filters["current_feature"]),
+            date="Date",
+            time="Hour",
         ),
         category_orders=category_orders,
     )
-    fig.update_traces(marker=dict(size=dot_size))
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(
-            text=f"Acoustic Descriptor by Time of Day",
+            text='Recording Times',
+            automargin=True,
             x=0.5,
-            y=0.97,
+            y=1.00,
+            xanchor="center",
+            yanchor="top",
             font=dict(size=24),
-        )
+        ),
+        scattermode="group",
+        scattergap=0.75,
     )
+    fig.update_traces(marker=dict(size=dot_size))
     return fig

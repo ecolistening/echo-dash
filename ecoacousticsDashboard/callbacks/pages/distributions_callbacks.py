@@ -29,7 +29,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 
 @callback(
     Output("distributions-graph", "figure"),
-    Input("dataset-select", "value"),
+    State("dataset-select", "value"),
     Input("filter-store", "data"),
     # Input("umap-filter-store", "data"),
     Input("distributions-colour-select", "value"),

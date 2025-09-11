@@ -31,7 +31,7 @@ def toggle_page_info(
 
 @callback(
     Output("umap-graph", "figure"),
-    Input("dataset-select", "value"),
+    State("dataset-select", "value"),
     Input("filter-store", "data"),
     # Input("umap-filter-store", "data"),
     Input("umap-opacity-slider", "value"),

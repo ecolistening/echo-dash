@@ -95,7 +95,7 @@ def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
 
 @callback(
     Output("species-richness-graph", "figure"),
-    Input("dataset-select", "value"),
+    State("dataset-select", "value"),
     Input("filter-store", "data"),
     # Input("umap-filter-store", "data"),
     Input("species-richness-plot-type-select", "value"),
