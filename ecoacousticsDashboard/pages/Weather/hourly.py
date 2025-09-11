@@ -137,4 +137,6 @@ layout = dmc.Box([
     ),
 ])
 
-from callbacks.pages import weather_hourly_callbacks
+def register_callbacks():
+    from callbacks.pages import weather_hourly_callbacks
+    weather_hourly_callbacks.register_callbacks()

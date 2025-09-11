@@ -64,4 +64,6 @@ layout = html.Div([
     ),
 ])
 
-from callbacks.pages import map_callbacks
+def register_callbacks():
+    from callbacks.pages import map_callbacks
+    map_callbacks.register_callbacks()

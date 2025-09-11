@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, dcc, callback, ctx, no_update
+from dash import html, dcc
 from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
 from typing import Any, Dict, List, Tuple
@@ -84,63 +84,66 @@ plot_types = {
     ),
 }
 
-@callback(
-    Output("species-richness-page-info", "is_open"),
-    Input("info-icon", "n_clicks"),
-    State("species-richness-page-info", "is_open"),
-    prevent_initial_call=True,
-)
-def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-    return not is_open
+def register_callbacks():
+    from dash import callback, ctx, no_update
 
-@callback(
-    Output("species-richness-graph", "figure"),
-    State("dataset-select", "value"),
-    Input("filter-store", "data"),
-    # Input("umap-filter-store", "data"),
-    Input("species-richness-plot-type-select", "value"),
-    Input("species-richness-threshold-slider", "value"),
-    Input("species-richness-facet-row-select", "value"),
-    Input("species-richness-facet-column-select", "value"),
-    Input("dataset-category-orders", "data"),
-)
-def draw_figure(
-    dataset_name: str,
-    filters: Dict[str, Any],
-    # file_filter_groups: Dict[str, List],
-    plot_type: str,
-    threshold: str,
-    facet_row: str,
-    facet_col: str,
-    category_orders: Dict[str, List[str]],
-) -> go.Figure:
-    data = dispatch(
-        FETCH_BIRDNET_SPECIES_RICHNESS,
-        dataset_name=dataset_name,
-        threshold=threshold,
-        group_by=list2tuple(list(filter(None, set(["hour", facet_row, facet_col])))),
-        dates=list2tuple(filters["date_range"]),
-        locations=list2tuple(filters["current_sites"]),
-        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+    @callback(
+        Output("species-richness-page-info", "is_open"),
+        Input("info-icon", "n_clicks"),
+        State("species-richness-page-info", "is_open"),
+        prevent_initial_call=True,
     )
-    # if none are present within the threshold, return an empty plot
-    if not len(data):
-        return {}
+    def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
+        return not is_open
 
-    fig = plot_types[plot_type](
-        data_frame=data,
-        facet_row=facet_row,
-        facet_col=facet_col,
-        category_orders=category_orders,
+    @callback(
+        Output("species-richness-graph", "figure"),
+        State("dataset-select", "value"),
+        Input("filter-store", "data"),
+        # Input("umap-filter-store", "data"),
+        Input("species-richness-plot-type-select", "value"),
+        Input("species-richness-threshold-slider", "value"),
+        Input("species-richness-facet-row-select", "value"),
+        Input("species-richness-facet-column-select", "value"),
+        State("dataset-category-orders", "data"),
     )
-    fig.update_layout(
-        barmode='stack',
-        height=PLOT_HEIGHT,
-        title=dict(
-            text=f"Polar Plot of Species Richness by Time of Day",
-            x=0.5,
-            y=0.97,
-            font=dict(size=24),
+    def draw_figure(
+        dataset_name: str,
+        filters: Dict[str, Any],
+        # file_filter_groups: Dict[str, List],
+        plot_type: str,
+        threshold: str,
+        facet_row: str,
+        facet_col: str,
+        category_orders: Dict[str, List[str]],
+    ) -> go.Figure:
+        data = dispatch(
+            FETCH_BIRDNET_SPECIES_RICHNESS,
+            dataset_name=dataset_name,
+            threshold=threshold,
+            group_by=list2tuple(list(filter(None, set(["hour", facet_row, facet_col])))),
+            dates=list2tuple(filters["date_range"]),
+            locations=list2tuple(filters["current_sites"]),
+            # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
         )
-    )
-    return fig
+        # if none are present within the threshold, return an empty plot
+        if not len(data):
+            return {}
+
+        fig = plot_types[plot_type](
+            data_frame=data,
+            facet_row=facet_row,
+            facet_col=facet_col,
+            category_orders=category_orders,
+        )
+        fig.update_layout(
+            barmode='stack',
+            height=PLOT_HEIGHT,
+            title=dict(
+                text=f"Polar Plot of Species Richness by Time of Day",
+                x=0.5,
+                y=0.97,
+                font=dict(size=24),
+            )
+        )
+        return fig

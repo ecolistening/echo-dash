@@ -12,31 +12,32 @@ from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_DATASETS
 
-@callback(
-    Output("appshell", "navbar"),
-    Input("burger", "opened"),
-    State("appshell", "navbar"),
-)
-def navbar_is_open(
-    opened: bool,
-    navbar: Dict[str, str],
-) -> Dict[str, str]:
-    navbar["collapsed"] = {"desktop": not opened, "mobile": not opened }
-    return navbar
+def register_callbacks():
+    @callback(
+        Output("appshell", "navbar"),
+        Input("burger", "opened"),
+        State("appshell", "navbar"),
+    )
+    def navbar_is_open(
+        opened: bool,
+        navbar: Dict[str, str],
+    ) -> Dict[str, str]:
+        navbar["collapsed"] = {"desktop": not opened, "mobile": not opened }
+        return navbar
 
-@callback(
-    Output("dataset-select", "value"),
-    Output("dataset-select", "data"),
-    State("dataset-select", "value"),
-    Input("load-datasets", "n_intervals"),
-)
-def fetch_datasets(current_dataset, _) -> List[Dict[str, str]]:
-    # FIXME switch to dataset_id and dataset_name
-    datasets = dispatch(FETCH_DATASETS, default=[])
-    dataset_options = [
-        dict(label=dataset, value=dataset)
-        for dataset in datasets
-    ]
-    if current_dataset is None or not len(current_dataset):
-        current_dataset = dataset_options[0]["value"]
-    return current_dataset, dataset_options
+    @callback(
+        Output("dataset-select", "value"),
+        Output("dataset-select", "data"),
+        State("dataset-select", "value"),
+        Input("load-datasets", "n_intervals"),
+    )
+    def fetch_datasets(current_dataset, _) -> List[Dict[str, str]]:
+        # FIXME switch to dataset_id and dataset_name
+        datasets = dispatch(FETCH_DATASETS, default=[])
+        dataset_options = [
+            dict(label=dataset, value=dataset)
+            for dataset in datasets
+        ]
+        if current_dataset is None or not len(current_dataset):
+            current_dataset = dataset_options[0]["value"]
+        return current_dataset, dataset_options

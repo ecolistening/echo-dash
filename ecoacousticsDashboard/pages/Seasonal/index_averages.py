@@ -129,4 +129,6 @@ layout = dmc.Box([
     ),
 ])
 
-from callbacks.pages import index_averages_callbacks
+def register_callbacks():
+    from callbacks.pages import index_averages_callbacks
+    index_averages_callbacks.register_callbacks()

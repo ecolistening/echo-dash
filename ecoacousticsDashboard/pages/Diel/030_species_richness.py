@@ -138,4 +138,6 @@ layout = dmc.Box([
     ),
 ])
 
-from callbacks.pages import species_richness_callbacks
+def register_callbacks():
+    from callbacks.pages import species_richness_callbacks
+    species_richness_callbacks.register_callbacks()

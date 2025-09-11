@@ -82,4 +82,6 @@ layout = dmc.Box([
     ),
 ])
 
-from callbacks.pages import dates_callbacks
+def register_callbacks():
+    from callbacks.pages import dates_callbacks
+    dates_callbacks.register_callbacks()

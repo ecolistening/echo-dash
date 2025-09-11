@@ -135,4 +135,6 @@ layout = dmc.Box([
     # get_modal_sound_sample(PAGE_NAME),
 ])
 
-from callbacks.pages import times_callbacks
+def register_callbacks():
+    from callbacks.pages import times_callbacks
+    times_callbacks.register_callbacks()

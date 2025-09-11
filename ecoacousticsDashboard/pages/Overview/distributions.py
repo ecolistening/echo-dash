@@ -113,4 +113,6 @@ layout = dmc.Box([
     ),
 ])
 
-from callbacks.pages import distributions_callbacks
+def register_callbacks():
+    from callbacks.pages import distributions_callbacks
+    distributions_callbacks.register_callbacks()

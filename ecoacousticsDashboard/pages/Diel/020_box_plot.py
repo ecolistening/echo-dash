@@ -133,3 +133,6 @@ layout = dmc.Box([
     ),
 ])
 
+def register_callbacks():
+    from callbacks.pages import index_box_callbacks
+    index_box_callbacks.register_callbacks()
