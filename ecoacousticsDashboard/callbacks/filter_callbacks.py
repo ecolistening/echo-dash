@@ -84,12 +84,48 @@ def register_callbacks():
     # ------ DATES FILTER ----- #
 
     @callback(
+        Output("filter-store", "data", allow_duplicate=True),
+        Input("date-picker", "value"),
+        State("filter-store", "data"),
+        prevent_initial_call=True
+    )
+    def update_dates_filter_from_picker(
+        selected_dates: List[str],
+        filters,
+    ):
+        if selected_dates is not None and len(list(filter(None, selected_dates))) < 2:
+            return no_update
+        if selected_dates == filters.get("date_range", None):
+            return no_update
+        filters["date_range"] = selected_dates
+        return filters
+
+    @callback(
+        Output("filter-store", "data", allow_duplicate=True),
+        Input({"type": "active-filter-chip-group", "index": "date-range"}, "value"),
+        State("filter-store", "data"),
+        prevent_initial_call=True,
+    )
+    def update_dates_filter_from_chips(
+        chip_values: List[str],
+        filters,
+    ):
+        min_date, max_date = filters["date_range_bounds"]
+        dates_dict = {prefix: date for prefix, date in map(lambda s: s.split("="), chip_values)}
+        date_range = [dates_dict.get("start_date", min_date), dates_dict.get("end_date", max_date)]
+        if date_range == filters.get("date_range", None):
+            return no_update
+        filters["date_range"] = date_range
+        return filters
+
+    @callback(
         Output("date-picker", "minDate"),
         Output("date-picker", "maxDate"),
         Output("date-picker", "value"),
-        Input("filter-store", "data")
+        Input("filter-store", "data"),
+        prevent_initial_call=True,
     )
-    def update_date_picker(
+    def update_date_picker_from_filter(
         filters: Filters,
     ) -> Tuple[str, str, str]:
         date_range = filters["date_range"]
@@ -148,31 +184,58 @@ def register_callbacks():
     # ------ ACOUSTIC FEATURE FILTER ----- #
 
     @callback(
-        Output("feature-select", "value"),
-        Output("feature-select", "data"),
-        Input("filter-store", "data")
+        Output("filter-store", "data", allow_duplicate=True),
+        Input("feature-select", "value"),
+        State("filter-store", "data"),
+        prevent_initial_call=True
     )
-    def update_acoustic_feature_select(
-        filters: Filters
-    ) -> Tuple[str, List[str]]:
-        return filters["current_feature"], list(filters["acoustic_features"].keys())
+    def update_acoustic_feature_filter_from_select(
+        selected_feature: str,
+        filters,
+    ):
+        if selected_feature == filters.get("current_feature", None):
+            return no_update
+        selected_feature = filters["current_feature"] if not selected_feature else selected_feature
+        feature_range = tuple(filters["acoustic_features"][selected_feature])
+        features = list(filters["acoustic_features"].keys())
+        filters["current_feature"] = selected_feature
+        filters["current_feature_range"] = feature_range
+        return filters
 
     @callback(
-        Output("feature-range-slider", "min"),
-        Output("feature-range-slider", "max"),
-        Output("feature-range-slider", "value"),
-        Output("feature-range-bounds", "children"),
-        Input("filter-store", "data")
+        Output("filter-store", "data", allow_duplicate=True),
+        Input("feature-range-slider", "value"),
+        State("filter-store", "data"),
+        prevent_initial_call=True
     )
-    def update_acoustic_feature_slider(
-        filters: Filters
-    ) -> Tuple[str, List[str]]:
-        feature_range = filters["current_feature_range"]
+    def update_acoustic_feature_filter_from_slider(
+        selected_feature_range: List[float],
+        filters,
+    ):
+        if selected_feature_range == filters.get("current_feature_range", None):
+            return no_update
+        filters["current_feature_range"] = selected_feature_range
+        feature_min, feature_max = selected_feature_range
+        return filters
+
+    @callback(
+        Output("filter-store", "data", allow_duplicate=True),
+        Input({"type": "active-filter-chip-group", "index": "acoustic-feature"}, "value"),
+        State("filter-store", "data"),
+        prevent_initial_call=True,
+    )
+    def update_acoustic_feature_filter_from_chips(
+        chip_values: List[str],
+        filters,
+    ):
         current_feature = filters["current_feature"]
-        feature_bounds = filters["acoustic_features"][current_feature]
-        feature_min, feature_max = feature_bounds
-        range_description = f"{feature_min} - {feature_max}"
-        return feature_min, feature_max, feature_range, range_description
+        feature_min, feature_max = filters["acoustic_features"][current_feature]
+        selected_values = {prefix: float(value) for prefix, value in map(lambda s: s.split("="), chip_values)}
+        feature_range = [selected_values.get("start_value", feature_min), selected_values.get("end_value", feature_max)]
+        if feature_range == filters.get("current_feature_range"):
+            return no_update
+        filters["current_feature_range"] = feature_range
+        return filters
 
     @callback(
         Output("acoustic-feature-range-filter-chips", "children"),
@@ -180,7 +243,7 @@ def register_callbacks():
         prevent_initial_call=True,
     )
     def update_acoustic_range_filter_chips(
-        filters: Filters,
+        filters,
     ) -> dmc.Accordion:
         feature = filters["current_feature"]
         feature_range = filters["current_feature_range"]
@@ -228,6 +291,33 @@ def register_callbacks():
                 )
             ]
         )
+
+    @callback(
+        Output("feature-select", "value"),
+        Output("feature-select", "data"),
+        Input("filter-store", "data")
+    )
+    def update_acoustic_feature_select(
+        filters: Filters
+    ) -> Tuple[str, List[str]]:
+        return filters["current_feature"], list(filters["acoustic_features"].keys())
+
+    @callback(
+        Output("feature-range-slider", "min"),
+        Output("feature-range-slider", "max"),
+        Output("feature-range-slider", "value"),
+        Output("feature-range-bounds", "children"),
+        Input("filter-store", "data")
+    )
+    def update_acoustic_feature_slider(
+        filters: Filters
+    ) -> Tuple[str, List[str]]:
+        feature_range = filters["current_feature_range"]
+        current_feature = filters["current_feature"]
+        feature_bounds = filters["acoustic_features"][current_feature]
+        feature_min, feature_max = feature_bounds
+        range_description = f"{feature_min} - {feature_max}"
+        return feature_min, feature_max, feature_range, range_description
 
 
     # ------ WEATHER FILTER ----- #

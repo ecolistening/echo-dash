@@ -8,7 +8,7 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 
 from dash import Dash, dcc, ctx
-from dash import Output, Input, State, callback
+from dash import Output, Input, State, callback, no_update
 from dash_iconify import DashIconify
 from typing import Any, Dict, List
 
@@ -31,7 +31,7 @@ def create_dash_app() -> dash.Dash:
     app = dash.Dash(
         __name__,
         use_pages=True,
-        suppress_callback_exceptions=True,
+        # suppress_callback_exceptions=True,
         external_stylesheets=[
             dbc.themes.LITERA,
             dbc.icons.BOOTSTRAP,
@@ -71,38 +71,18 @@ def create_dash_app() -> dash.Dash:
     )
 
     from callbacks import nav_bar_callbacks
-    from callbacks import dataset_config_callbacks
-    from callbacks import filter_callbacks
+    nav_bar_callbacks.register_callbacks()
 
-    @callback(
-        Output("filter-store", "data", allow_duplicate=True),
-        Input("date-picker", "value"),
-        Input({"type": "active-filter-chip-group", "index": "date-range"}, "value"),
-        State("filter-store", "data"),
-        prevent_initial_call=True
-    )
-    def update_dates_filter(
-        selected_dates: List[str],
-        chip_values: List[str],
-        filters,
-    ):
-        if ctx.triggered_id is None:
-            return no_update
-        if ctx.triggered_id == "date-picker":
-            if selected_dates is not None and len(list(filter(None, selected_dates))) < 2:
-                return no_update
-            if selected_dates == filters.get("date_range", None):
-                return no_update
-            filters["date_range"] = selected_dates
-            return filters
-        elif isinstance(ctx.triggered_id, dict) and ctx.triggered_id.get("index", None) == "date-range":
-            min_date, max_date = filters["date_range_bounds"]
-            dates_dict = {prefix: date for prefix, date in map(lambda s: s.split("="), chip_values)}
-            date_range = [dates_dict.get("start_date", min_date), dates_dict.get("end_date", max_date)]
-            if date_range == filters.get("date_range", None):
-                return no_update
-            return filters
-        return no_update
+    from callbacks import dataset_config_callbacks
+    dataset_config_callbacks.register_callbacks()
+
+    from callbacks import filter_callbacks
+    filter_callbacks.register_callbacks()
+
+    for page in dash.page_registry.values():
+        mod = __import__(page["module"], fromlist=["register_callbacks"])
+        if hasattr(mod, "register_callbacks"):
+            mod.register_callbacks()
 
     return app
 
