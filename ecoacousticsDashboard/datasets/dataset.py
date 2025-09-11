@@ -27,7 +27,6 @@ class Dataset:
     locations: pd.DataFrame = attrs.field(init=False)
     solar: pd.DataFrame = attrs.field(init=False)
     weather: pd.DataFrame = attrs.field(init=False)
-    file_weather: pd.DataFrame = attrs.field(init=False)
     acoustic_features: pd.DataFrame = attrs.field(init=False)
     species: pd.DataFrame = attrs.field(init=False)
     species_predictions: pd.DataFrame = attrs.field(init=False)

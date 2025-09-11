@@ -12,7 +12,7 @@ from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_FILE_WEATHER
+from api import dispatch, FETCH_DATASET_OPTIONS, FETCH_FILE_WEATHER
 from utils import list2tuple
 
 PLOT_HEIGHT = 800
@@ -47,6 +47,7 @@ def draw_figure(
     facet_row: str,
     category_orders: Dict[str, List[str]],
 ) -> go.Figure:
+    options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)[variable]
     data = dispatch(
         FETCH_FILE_WEATHER,
         dataset_name=dataset_name,
@@ -55,31 +56,31 @@ def draw_figure(
         locations=list2tuple(filters["current_sites"]),
         # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
-    if not len(data):
-        return {}
     data = (
         data
-        .drop_duplicates(["timestamp_weather", "site_id"])
-        .sort_values("timestamp_weather")
-        .groupby([*list(set(filter(None, [color, facet_row]))), pd.Grouper(key="timestamp_weather", freq=time_agg)])
+        .drop_duplicates(["nearest_hour", "site_id"])
+        .sort_values("nearest_hour")
+        .groupby([*list(set(filter(None, [color, facet_row]))), pd.Grouper(key="nearest_hour", freq=time_agg)])
         .agg(value_mean=("value", "mean"), value_std=("value", "std"))
         .reset_index()
     )
     fig = px.line(
-        data_frame=data_frame,
-        x="timestamp_weather",
+        data_frame=data,
+        x="nearest_hour",
         y="value_mean",
         error_y="value_std",
         color=color,
         facet_row=facet_row,
         markers=True,
         labels=dict(
-            timestamp_weather="Time",
+            nearest_hour="Time",
             value_mean="value",
         ),
         category_orders=category_orders,
     )
     fig.update_traces(marker=dict(size=4))
+    # Unsure whether to clip at min/max for std-err bars where the minimum possible value is non-negative, e.g. rainfall
+    # fig.update_yaxes(range=[options["min"], options["max"]])
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(

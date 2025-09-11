@@ -32,6 +32,6 @@ def DatasetOptionsSelect(
         Input("dataset-select", "value"),
     )
     def init_select_options(dataset_name: str) -> List[Dict[str, str]]:
-        return dispatch(action, dataset_name=dataset_name, options=options)
+        return dispatch(action, dataset_name=dataset_name, options=list2tuple(options))
 
     return dmc.Select(id=id, **select_options)
