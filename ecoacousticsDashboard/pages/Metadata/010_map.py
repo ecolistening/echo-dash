@@ -17,6 +17,7 @@ from api import dispatch, FETCH_LOCATIONS
 from components.controls_panel import ControlsPanel
 from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
+from utils import capitalise_each
 
 PAGE_NAME = 'map'
 PAGE_TITLE = 'Location Map'
@@ -53,6 +54,8 @@ layout = html.Div([
     dcc.Loading(
         dcc.Graph(id="map-graph"),
     ),
+    dmc.Space(h="sm"),
+    dmc.Box(id="locations-table"),
     dbc.Offcanvas(
         id="map-page-info",
         is_open=False,
@@ -69,6 +72,23 @@ layout = html.Div([
 )
 def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
     return not is_open
+
+@callback(
+    Output("locations-table", "children"),
+    Input("dataset-select", "value"),
+)
+def render_locations_table(dataset_name):
+    data = dispatch(FETCH_LOCATIONS, dataset_name=dataset_name).sort_values(by="location")
+    return dmc.Table([
+        dmc.TableThead(
+            dmc.TableTr([dmc.TableTh(capitalise_each(col.replace("_", " "))) for col in data.columns])
+        ),
+        dmc.TableTbody([
+            dmc.TableTr([dmc.TableTd(record[col]) for col in data.columns])
+            for record in data.to_dict(orient="records")
+        ]),
+        dmc.TableCaption("Location metadata")
+    ])
 
 @callback(
     Output("map-graph", "figure"),
