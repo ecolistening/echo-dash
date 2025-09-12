@@ -92,31 +92,30 @@ def plot(
 
     for i, row_cat in enumerate(row_categories):
         row = i + 1
-        row_species = counts.loc[counts[facet_row] == row_cat, "species"]
+        row_species = counts[counts[facet_row] == row_cat].sort_values(by="detected")["species"].unique()
         for j, col_cat in enumerate(col_categories):
             col = j + 1
-            subset = counts[(counts[facet_row] == row_cat) & (counts[facet_col] == col_cat)]
-            if subset.empty:
-                subset = pd.DataFrame(0, index=row_species, columns=all_x)
-            else:
-                subset = subset.pivot_table(
-                    index="species",
-                    columns=axis_group,
-                    values="detected",
-                    aggfunc="sum",
-                    fill_value=0,
-                ).reindex(
-                    index=row_species,
-                    columns=all_x,
-                    fill_value=0,
-                )
+            subset = counts[
+                (counts[facet_row] == row_cat) &
+                (counts[facet_col] == col_cat) &
+                (counts["species"].isin(row_species))
+            ]
+            species_list = pd.DataFrame({'species': row_species})
+            x_unique = subset[[axis_group, facet_row, facet_col]].drop_duplicates()
+            all_combinations = x_unique.merge(species_list, how='cross')
+            df = all_combinations.merge(subset, on=[axis_group, facet_row, facet_col, 'species'], how='left')
+            df = (
+                pd.DataFrame(0, index=row_species, columns=all_x)
+                if df.empty
+                else df.pivot(index="species", columns=axis_group, values="detected").fillna(0).astype(int)
+            )
             fig.add_trace(
                 go.Heatmap(
-                    z=subset.values,
-                    x=subset.columns,
+                    z=df.values,
+                    x=df.columns,
                     y=row_species,
                     colorscale="Greys",
-                    text=subset.values,
+                    text=df.values,
                     texttemplate="%{text}",
                     textfont={"size": 10, "color": "black"},
                     showscale=(row == 1 and col == len(col_categories)),
