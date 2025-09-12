@@ -116,7 +116,7 @@ def plot(
     fig.update_layout(
         barmode='stack',
         height=CELL_HEIGHT * len(all_y) * len(row_categories),
-        width=max(MAX_WIDTH, CELL_WIDTH * len(all_x) * len(col_categories)),
+        width=MAX_WIDTH,
         title=dict(
             automargin=True,
             x=0.5,
