@@ -58,7 +58,7 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    graph_data="dates-graph-data",
+                                    context="dates",
                                 ),
                                 FigureDownloadWidget(
                                     plot_name="dates-graph",

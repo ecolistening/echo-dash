@@ -13,9 +13,21 @@ from io import StringIO
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
-from utils import list2tuple, capitalise_each
+from utils import list2tuple, capitalise_each, send_download
 
 PLOT_HEIGHT = 800
+
+def fetch_data(dataset_name, filters):
+    return dispatch(
+        FETCH_ACOUSTIC_FEATURES,
+        dataset_name=dataset_name,
+        dates=list2tuple(filters["date_range"]),
+        feature=filters["current_feature"],
+        feature_range=list2tuple(filters["current_feature_range"]),
+        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
+        locations=list2tuple(filters["current_sites"]),
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+    )
 
 def register_callbacks():
     @callback(
@@ -50,16 +62,7 @@ def register_callbacks():
         facet_col: str,
         category_orders: Dict[str, List[str]],
     ) -> go.Figure:
-        data = dispatch(
-            FETCH_ACOUSTIC_FEATURES,
-            dataset_name=dataset_name,
-            dates=list2tuple(filters["date_range"]),
-            feature=filters["current_feature"],
-            feature_range=list2tuple(filters["current_feature_range"]),
-            **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-            locations=list2tuple(filters["current_sites"]),
-            # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        )
+        data = fetch_data(dataset_name, filters)
         fig = px.scatter(
             data_frame=data,
             x='hour',
@@ -88,3 +91,21 @@ def register_callbacks():
             )
         )
         return fig
+
+    @callback(
+        Output("index-scatter-data-download", "data"),
+        State("dataset-select", "value"),
+        State("filter-store", "data"),
+        Input({"type": "index-scatter-data-download-button", "index": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def download_data(
+        dataset_name: str,
+        filters,
+        clicks,
+    ) -> Dict[str, Any]:
+        return send_download(
+            fetch_data(dataset_name, filters),
+            f"{dataset_name}_acoustic_indices",
+            ctx.triggered_id["index"],
+        )

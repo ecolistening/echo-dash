@@ -13,9 +13,57 @@ from io import StringIO
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_DATASET_OPTIONS, FETCH_FILE_WEATHER
-from utils import list2tuple
+from utils import list2tuple, send_download
 
 PLOT_HEIGHT = 800
+
+def fetch_data(dataset_name, filters):
+    return dispatch(
+        FETCH_FILE_WEATHER,
+        dataset_name=dataset_name,
+        dates=list2tuple(filters["date_range"]),
+        locations=list2tuple(filters["current_sites"]),
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+    )
+
+def plot(
+    df: pd.DataFrame,
+    variable: str,
+    time_agg: str = "1W",
+    color: str | None = None,
+    facet_row: str | None = None,
+    labels: Dict[str, str] | None = None,
+    **kwargs: Any,
+) -> go.Figure:
+    df = (
+        df[df.variable == variable]
+        .drop_duplicates(["nearest_hour", "site_id"])
+        .sort_values("nearest_hour")
+        .groupby([*list(set(filter(None, [color, facet_row]))), pd.Grouper(key="nearest_hour", freq=time_agg)])
+        .agg(value_mean=("value", "mean"), value_std=("value", "std"))
+        .reset_index()
+    )
+    fig = px.line(
+        data_frame=df,
+        x="nearest_hour",
+        y="value_mean",
+        error_y="value_std",
+        color=color,
+        facet_row=facet_row,
+        markers=True,
+        labels=labels,
+        **kwargs,
+    )
+    fig.update_traces(marker=dict(size=4))
+    fig.update_layout(
+        height=PLOT_HEIGHT,
+        title=dict(
+            x=0.5,
+            y=0.97,
+            font=dict(size=24),
+        )
+    )
+    return fig
 
 def register_callbacks():
     @callback(
@@ -36,7 +84,6 @@ def register_callbacks():
         Input("weather-hourly-time-aggregation", "value"),
         Input("weather-hourly-colour-select", "value"),
         Input("weather-hourly-facet-row-select", "value"),
-        State("dataset-options", "data"),
         State("dataset-category-orders", "data"),
     )
     def draw_figure(
@@ -47,50 +94,35 @@ def register_callbacks():
         time_agg: str,
         color: str,
         facet_row: str,
-        options: Dict[str, List[str]],
         category_orders: Dict[str, List[str]],
     ) -> go.Figure:
-        options = options[variable]
-        data = dispatch(
-            FETCH_FILE_WEATHER,
-            dataset_name=dataset_name,
+        data = fetch_data(dataset_name, filters)
+        fig = plot(
+            data,
             variable=variable,
-            dates=list2tuple(filters["date_range"]),
-            locations=list2tuple(filters["current_sites"]),
-            # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        )
-        data = (
-            data
-            .drop_duplicates(["nearest_hour", "site_id"])
-            .sort_values("nearest_hour")
-            .groupby([*list(set(filter(None, [color, facet_row]))), pd.Grouper(key="nearest_hour", freq=time_agg)])
-            .agg(value_mean=("value", "mean"), value_std=("value", "std"))
-            .reset_index()
-        )
-        fig = px.line(
-            data_frame=data,
-            x="nearest_hour",
-            y="value_mean",
-            error_y="value_std",
+            time_agg=time_agg,
             color=color,
             facet_row=facet_row,
-            markers=True,
-            labels=dict(
-                nearest_hour="Time",
-                value_mean="value",
-            ),
+            labels=dict(nearest_hour="Time", value_mean="value"),
             category_orders=category_orders,
         )
-        fig.update_traces(marker=dict(size=4))
-        # Unsure whether to clip at min/max for std-err bars where the minimum possible value is non-negative, e.g. rainfall
-        # fig.update_yaxes(range=[options["min"], options["max"]])
-        fig.update_layout(
-            height=PLOT_HEIGHT,
-            title=dict(
-                text=variable,
-                x=0.5,
-                y=0.97,
-                font=dict(size=24),
-            )
-        )
+        fig.update_layout(title_text=variable)
         return fig
+
+    @callback(
+        Output("weather-hourly-data-download", "data"),
+        State("dataset-select", "value"),
+        State("filter-store", "data"),
+        Input({"type": "weather-hourly-data-download-button", "index": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def download_data(
+        dataset_name: str,
+        filters,
+        clicks,
+    ) -> Dict[str, Any]:
+        return send_download(
+            fetch_data(dataset_name, filters),
+            f"{dataset_name}_weather",
+            ctx.triggered_id["index"]
+        )

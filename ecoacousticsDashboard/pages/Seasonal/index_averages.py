@@ -9,6 +9,7 @@ import plotly.graph_objs as go
 from dash import dcc
 from dash_iconify import DashIconify
 
+from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
@@ -19,7 +20,7 @@ from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.footer import Footer
-from utils import list2tuple
+from utils import list2tuple, send_download
 
 PAGE_NAME = "idx-averages"
 PAGE_TITLE = "Seasonal Descriptor Averages"
@@ -65,6 +66,13 @@ layout = dmc.Box([
         dmc.Group(
             grow=True,
             children=[
+                DatasetOptionsSelect(
+                    id="index-averages-colour-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("Spatial",),
+                    label="Colour by",
+                    value="location",
+                ),
                 dmc.SegmentedControl(
                     id="index-averages-time-aggregation",
                     data=[
@@ -105,7 +113,7 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    graph_data="index-averages-graph-data",
+                                    context="index-averages",
                                 ),
                                 FigureDownloadWidget(
                                     plot_name="index-averages-graph",

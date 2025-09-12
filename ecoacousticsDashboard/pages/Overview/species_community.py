@@ -93,7 +93,7 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    graph_data="species-community-graph-data",
+                                    context="species-community",
                                 ),
                                 FigureDownloadWidget(
                                     plot_name="species-community-graph",

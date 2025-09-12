@@ -2,10 +2,11 @@ import base64
 import datetime as dt
 import hashlib
 import numpy as np
+import pandas as pd
 
 from dash import dcc
 from loguru import logger
-from typing import Any, List
+from typing import Any, Dict, List
 
 def ceil(a, precision=0):
     return np.round(a + 0.5 * 10**(-precision), precision)
@@ -75,3 +76,15 @@ def audio_bytes_to_enc(
 
 def capitalise_each(string: str) -> str:
     return ' '.join([s.capitalize() for s in string.split(' ')])
+
+DOWNLOAD_PARAMS = {
+    "csv": { "render": lambda df: df.to_csv, "extension": "csv", "params": {}},
+    "excel": { "render": lambda df: df.to_excel, "extension": "xlsx", "params": {"sheet_name": "Sheet 1"}},
+    "json": { "render": lambda df: df.to_json, "extension": "json", "params": {}},
+    "parquet": { "render": lambda df: df.to_parquet, "extension": "parquet", "params": {}},
+}
+def send_download(df: pd.DataFrame, file_name: str, dl_type: str) -> Dict[str, Any]:
+    render, extension, params = DOWNLOAD_PARAMS[dl_type].values()
+    file_name = file_name + f".{extension}"
+    response = dcc.send_data_frame(render(df), file_name, **params)
+    return response

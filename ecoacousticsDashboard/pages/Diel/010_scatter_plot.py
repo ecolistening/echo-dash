@@ -83,12 +83,8 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    graph_data="index-scatter-graph-data",
+                                    context="index-scatter",
                                 ),
-                                # DataDownloadWidget(
-                                #     id="index-scatter-data-download",
-                                #     action=FETCH_ACOUSTIC_FEATURES,
-                                # ),
                                 FigureDownloadWidget(
                                     plot_name="index-scatter-graph",
                                 ),

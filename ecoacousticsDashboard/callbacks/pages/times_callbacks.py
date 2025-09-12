@@ -14,9 +14,57 @@ from io import StringIO
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_FILES
-from utils import list2tuple
+from utils import list2tuple, send_download
 
 PLOT_HEIGHT = 800
+
+def fetch_data(dataset_name, filters):
+    return dispatch(
+        FETCH_FILES,
+        dataset_name=dataset_name,
+        dates=list2tuple(filters["date_range"]),
+        locations=list2tuple(filters["current_sites"]),
+        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+    )
+
+def plot(
+    df: pd.DataFrame,
+    color: str | None = None,
+    symbol: str | None = None,
+    facet_row: str | None = None,
+    facet_col: str | None = None,
+    labels: Dict[str, str] | None = None,
+    **kwargs: Any,
+) -> go.Figure:
+    fig = px.scatter(
+        data_frame=df,
+        x="date",
+        y="time",
+        opacity=0.25,
+        hover_name="file_name",
+        hover_data=["file_id", "timestamp"],
+        color=color,
+        symbol=symbol,
+        facet_row=facet_row,
+        facet_col=facet_col,
+        labels=labels,
+        **kwargs,
+    )
+    fig.update_layout(
+        height=PLOT_HEIGHT,
+        title=dict(
+            automargin=True,
+            x=0.5,
+            y=1.00,
+            xanchor="center",
+            yanchor="top",
+            font=dict(size=24),
+        ),
+        scattermode="group",
+        scattergap=0.75,
+    )
+    return fig
 
 def register_callbacks():
     @callback(
@@ -51,44 +99,34 @@ def register_callbacks():
         facet_col: str,
         category_orders: Dict[str, List[str]],
     ) -> go.Figure:
-        data = dispatch(
-            FETCH_FILES,
-            dataset_name=dataset_name,
-            dates=list2tuple(filters["date_range"]),
-            locations=list2tuple(filters["current_sites"]),
-            **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-            # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
-        )
-        fig = px.scatter(
-            data_frame=data,
-            x="date",
-            y="time",
-            opacity=0.25,
-            hover_name="file_name",
-            hover_data=["file_id", "timestamp"],
+        data = fetch_data(dataset_name, filters)
+        fig = plot(
+            data,
             color=color,
             symbol=symbol,
             facet_row=facet_row,
             facet_col=facet_col,
-            labels=dict(
-                date="Date",
-                time="Hour",
-            ),
+            labels=dict(date="Date", time="Hour"),
             category_orders=category_orders,
         )
-        fig.update_layout(
-            height=PLOT_HEIGHT,
-            title=dict(
-                text='Recording Times',
-                automargin=True,
-                x=0.5,
-                y=1.00,
-                xanchor="center",
-                yanchor="top",
-                font=dict(size=24),
-            ),
-            scattermode="group",
-            scattergap=0.75,
-        )
+        fig.update_layout(title_text="Recording Times")
         fig.update_traces(marker=dict(size=dot_size))
         return fig
+
+    @callback(
+        Output("times-data-download", "data"),
+        State("dataset-select", "value"),
+        State("filter-store", "data"),
+        Input({"type": "times-data-download-button", "index": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def download_data(
+        dataset_name: str,
+        filters,
+        clicks,
+    ) -> Dict[str, Any]:
+        return send_download(
+            fetch_data(dataset_name, filters),
+            f"{dataset_name}_birdnet_detections",
+            ctx.triggered_id["index"],
+        )

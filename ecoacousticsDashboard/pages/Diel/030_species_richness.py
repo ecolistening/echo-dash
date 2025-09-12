@@ -92,7 +92,7 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    graph_data="species-richness-graph-data",
+                                    context="species-richness",
                                 ),
                                 FigureDownloadWidget(
                                     plot_name="species-richness-graph",

@@ -124,17 +124,18 @@ def fetch_weather(
 @functools.lru_cache(maxsize=10)
 def fetch_file_weather(
     dataset_name: str,
-    variable: str,
     **filters: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
+    weather_columns = DatasetDecorator(dataset).weather_columns
     id_vars = ["file_id", "site_id", "nearest_hour", "timestamp"]
-    return filter_data((
+    data = filter_data((
         dataset.files
-        .filter(items=[*id_vars, variable])
+        .filter(items=[*id_vars, *weather_columns])
         .melt(id_vars=id_vars, var_name="variable", value_name="value")
         .join(dataset.locations, on="site_id", how="left")
     ), **filters)
+    return data
 
 @functools.lru_cache(maxsize=10)
 def fetch_acoustic_features(

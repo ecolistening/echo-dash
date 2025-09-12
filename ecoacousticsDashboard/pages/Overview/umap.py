@@ -97,7 +97,7 @@ layout = dmc.Box([
                             children=[
                                 FileSelectionSidebarIcon(),
                                 DataDownloadWidget(
-                                    graph_data="umap-graph-data",
+                                    context="umap",
                                 ),
                                 FigureDownloadWidget(
                                     plot_name="umap-graph",

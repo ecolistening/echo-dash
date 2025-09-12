@@ -74,7 +74,6 @@ def register_callbacks():
             weather_variables[variable] = variable_ranges
         filters["weather_variables"] = weather_variables
         # set site filters
-        config = dispatch(FETCH_DATASET_CONFIG, **params)
         root_node = dispatch(FETCH_DATASET_SITES_TREE, **params)
         sites = list(bt.tree_to_dict(root_node).keys())[1:]
         filters["current_sites"] = sites
@@ -319,9 +318,7 @@ def register_callbacks():
         range_description = f"{feature_min} - {feature_max}"
         return feature_min, feature_max, feature_range, range_description
 
-
     # ------ WEATHER FILTER ----- #
-
 
     @callback(
         Output("weather-variable-filter-groups", "children"),
@@ -458,13 +455,14 @@ def register_callbacks():
     @callback(
         Output("site-level-filter-group", "children"),
         Input("dataset-select", "value"),
+        Input("dataset-config", "data"),
     )
     def init_site_level_filters(
         dataset_name: str,
+        config: Dict[str, str],
     ) -> dmc.Stack:
         tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
-        config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name).get("Site Hierarchy", {})
-        return SiteLevelHierarchyAccordion(tree=tree, config=config)
+        return SiteLevelHierarchyAccordion(tree=tree, config=config.get("Site Hierarchy"))
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
@@ -505,14 +503,16 @@ def register_callbacks():
         Output({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
         Input("filter-store", "data"),
         State("dataset-select", "value"),
+        Input("dataset-config", "data"),
         prevent_initial_call=True,
     )
     def update_site_level_filters(
         filters: str,
         dataset_name: str,
+        config: Dict[str, str]
     ) -> Tuple[List[TreeNodeChip], List[str]]:
         tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
-        config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name).get("Site Hierarchy", {})
+        config = config.get("Site Hierarchy", {})
         sites = filters["current_sites"]
         values = []
         if not len(sites):
@@ -533,14 +533,16 @@ def register_callbacks():
         Output("site-filter-chips", "children"),
         Input("filter-store", "data"),
         State("dataset-select", "value"),
+        Input("dataset-config", "data"),
         prevent_initial_call=True,
     )
     def update_active_site_filters(
         filters: List[str],
         dataset_name: str,
+        config: Dict[str, Dict[str, str]],
     ) -> dmc.Accordion:
         tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
-        site_hierarchy = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name).get("Site Hierarchy", {})
+        site_hierarchy = config.get("Site Hierarchy", {})
         active_sites = filters["current_sites"]
         absent_sites = []
         for depth in range(1, tree.max_depth):

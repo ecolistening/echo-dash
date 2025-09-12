@@ -13,11 +13,20 @@ from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_BIRDNET_SPECIES_RICHNESS
-from utils import list2tuple
+from api import dispatch, FETCH_BIRDNET_SPECIES
+from utils import list2tuple, send_download
 from utils import sketch
 
 PLOT_HEIGHT = 800
+
+def fetch_data(dataset_name, filters):
+    return dispatch(
+        FETCH_BIRDNET_SPECIES,
+        dataset_name=dataset_name,
+        dates=list2tuple(filters["date_range"]),
+        locations=list2tuple(filters["current_sites"]),
+        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+    )
 
 plot_types = {
     "Scatter": functools.partial(
@@ -117,20 +126,16 @@ def register_callbacks():
         facet_col: str,
         category_orders: Dict[str, List[str]],
     ) -> go.Figure:
-        data = dispatch(
-            FETCH_BIRDNET_SPECIES_RICHNESS,
-            dataset_name=dataset_name,
-            threshold=threshold,
-            group_by=list2tuple(list(filter(None, set(["hour", facet_row, facet_col])))),
-            dates=list2tuple(filters["date_range"]),
-            locations=list2tuple(filters["current_sites"]),
-            # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        data = fetch_data(dataset_name, filters)
+        data = (
+            data[data["confidence"] >= threshold]
+            .groupby(list(filter(None, set(["hour", facet_row, facet_col]))))["species"]
+            .nunique()
+            .reset_index(name="richness")
         )
-        # if none are present within the threshold, return an empty plot
-        if not len(data):
-            return {}
-
-        fig = plot_types[plot_type](
+        # TODO: refactor
+        plot = plot_types[plot_type]
+        fig = plot(
             data_frame=data,
             facet_row=facet_row,
             facet_col=facet_col,
@@ -147,3 +152,21 @@ def register_callbacks():
             )
         )
         return fig
+
+    @callback(
+        Output("species-richness-data-download", "data"),
+        State("dataset-select", "value"),
+        State("filter-store", "data"),
+        Input({"type": "species-richness-data-download-button", "index": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def download_data(
+        dataset_name: str,
+        filters,
+        clicks,
+    ) -> Dict[str, Any]:
+        return send_download(
+            fetch_data(dataset_name, filters),
+            f"{dataset_name}_birdnet_detections",
+            ctx.triggered_id["index"],
+        )

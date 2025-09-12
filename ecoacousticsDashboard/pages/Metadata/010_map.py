@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_LOCATIONS
 from components.controls_panel import ControlsPanel
+from components.data_download_widget import DataDownloadWidget
 from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
 from utils import capitalise_each
@@ -42,6 +43,9 @@ layout = html.Div([
                         "justify-content": "right",
                     },
                     children=[
+                        DataDownloadWidget(
+                            context="map",
+                        ),
                         FigureDownloadWidget(
                             plot_name="map-graph",
                         ),

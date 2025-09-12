@@ -127,6 +127,14 @@ class DatasetDecorator:
         }
 
     @property
+    def weather_columns(self) -> Dict[str, List[Any]]:
+        return (
+            self.temperature_columns |
+            self.precipitation_columns |
+            self.wind_columns
+        )
+
+    @property
     def temperature_columns(self) -> Dict[str, List[Any]]:
         return {
             "temperature_2m": {

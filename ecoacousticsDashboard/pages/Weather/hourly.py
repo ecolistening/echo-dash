@@ -92,7 +92,7 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    graph_data="weather-hourly-graph-data",
+                                    context="weather-hourly",
                                 ),
                                 FigureDownloadWidget(
                                     plot_name="weather-hourly-graph",

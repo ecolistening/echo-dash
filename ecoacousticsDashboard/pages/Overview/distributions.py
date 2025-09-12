@@ -87,7 +87,7 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    graph_data="distributions-graph-data",
+                                    context="distributions",
                                 ),
                                 FigureDownloadWidget(
                                     plot_name="distributions-graph",
