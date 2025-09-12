@@ -23,7 +23,7 @@ def fetch_data(dataset_name, filters):
         dataset_name=dataset_name,
         dates=list2tuple(filters["date_range"]),
         locations=list2tuple(filters["current_sites"]),
-        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
 
 def plot(
@@ -79,7 +79,6 @@ def register_callbacks():
         Output("weather-hourly-graph", "figure"),
         State("dataset-select", "value"),
         Input("filter-store", "data"),
-        # Input("umap-filter-store", "data"),
         Input("weather-hourly-variable-select", "value"),
         Input("weather-hourly-time-aggregation", "value"),
         Input("weather-hourly-colour-select", "value"),
@@ -89,7 +88,6 @@ def register_callbacks():
     def draw_figure(
         dataset_name: str,
         filters: Dict[str, Any],
-        # file_filter_groups: Dict[int, List[str]],
         variable: str,
         time_agg: str,
         color: str,

@@ -27,7 +27,7 @@ def fetch_data(dataset_name, filters):
         dataset_name=dataset_name,
         dates=list2tuple(filters["date_range"]),
         locations=list2tuple(filters["current_sites"]),
-        # file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
     )
 
 def plot(
@@ -138,7 +138,6 @@ def register_callbacks():
         Output("species-community-graph", "figure"),
         State("dataset-select", "value"),
         Input("filter-store", "data"),
-        # Input("umap-filter-store", "data"),
         Input("species-community-threshold-slider", "value"),
         Input("species-community-axis-select", "value"),
         Input("species-community-facet-column-select", "value"),
@@ -149,7 +148,6 @@ def register_callbacks():
     def draw_figure(
         dataset_name: str,
         filters: Dict[str, Any],
-        # file_filter_groups: Dict[str, List],
         threshold: float,
         axis_group: str,
         facet_col: str,

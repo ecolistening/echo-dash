@@ -185,7 +185,6 @@ layout = dmc.Box([
             ],
         ),
         FileSelectionSidebar(
-            filter_data="umap-filter-store",
             graph="umap-graph",
             sibling="umap-graph-container",
             span=5,

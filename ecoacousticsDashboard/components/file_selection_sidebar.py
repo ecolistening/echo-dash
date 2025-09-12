@@ -19,7 +19,6 @@ from utils.webhost import AudioAPI
 PAGE_LIMIT = 10
 
 def FileSelectionSidebar(
-    filter_data: str,
     graph: str,
     sibling: str,
     span: int = 4
@@ -29,8 +28,6 @@ def FileSelectionSidebar(
 
     Parameters
     ----------
-    filter_data: str
-        The element ID for a dcc.Store containing a discluded list of file IDs
     graph: str
         The element ID for a dcc.Graph
     sibling: str
@@ -393,18 +390,18 @@ def FileSelectionSidebar(
         ])
 
     @callback(
-        Output(filter_data, "data", allow_duplicate=True),
+        Output("filter-store", "data", allow_duplicate=True),
+        Input("file-sidebar-include-button", "n_clicks"),
         State("dataset-select", "value"),
         State("file-sidebar-store", "data"),
-        State(filter_data, "data"),
-        Input("file-sidebar-include-button", "n_clicks"),
+        State("filter-store", "data"),
         prevent_initial_call=True,
     )
     def include_file_selection(
+        n_clicks: int,
         dataset_name: str,
         selected_json_data: str,
-        filter_groups: Dict[str, List[str]],
-        n_clicks: int,
+        filters: Dict[str, Any],
     ) -> Dict[str, List[str]]:
         """Add *all other* file_ids to the filter store
 
@@ -417,28 +414,30 @@ def FileSelectionSidebar(
 
         Returns
         -------
-        filter_data: list
+        "filter-store": list
             An updated list of unique file ids to disclude from the graph
         """
         if not n_clicks: return no_update
         selected_file_ids = pd.read_json(StringIO(selected_json_data), orient="table")["file_id"]
         data = dispatch(FETCH_FILES, dataset_name=dataset_name)
         file_ids = set(data.loc[~data["file_id"].isin(selected_file_ids), "file_id"].tolist())
-        selection_id = len(filter_groups.keys()) + 1
-        filter_groups[selection_id] = list(file_ids)
-        return filter_groups
+        file_filter = filters["files"]
+        selection_id = len(file_filter.keys()) + 1
+        file_filter[selection_id] = list(file_ids)
+        filters["files"] = file_filter
+        return filters
 
     @callback(
-        Output(filter_data, "data", allow_duplicate=True),
-        State("file-sidebar-store", "data"),
-        State(filter_data, "data"),
+        Output("filter-store", "data", allow_duplicate=True),
         Input("file-sidebar-disclude-button", "n_clicks"),
+        State("file-sidebar-store", "data"),
+        State("filter-store", "data"),
         prevent_initial_call=True,
     )
     def disclude_file_selection(
-        selected_json_data: str,
-        filter_groups: Dict[str, List[str]],
         n_clicks: int,
+        selected_json_data: str,
+        filters: Dict[str, Any],
     ) -> Dict[str, List[str]]:
         """Add *selected* file_ids to the filter store
 
@@ -446,55 +445,64 @@ def FileSelectionSidebar(
         ----------
         selected_json_data: str
             The file data as JSON parsable as a table using pandas
-        filter_groups: dict
-            File ids indexed by selection event
+        filters: dict
 
         Returns
         -------
-        filter_groups: dict
-            A dictionary containing selected file ids indexed by selection event
+        filters: dict
         """
         if not n_clicks: return no_update
         file_ids = set(pd.read_json(StringIO(selected_json_data), orient="table")["file_id"].tolist())
-        selection_id = len(filter_groups.keys()) + 1
-        filter_groups[selection_id] = list(file_ids)
-        return filter_groups
+        file_filter = filters["files"]
+        selection_id = len(file_filter.keys()) + 1
+        file_filter[selection_id] = list(file_ids)
+        filters["files"] = file_filter
+        return filters
 
     @callback(
-        Output(filter_data, "data", allow_duplicate=True),
-        State(filter_data, "data"),
+        Output("filter-store", "data", allow_duplicate=True),
         Input("file-sidebar-undo-button", "n_clicks"),
+        State("filter-store", "data"),
         prevent_initial_call=True,
     )
     def undo_last_file_selection(
-        filter_groups: Dict[str, Any],
         n_clicks: int,
+        filters: Dict[str, Any],
     ) -> str:
         """Undo the last file filter
 
         Returns
         -------
-        filter_groups: dict
-            A dictionary containing selected file ids indexed by selection event
+        filters: dict
         """
-        if not n_clicks: return no_update
-        filter_groups.pop(len(filter_groups.keys()), None)
-        return filter_groups
+        if not n_clicks:
+            return no_update
+        file_filters = filters["files"]
+        if not len(file_filters):
+            return no_update
+        file_filters.pop(str(len(file_filters.keys())), None)
+        filters["files"] = file_filters
+        return filters
 
     @callback(
-        Output(filter_data, "data", allow_duplicate=True),
+        Output("filter-store", "data", allow_duplicate=True),
         Input("file-sidebar-reset-button", "n_clicks"),
+        State("filter-store", "data"),
         prevent_initial_call=True,
     )
-    def reset_file_selection(n_clicks: int) -> str:
+    def reset_file_selection(
+        n_clicks: int,
+        filters: Dict[str, Any],
+    ) -> str:
         """Reset the scope of the file filters, reverting back to the original graph data
 
         Returns
         -------
-        filter_groups: dict
-            An empty dict
+        filters: dict
         """
-        if not n_clicks: return no_update
-        return {}
+        if not n_clicks or not len(filters["files"]):
+            return no_update
+        filters["files"] = {}
+        return filters
 
     return component

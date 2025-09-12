@@ -77,6 +77,8 @@ def register_callbacks():
         root_node = dispatch(FETCH_DATASET_SITES_TREE, **params)
         sites = list(bt.tree_to_dict(root_node).keys())[1:]
         filters["current_sites"] = sites
+        # file filters defaults to empty
+        filters["files"] = {}
         logger.debug(filters)
         return filters
 
