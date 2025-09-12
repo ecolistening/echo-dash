@@ -9,7 +9,8 @@ from typing import List
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
 
 def AcousticFeatureFilter():
-    component = dmc.Accordion(
+    return dmc.Accordion(
+        id="feature-filter-accordion",
         chevronPosition="right",
         variant="separated",
         radius="sm",
@@ -73,4 +74,3 @@ def AcousticFeatureFilter():
             )
         ],
     )
-    return component

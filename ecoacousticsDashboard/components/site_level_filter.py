@@ -42,7 +42,7 @@ def SiteLevelChipGroup(
 
 def SiteLevelHierarchyAccordion(
     tree: bt.Node,
-    config: Dict[str, Dict[str, str]],
+    config: Dict[str, str],
 ) -> dmc.Accordion:
     return dmc.Accordion(
         chevronPosition="right",

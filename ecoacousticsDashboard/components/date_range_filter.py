@@ -5,6 +5,7 @@ import datetime as dt
 
 def DateRangeFilter():
     return dmc.Accordion(
+        id="date-filter-accordion",
         chevronPosition="right",
         variant="separated",
         radius="sm",
