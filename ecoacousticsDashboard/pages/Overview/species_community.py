@@ -50,9 +50,6 @@ layout = dmc.Box([
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     options=("Site Level", "Spatial"),
                     label="Group columns by...",
-                    value="location",
-                    clearable=False,
-                    allowDeselect=False,
                 ),
                 DatasetOptionsSelect(
                     id="species-community-facet-column-select",

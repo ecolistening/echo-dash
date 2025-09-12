@@ -138,7 +138,7 @@ class Dataset:
     def _add_fields_to_locations_table(self) -> None:
         self.locations["site"] = self.dataset_name + "/" + self.locations["site_name"]
         for level, values in self.locations.site.str.split('/', expand=True).iloc[:, 1:].to_dict(orient='list').items():
-            self.locations[f"site_level_{level}"] = values
+            self.locations[f"sitelevel_{level}"] = values
 
     @staticmethod
     def _read_or_build_config(config_path) -> ConfigParser:
