@@ -12,11 +12,11 @@ from utils import query as Q
 class DatasetLoader(Iterable):
     root_dir: pathlib.Path
     datasets: List[Dataset] = attrs.field(init=False, default=list)
-    datasets_table: pd.DataFrame = attrs.field(init=False, default=list)
 
     def __attrs_post_init__(self):
-        self.datasets_table = pd.read_parquet(self.root_dir / "datasets_table.parquet")
-        self.datasets = self._init_datasets(self.datasets_table)
+        self.datasets = self._init_datasets([
+            d for d in self.root_dir.iterdir() if d.is_dir()
+        ])
 
     def __iter__(self):
         for each in self.datasets.values():
@@ -29,14 +29,13 @@ class DatasetLoader(Iterable):
         return list(self.datasets.keys())
 
     @staticmethod
-    def _init_datasets(datasets_table: pd.DataFrame) -> Dict[str, Dataset]:
+    def _init_datasets(datasets_dir: List[pathlib.Path]) -> Dict[str, Dataset]:
         datasets = {}
-        for dataset in datasets_table.reset_index().to_dict(orient="records"):
+        for dataset_path in datasets_dir:
             try:
-                logger.debug(f"Loading {dataset['dataset_name']}")
-                ds = Dataset(**dataset)
+                ds = Dataset(dataset_path=dataset_path)
                 datasets[ds.dataset_name] = ds
             except Exception as e:
-                logger.error(f"Unable to load dataset {dataset['dataset_name']}")
+                logger.error(f"Unable to load dataset at {dataset_path}")
                 logger.error(e)
         return datasets

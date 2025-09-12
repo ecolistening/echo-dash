@@ -15,10 +15,11 @@ from umap.parametric_umap import load_ParametricUMAP
 
 @attrs.define
 class Dataset:
-    dataset_id: str
-    dataset_name: str
     dataset_path: str
-    audio_path: str
+
+    dataset_id: str = attrs.field(init=False)
+    dataset_name: str = attrs.field(init=False)
+    audio_path: str = attrs.field(init=False)
 
     config: ConfigParser = attrs.field(init=False)
     sites_tree: bt.Node = attrs.field(init=False)
@@ -37,6 +38,9 @@ class Dataset:
 
     def __attrs_post_init__(self) -> None:
         self.config = self._read_or_build_config(self.path / "config.ini")
+        self.dataset_name = self.config.get("Dataset", "name")
+        self.dataset_id = self.config.get("Dataset", "id")
+        self.audio_path = self.config.get("Dataset", "audio_path")
         logger.info({ "dataset_name": self.dataset_name, "message": "loaded config" })
         # cache species table
         self.species = pd.read_parquet(self.path.parent / "species_table.parquet")
