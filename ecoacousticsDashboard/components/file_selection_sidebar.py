@@ -469,7 +469,7 @@ def FileSelectionSidebar(
         n_clicks: int,
         filters: Dict[str, Any],
     ) -> str:
-        """Undo the last file filter
+        """Remove the last file filter
 
         Returns
         -------
@@ -480,7 +480,8 @@ def FileSelectionSidebar(
         file_filters = filters["files"]
         if not len(file_filters):
             return no_update
-        file_filters.pop(str(len(file_filters.keys())), None)
+        selection_ids = list(map(int, file_filters.keys()))
+        file_filters.pop(str(max(selection_ids)), None)
         filters["files"] = file_filters
         return filters
 

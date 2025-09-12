@@ -153,7 +153,7 @@ def register_callbacks():
             chevronPosition="right",
             variant="separated",
             radius="sm",
-            value=["dates-filter"],
+            persistence=True,
             children=[
                 dmc.AccordionItem(
                     value="dates-filter",
@@ -256,7 +256,7 @@ def register_callbacks():
             id="active-acoustic-range-filters-accordion",
             chevronPosition="right",
             variant="separated",
-            value=["acoustic-range-filter"],
+            persistence=True,
             radius="sm",
             children=[
                 dmc.AccordionItem(
@@ -410,7 +410,7 @@ def register_callbacks():
             chevronPosition="right",
             variant="separated",
             radius="sm",
-            value=["weather-variable-filter"],
+            persistence=True,
             children=[
                 dmc.AccordionItem(
                     value="weather-variable-filter",
@@ -557,7 +557,7 @@ def register_callbacks():
             chevronPosition="right",
             variant="separated",
             radius="sm",
-            value=["site-filter"],
+            persistence=True,
             children=[
                 dmc.AccordionItem(
                     value="sites-filter",
@@ -595,61 +595,63 @@ def register_callbacks():
             ]
         )
 
-
     # ------- FILE ID FILTER ------ #
 
-    # @callback(
-    #     Output("file-filter-chips", "children"),
-    #     Input("umap-filter-store", "data"),
-    #     prevent_initial_call=True,
-    # )
-    # def update_active_file_filters(
-    #     file_filter_groups: Dict[int, List[str]],
-    # ) -> dmc.Accordion:
-    #     if not len(file_filter_groups):
-    #         return []
+    @callback(
+        Output("file-filter-chips", "children"),
+        Input("filter-store", "data"),
+        prevent_initial_call=True,
+    )
+    def update_active_file_filters(
+        filters: Dict[int, List[str]],
+    ) -> dmc.Accordion:
+        file_filters = filters["files"]
+        if not len(file_filters):
+            return []
+        return dmc.Accordion(
+            id="active-file-filters-accordion",
+            chevronPosition="right",
+            variant="separated",
+            radius="sm",
+            children=[
+                dmc.AccordionItem(
+                    value="files-filter",
+                    children=[
+                        dmc.AccordionControl("Files"),
+                        dmc.AccordionPanel(
+                            pb="1rem",
+                            children=dmc.ChipGroup(
+                                id={"type": "active-filter-chip-group", "index": "file"},
+                                value=list(file_filters.keys()),
+                                multiple=True,
+                                children=[
+                                    dmc.Chip(
+                                        variant="outline",
+                                        icon=DashIconify(icon="bi-x-circle"),
+                                        value=selection_id,
+                                        mt="xs",
+                                        children=f"UMAP Selection {selection_id}: {len(file_ids)} samples",
+                                    )
+                                    for selection_id, file_ids in file_filters.items()
+                                ]
+                            )
+                        )
+                    ]
+                )
+            ]
+        )
 
-    #     return dmc.Accordion(
-    #         id="active-file-filters-accordion",
-    #         chevronPosition="right",
-    #         variant="separated",
-    #         radius="sm",
-    #         children=[
-    #             dmc.AccordionItem(
-    #                 value="files-filter",
-    #                 children=[
-    #                     dmc.AccordionControl("Files"),
-    #                     dmc.AccordionPanel(
-    #                         pb="1rem",
-    #                         children=dmc.ChipGroup(
-    #                             id={"type": "active-filter-chip-group", "index": "file"},
-    #                             value=list(file_filter_groups.keys()),
-    #                             multiple=True,
-    #                             children=[
-    #                                 dmc.Chip(
-    #                                     variant="outline",
-    #                                     icon=DashIconify(icon="bi-x-circle"),
-    #                                     value=selection_id,
-    #                                     mt="xs",
-    #                                     children=f"UMAP Selection {selection_id}: {len(file_ids)} samples",
-    #                                 )
-    #                                 for selection_id, file_ids in file_filter_groups.items()
-    #                             ]
-    #                         )
-    #                     )
-    #                 ]
-    #             )
-    #         ]
-    #     )
-
-    # @callback(
-    #     Output("umap-filter-store", "data"),
-    #     State("umap-filter-store", "data"),
-    #     Input({"type": "active-filter-chip-group", "index": "file"}, "value"),
-    #     prevent_initial_call=True,
-    # )
-    # def remove_umap_selection(
-    #     file_filter_groups: Dict[str, List[str]],
-    #     values: bool,
-    # ) -> Dict[str, List[str]]:
-    #     return { value: file_filter_groups[value] for value in values }
+    @callback(
+        Output("filter-store", "data", allow_duplicate=True),
+        Input({"type": "active-filter-chip-group", "index": "file"}, "value"),
+        State("filter-store", "data"),
+        prevent_initial_call=True,
+    )
+    def remove_umap_selection(
+        values: bool,
+        filters: Dict[str, List[str]],
+    ) -> Dict[str, List[str]]:
+        file_filters = filters["files"]
+        # remove by index
+        filters["files"] = {value: file_filters[value] for value in values}
+        return filters
