@@ -11,6 +11,7 @@ from plotly.subplots import make_subplots
 
 from dash import html, dcc, callback, ctx, no_update
 from dash import Output, Input, State, ALL, MATCH
+from loguru import logger
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
@@ -18,6 +19,7 @@ from api import dispatch, FETCH_BIRDNET_SPECIES
 from utils import list2tuple, send_download
 
 MAX_WIDTH = 1600
+MAX_HEIGHT = 2400
 CELL_HEIGHT = 40
 
 def fetch_data(dataset_name, filters):
@@ -59,15 +61,15 @@ def plot(
 
     # calculate plot heights proportional to the number of species detected
     row_categories = []
-    row_heights = []
+    species_per_row = []
     for row_cat in category_orders.get(facet_row, counts[facet_row].unique()):
-        species_count = counts.loc[counts[facet_row] == row_cat, "species"].count()
+        species_count = counts.loc[counts[facet_row] == row_cat, "species"].nunique()
         if species_count > 0:
             row_categories.append(row_cat)
-            row_heights.append(species_count)
-    row_heights = np.array(row_heights)
-    height = CELL_HEIGHT * row_heights.sum()
-    row_heights = list(row_heights / row_heights.sum())
+            species_per_row.append(species_count)
+    species_per_row = np.array(species_per_row)
+    height = (CELL_HEIGHT * species_per_row).sum()
+    row_heights = list(species_per_row / species_per_row.sum())
 
     # col categories remain consistent width
     col_categories = category_orders.get(facet_col, counts[facet_col].unique())
