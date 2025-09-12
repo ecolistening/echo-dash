@@ -122,6 +122,10 @@ class Dataset:
         self.species["common_name"] = self.species["common_name"].fillna("")
         self.species["species"] = self.species[["scientific_name", "common_name"]].agg("\n".join, axis=1)
         # HACK: FIXME prevent nulls in the front-end by populating missing values
+        self.species["habitat_type"] = self.species["habitat_type"].astype(str)
+        self.species["trophic_level"] = self.species["trophic_level"].astype(str)
+        self.species["trophic_niche"] = self.species["trophic_niche"].astype(str)
+        self.species["primary_lifestyle"] = self.species["primary_lifestyle"].astype(str)
         self.species[self.species["habitat_type"].isna()] = "Unspecified"
         self.species[self.species["trophic_level"].isna()] = "Unspecified"
         self.species[self.species["trophic_niche"].isna()] = "Unspecified"
