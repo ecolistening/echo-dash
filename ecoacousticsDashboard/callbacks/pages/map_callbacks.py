@@ -99,7 +99,7 @@ def register_callbacks():
         clicks,
     ) -> Dict[str, Any]:
         return send_download(
-            fetch_data(dataset_name, filters),
+            fetch_data(dataset_name),
             f"{dataset_name}_map_locations",
             ctx.triggered_id["index"],
         )
