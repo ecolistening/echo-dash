@@ -118,6 +118,25 @@ layout = dmc.Box([
                         persistence=True
                     )
                 ]),
+                dmc.Stack([
+                    dmc.Text(
+                        "Opacity",
+                        size='sm',
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="times-opacity-slider",
+                        persistence=True,
+                        min=0,
+                        max=100,
+                        step=5,
+                        value=50,
+                        marks=[
+                            dict(value=i, label=f"{i}%")
+                            for i in range(0, 101, 20)
+                        ],
+                    )
+                ]),
             ],
         ),
     ]),

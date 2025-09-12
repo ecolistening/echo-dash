@@ -22,7 +22,7 @@ def fetch_data(dataset_name, filters):
         dates=list2tuple(filters["date_range"]),
         locations=list2tuple(filters["current_sites"]),
         **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
     )
 
 def register_callbacks():

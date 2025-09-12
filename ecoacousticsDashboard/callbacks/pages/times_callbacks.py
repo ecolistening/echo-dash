@@ -25,11 +25,12 @@ def fetch_data(dataset_name, filters):
         dates=list2tuple(filters["date_range"]),
         locations=list2tuple(filters["current_sites"]),
         **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
     )
 
 def plot(
     df: pd.DataFrame,
+    opacity: int = 100,
     color: str | None = None,
     symbol: str | None = None,
     facet_row: str | None = None,
@@ -41,7 +42,7 @@ def plot(
         data_frame=df,
         x="date",
         y="time",
-        opacity=0.25,
+        opacity=opacity / 100,
         hover_name="file_name",
         hover_data=["file_id", "timestamp"],
         color=color,
@@ -81,6 +82,7 @@ def register_callbacks():
         State("dataset-select", "value"),
         Input("filter-store", "data"),
         Input("times-size-slider", "value"),
+        Input("times-opacity-slider", "value"),
         Input("times-colour-select", "value"),
         Input("times-symbol-select", "value"),
         Input("times-facet-row-select", "value"),
@@ -91,6 +93,7 @@ def register_callbacks():
         dataset_name: str,
         filters: Dict[str, Any],
         dot_size: int,
+        opacity: int,
         color: str,
         symbol: str,
         facet_row: str,
@@ -100,6 +103,7 @@ def register_callbacks():
         data = fetch_data(dataset_name, filters)
         fig = plot(
             data,
+            opacity=opacity,
             color=color,
             symbol=symbol,
             facet_row=facet_row,

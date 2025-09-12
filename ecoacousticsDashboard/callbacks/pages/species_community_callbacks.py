@@ -27,7 +27,7 @@ def fetch_data(dataset_name, filters):
         dataset_name=dataset_name,
         dates=list2tuple(filters["date_range"]),
         locations=list2tuple(filters["current_sites"]),
-        file_ids=frozenset(itertools.chain(*list(file_filter_groups.values()))),
+        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
     )
 
 def plot(
@@ -35,6 +35,7 @@ def plot(
     axis_group: str,
     facet_col: str | None = None,
     facet_row: str | None = None,
+    category_orders: Dict[str, Any] | None = None,
 ) -> go.Figure:
     counts = (
         df.groupby([*list(filter(None, [axis_group, facet_col, facet_row])), "species"])["detected"]
@@ -43,6 +44,9 @@ def plot(
         .sort_values(by="detected", ascending=True)
     )
     # ensure faceting works regardless of whether specified
+    if axis_group is None:
+        counts["_axis_group"] = "All"
+        axis_group = "_axis_group"
     if facet_row is None:
         counts["_row_facet"] = "All"
         facet_row = "_row_facet"
@@ -50,8 +54,8 @@ def plot(
         counts["_col_facet"] = "All"
         facet_col = "_col_facet"
 
-    row_categories = counts[facet_row].unique()
-    col_categories = counts[facet_col].unique()
+    row_categories = category_orders.get(facet_row, counts[facet_row].unique())
+    col_categories = category_orders.get(facet_col, counts[facet_col].unique())
     categories = list(itertools.product(row_categories, col_categories))
 
     z_min = 0
@@ -157,7 +161,7 @@ def register_callbacks():
     ) -> go.Figure:
         data = fetch_data(dataset_name, filters)
         data["detected"] = (data["confidence"] > threshold).astype(int)
-        fig = plot(data, axis_group, facet_col, facet_row)
+        fig = plot(data, axis_group, facet_col, facet_row, category_orders)
         fig.update_layout(title_text="Species by Site")
         return fig
 
