@@ -38,4 +38,6 @@ class DatasetLoader(Iterable):
             except Exception as e:
                 logger.error(f"Unable to load dataset at {dataset_path}")
                 logger.error(e)
+        if not len(datasets):
+            raise Exception("No datasets available, shutting down")
         return datasets
