@@ -3,6 +3,12 @@ import os
 import sys
 from loguru import logger
 
+is_production = os.environ.get("PRODUCTION") or False
+if is_production:
+    os.makedirs('log', exist_ok=True)
+    logger.add("log/{time}.log", rotation="00:00", retention="90 days")
+logger.debug(f"Python Version: {sys.version}")
+
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
@@ -11,11 +17,6 @@ from dash import Dash, dcc, ctx
 from dash import Output, Input, State, callback, no_update
 from dash_iconify import DashIconify
 from typing import Any, Dict, List
-
-os.makedirs('log', exist_ok=True)
-logger.add("log/{time}.log", rotation="00:00", retention="90 days")
-logger.info("Setup server..")
-logger.debug(f"Python Version: {sys.version}")
 
 THEME = {
     "fontFamily": "'Inter', sans-serif",
@@ -31,7 +32,6 @@ def create_dash_app() -> dash.Dash:
     app = dash.Dash(
         __name__,
         use_pages=True,
-        # suppress_callback_exceptions=True,
         external_stylesheets=[
             dbc.themes.LITERA,
             dbc.icons.BOOTSTRAP,
@@ -86,7 +86,7 @@ def create_dash_app() -> dash.Dash:
 
     return app
 
-is_production = os.environ.get("PRODUCTION") or False
+logger.info("Setup server..")
 app = create_dash_app()
 server = app.server
 
