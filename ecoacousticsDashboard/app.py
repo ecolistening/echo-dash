@@ -86,11 +86,13 @@ def create_dash_app() -> dash.Dash:
 
     return app
 
+is_production = os.environ.get("PRODUCTION") or False
 app = create_dash_app()
 server = app.server
 
 if __name__ == '__main__':
     logger.info("Start server..")
-    app.run(host='0.0.0.0', debug=True)
-    app.enable_dev_tools(dev_tools_ui=True, dev_tools_serve_dev_bundles=True)
+    app.run(host='0.0.0.0', debug=not is_production)
+    if not is_production:
+        app.enable_dev_tools(dev_tools_ui=True, dev_tools_serve_dev_bundles=True)
     logger.info("Server shutdown.")
