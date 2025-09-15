@@ -6,7 +6,6 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from typing import Any, Dict, List, Tuple
 
-MAX_WIDTH = 1600
 MAX_HEIGHT = 2400
 CELL_HEIGHT = 40
 
@@ -160,7 +159,6 @@ def species_matrix(
     fig.update_layout(
         barmode='stack',
         height=height,
-        width=MAX_WIDTH,
         **updates,
         title=dict(
             automargin=True,
