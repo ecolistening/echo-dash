@@ -86,9 +86,11 @@ def create_dash_app() -> dash.Dash:
 
     return app
 
+app = create_dash_app()
+server = app.server
+
 if __name__ == '__main__':
     logger.info("Start server..")
-    app = create_dash_app()
     app.run(host='0.0.0.0', debug=True)
     app.enable_dev_tools(dev_tools_ui=True, dev_tools_serve_dev_bundles=True)
     logger.info("Server shutdown.")

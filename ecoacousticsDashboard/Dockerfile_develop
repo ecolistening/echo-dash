@@ -1,22 +1,16 @@
 FROM python:3.12
-#LABEL authors="David Kadish"
 
 ENV DASH_DEBUG_MODE False
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
+ADD https://astral.sh/uv/0.7.13/install.sh /uv-installer.sh
+RUN sh /uv-installer.sh && rm /uv-installer.sh
+ENV PATH="/root/.local/bin/:$PATH"
+
+ADD . /code
 WORKDIR /code
 
-COPY requirements.txt /code/requirements.txt
-
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
-
-COPY app.py /code/app.py
-COPY config.py /code/config.py
-COPY components/ /code/components/
-COPY pages/ /code/pages/
-COPY utils/ /code/utils/
-COPY menu/ /code/menu/
-COPY content/ /code/content/
-COPY assets/ /code/assets/
+RUN uv sync --locked
 
 EXPOSE 8050
-CMD ["gunicorn", "-b", "0.0.0.0:8050", "--timeout=600", "app:server"]
+CMD ["uv", "run", "--with", "gunicorn", "gunicorn", "--bind", "0.0.0.0:8050", "--timeout=600", "app:server"]
