@@ -62,7 +62,7 @@ def register_callbacks():
         data = fetch_data(dataset_name, filters)
         data["detected"] = (data["confidence"] > threshold).astype(int)
         fig = plot(data, axis_group, facet_col, facet_row, category_orders)
-        fig.update_layout(title_text="Species by Site")
+        fig.update_layout(title_text=f"Species Matrix | p > {threshold}")
         return fig
 
     @callback(
