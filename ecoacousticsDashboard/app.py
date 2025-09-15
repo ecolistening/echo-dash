@@ -4,9 +4,8 @@ import sys
 from loguru import logger
 
 is_production = os.environ.get("PRODUCTION") or False
-if is_production:
-    os.makedirs('log', exist_ok=True)
-    logger.add("log/{time}.log", rotation="00:00", retention="90 days")
+branch_name = os.environ.get("BRANCH_NAME") or "develop"
+logger.add(f"../log/{branch_name}/" + "{time}.log", rotation="00:00", retention="90 days")
 logger.debug(f"Python Version: {sys.version}")
 
 import dash
