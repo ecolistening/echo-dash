@@ -8,4 +8,4 @@ services:
       - ${PORT}:${PORT}
     working_dir: /code
     volumes:
-      - ../${BRANCH_NAME}_data:/data
+      - ../data/${BRANCH_NAME}/data:/data

@@ -1,5 +1,7 @@
 import os
+
 from pathlib import Path
+from loguru import logger
 
 def is_docker():
     cgroup = Path('/proc/self/cgroup')
@@ -11,5 +13,7 @@ def is_docker():
 if is_docker():
     root_dir = Path('/data/')
 else:
-    cwd = Path.cwd()
-    root_dir = Path(cwd.parents[0], 'data')
+    parent_dir = Path.cwd().parent
+    branch_name = os.environ.get("BRANCH_NAME") or "develop"
+    root_dir = parent_dir / "data" / branch_name / "data"
+    logger.info(f"Data path set to {root_dir}")
