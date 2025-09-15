@@ -9,4 +9,4 @@ services:
     working_dir: /code
     volumes:
       - ../data/${BRANCH_NAME}/data:/data
-      - ../log/${BRANCH_NAME}:/code/log
+      - ../log/${BRANCH_NAME}:/log
