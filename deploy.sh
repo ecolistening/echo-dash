@@ -6,7 +6,7 @@ if ! [ -d "$HOME/ecoacoustics-dashboard/" ]; then
 fi
 
 cd $HOME/ecoacoustics-dashboard/ecoacousticsDashboard/
-docker compose --env-file ./.env.develop up --build -d
+docker compose --env-file ./.env up --build -d
 if [ $? != 0 ]; then
     echo "docker compose failed, check the server logs!"
     exit 1

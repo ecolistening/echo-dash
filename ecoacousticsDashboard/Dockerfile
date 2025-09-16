@@ -11,6 +11,3 @@ ADD . /code
 WORKDIR /code
 
 RUN uv sync --locked
-
-EXPOSE 8051
-CMD ["uv", "run", "--with", "gunicorn", "gunicorn", "--bind", "0.0.0.0:8051", "--timeout=600", "app:server"]

@@ -1,12 +1,12 @@
 services:
   app:
-    container_name: ${BRANCH_NAME}
     build:
       context: .
-      dockerfile: ./Dockerfile_${BRANCH_NAME}
+      dockerfile: ./Dockerfile
     ports:
       - ${PORT}:${PORT}
     working_dir: /code
     volumes:
-      - ../data/${BRANCH_NAME}/data:/data
+      - ../data:/data
       - ../log:/log
+    command: uv run --with gunicorn gunicorn --bind 0.0.0.0:${PORT} --timeout=800 app:server

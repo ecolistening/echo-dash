@@ -3,10 +3,8 @@ import os
 import sys
 from loguru import logger
 
-# TODO: write a more elegant solution to flagging production/development/staging
 is_production = os.environ.get("PRODUCTION") or False
-branch_name = os.environ.get("BRANCH_NAME") or "develop"
-logger.add(f"../log/{branch_name}/" + "{time}.log", rotation="00:00", retention="90 days")
+logger.add(f"../log" + "{time}.log", rotation="00:00", retention="90 days")
 logger.debug(f"Python Version: {sys.version}")
 
 import dash

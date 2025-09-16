@@ -14,6 +14,6 @@ if is_docker():
     root_dir = Path('/data/')
 else:
     parent_dir = Path.cwd().parent
-    branch_name = os.environ.get("BRANCH_NAME") or "develop"
-    root_dir = parent_dir / "data" / branch_name / "data"
-    logger.info(f"Data path set to {root_dir}")
+    root_dir = parent_dir / "data"
+
+logger.info(f"Data path set to {root_dir}")
