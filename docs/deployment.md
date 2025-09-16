@@ -43,4 +43,22 @@ sudo passwd {staging|production}
 ssh-copy-id -i ~/.ssh/id_ed25519.pub {staging|production}@{IPADDR}
 ```
 
+We store some audio on the server. We put this in a shared directory.
+
+```
+# create the shared files directory
+sudo mkdir -p /srv/data
+# create a group
+sudo addgroup shared
+# give the group ownership of the directory
+sudo chown $USER:shared /srv/data
+# add staging and production to the group
+sudo adduser staging newgroup
+sudo adduser production newgroup
+# set group permissions to read-only
+sudo chmod 750 /srv/data
+```
+
+> **NB**: Note that `$USER` here should be neither staging or production as they will get write access when they should only have read-only.
+
 Now follow the remainder of the instructions on [echodash-server-ansible](github.com/ecolistening/echodash-server-ansible/).
