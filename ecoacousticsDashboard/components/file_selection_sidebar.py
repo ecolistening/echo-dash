@@ -209,13 +209,15 @@ def FileSelectionSidebar(
         State("file-sidebar", "span"),
         State("file-sidebar", "style"),
         Input(graph, "selectedData"),
+        Input(graph, "clickData"),
         prevent_initial_call=True,
     )
     def toggle_selection_sidebar(
         dataset_name: str,
         current_span: int,
         current_style: Dict[str, str],
-        selected_data: Dict[str, Any],
+        lassoo_data: Dict[str, Any],
+        clicked_data: Dict[str, Any],
     ) -> Tuple[int, int, Dict[str, str], str, str, int]:
         """Toggle the sidebar and populate the selected data store
 
@@ -245,6 +247,7 @@ def FileSelectionSidebar(
         total_pages: int
             The total number of pages for pagination
         """
+        selected_data = lassoo_data or clicked_data
         if selected_data is None or len((points := selected_data['points'])) == 0:
             return (
                 sibling_span := 12 - current_span,
