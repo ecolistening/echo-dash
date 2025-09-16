@@ -4,7 +4,7 @@ import sys
 from loguru import logger
 
 is_production = os.environ.get("PRODUCTION") or False
-logger.add(f"../log" + "{time}.log", rotation="00:00", retention="90 days")
+logger.add(f"../log/" + "{time}.log", rotation="00:00", retention="90 days")
 logger.debug(f"Python Version: {sys.version}")
 
 import dash
