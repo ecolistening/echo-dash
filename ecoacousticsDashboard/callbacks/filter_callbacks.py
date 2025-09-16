@@ -490,7 +490,7 @@ def register_callbacks():
         tree = dispatch(FETCH_DATASET_SITES_TREE, dataset_name=dataset_name)
         # find child nodes at specified depth
         depth = ctx.triggered_id["index"]
-        nodes = bt.levelorder_iter(tree, filter_condition=lambda node: node.depth == len(values[depth:]) + 1)
+        nodes = bt.levelorder_iter(tree, filter_condition=lambda node: node.depth == depth + 2)
         # remove all nodes where the parent is not present in selected values
         nodes = filter(lambda node: node.parent and node.parent.path_name in flat_values, nodes)
         nodes = sorted(nodes, key=lambda node: node.path_name)
