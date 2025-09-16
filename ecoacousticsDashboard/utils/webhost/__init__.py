@@ -3,7 +3,6 @@ import os
 
 from loguru import logger
 
-from utils.data import get_path_from_config
 from utils.webhost.localhost import Localhost
 from utils.webhost.gdrive import Google_Drive
 
@@ -16,15 +15,15 @@ class AudioAPI(object):
         if not dataset in AudioAPI.API:
             hosts = {}
 
-            sound_file_path = get_path_from_config(dataset, config, 'Sound Files','sound_file_path')
-            if sound_file_path is not None:
-                host = Localhost(sound_file_path)
+            audio_path = config.get("Dataset", {}).get("audio_path", None)
+            if audio_path is not None:
+                host = Localhost(audio_path)
                 if host.is_active():
                     hosts['local'] = host
 
-            sound_file_path = get_path_from_config(dataset, config, 'Sound Files','gdrive_sound_file_path')
-            if sound_file_path is not None:
-                host = Google_Drive(dataset, sound_file_path)
+            google_audio_path = config.get("Dataset", {}).get("audio_path", None)
+            if google_audio_path is not None:
+                host = Google_Drive(dataset, google_audio_path)
                 if host.is_active():
                     hosts['gdrive'] = host
 
@@ -41,7 +40,6 @@ class AudioAPI(object):
         audio_path_base = split_name[0]
 
         for host_name, host in hosts.items():
-
             # Move file extension to sub class
             for file_extension in ('mp3','MP3','wav','WAV'):
                 audio_path = f"{audio_path_base}.{file_extension}"
@@ -49,7 +47,6 @@ class AudioAPI(object):
                 if audio_bytes is not None:
                     logger.debug(f"Found file \'{audio_path}\' at host \'{host_name}\'")
                     return audio_bytes, filetype, audio_path
-         
         else:
             if len(split_name)>0:
                 audio_path = f"{audio_path_base}{split_name[1]}"

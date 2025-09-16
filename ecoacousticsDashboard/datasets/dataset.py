@@ -3,10 +3,10 @@ import bigtree as bt
 import functools
 import numpy as np
 import pandas as pd
-import pathlib
 import pickle
 
 from configparser import ConfigParser
+from pathlib import Path
 from loguru import logger
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
@@ -34,13 +34,13 @@ class Dataset:
 
     @property
     def path(self):
-        return pathlib.Path.cwd().parent / "data" / self.dataset_path
+        return Path.cwd().parent / "data" / self.dataset_path
 
     def __attrs_post_init__(self) -> None:
         self.config = self._read_or_build_config(self.path / "config.ini")
         self.dataset_name = self.config.get("Dataset", "name")
         self.dataset_id = self.config.get("Dataset", "id")
-        self.audio_path = self.config.get("Dataset", "audio_path")
+        self.audio_path = Path(self.config.get("Dataset", "audio_path"))
         logger.info({ "dataset_name": self.dataset_name, "message": "loaded config" })
         # cache species table
         self.species = pd.read_parquet(self.path.parent / "species_table.parquet")
@@ -132,8 +132,7 @@ class Dataset:
         self.species[self.species["primary_lifestyle"].isna()] = "Unspecified"
 
     def _add_fields_to_files_table(self):
-        # TODO: this should be adjusted based on dataset? what about remote file path?
-        self.files["file_path"] = self.files["local_file_path"]
+        self.files["local_file_path"] = (self.audio_path / self.files["file_path"]).astype(str)
         self.files["minute"] = self.files["timestamp"].dt.minute
         self.files["hour"] = self.files["timestamp"].dt.hour
         self.files["weekday"] = self.files["timestamp"].dt.day_name()

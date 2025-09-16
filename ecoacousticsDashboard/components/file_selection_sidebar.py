@@ -259,6 +259,7 @@ def FileSelectionSidebar(
             dataset_name=dataset_name,
             file_ids=tuple([point["hovertext"] for point in points]),
         )
+        data = data[["file_id", "file_name", "file_path"]]
         total = len(data)
         start = 1
         end = min(total, PAGE_LIMIT * start)
@@ -317,12 +318,12 @@ def FileSelectionSidebar(
 
         accordion_items = [
             dmc.AccordionItem(
-                value=row["file_id"],
+                value=row["file_path"],
                 children=[
                     dmc.AccordionControl(row["file_name"]),
                     dmc.AccordionPanel(
                         html.Div(
-                            id={"type": "file-sidebar-file-data", "index": row["file_id"]},
+                            id={"type": "file-sidebar-file-data", "index": row["file_path"]},
                             children=[],
                         )
                     )
@@ -371,14 +372,10 @@ def FileSelectionSidebar(
         component: dmc.Box
             A html element containing file metadata and audio
         """
-        if (file_id := matched["index"]) not in open_values:
+        if (file_path := matched["index"]) not in open_values:
             raise exceptions.PreventUpdate
-
         config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name)
-        data = pd.read_json(StringIO(selected_json_data), orient="table").set_index("file_id")
-
-        file_info = data.loc[file_id]
-        audio_bytes, mime_type, _ = AudioAPI.get_audio_bytes(file_info.file_path, dataset_name, config)
+        audio_bytes, mime_type, _ = AudioAPI.get_audio_bytes(file_path, dataset_name, config)
         return dmc.Box([
             dcc.Loading(
                 html.Audio(
