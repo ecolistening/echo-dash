@@ -185,7 +185,7 @@ def fetch_file_weather(
     )
     return dataset.append_columns(
         files
-        .merge(weather, on=["site_id", "nearest_hour"], how="inner")
+        .merge(weather, on=["site_id", "nearest_hour"], how="left")
         .melt(id_vars=["file_id", "site_id", "nearest_hour", "timestamp"], var_name="variable", value_name="value")
         .merge(dataset.locations, on="site_id", how="inner")
     )
@@ -217,20 +217,17 @@ def fetch_acoustic_features(
     )
     file_site_weather = (
         files
-        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="inner")
+        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="left")
         .drop("nearest_hour", axis=1)
         .merge(dataset.locations, on="site_id", how="inner")
     )
     features = (
         pd.read_parquet(dataset.path / "recording_acoustic_features.parquet", columns=["file_id", "segment_id", "duration", "offset", filters["current_feature"]])
-        .query(f"{file_query} and {feature_query}")
+        .query(f"file_id in ({', '.join([f'{file_id}' for file_id in files.file_id])}) and {feature_query}")
         .assign(feature=lambda df: filters["current_feature"])
         .rename(columns={filters["current_feature"]: "value"})
     )
-    return dataset.append_columns(
-        file_site_weather
-        .merge(features, on="file_id", how="inner")
-    )
+    return dataset.append_columns(features.merge(file_site_weather, on="file_id", how="left"))
 
 # @functools.lru_cache(maxsize=10)
 def fetch_birdnet_species(
@@ -271,7 +268,7 @@ def fetch_birdnet_species(
     )
     file_site_weather = (
         files
-        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="inner")
+        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="left")
         .drop("nearest_hour", axis=1)
         .merge(dataset.locations, on="site_id", how="inner")
     )
@@ -306,10 +303,10 @@ def fetch_acoustic_features_umap(
     features = dataset.umap(pd.read_parquet(dataset.path / "recording_acoustic_features.parquet").query(f"{file_query}"))
     return dataset.append_columns(
         files
-        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="inner")
+        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="left")
         .drop("nearest_hour", axis=1)
         .merge(dataset.locations, on="site_id", how="inner")
-        .merge(features, on="file_id", how="inner")
+        .merge(features, on="file_id", how="left")
     )
 
 from dash import exceptions
