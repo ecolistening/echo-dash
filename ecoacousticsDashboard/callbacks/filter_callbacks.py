@@ -49,6 +49,7 @@ def register_callbacks():
         # set feature and feature range
         action = FETCH_ACOUSTIC_FEATURES
         data = dispatch(action, **payload)
+        # TODO: these shouldn't be hard coded
         features = [
             'acoustic complexity index', 'acoustic evenness index',
             'bioacoustic index', 'log acoustic evenness index',
@@ -62,7 +63,7 @@ def register_callbacks():
         feature_max = ceil(feature_data.max(), precision=2)
         acoustic_features = {}
         for feature in features:
-            df = data.loc[:, current_feature]
+            df = data.loc[:, feature]
             acoustic_features[feature] = [floor(df.min(), precision=2), ceil(df.max(), precision=2)]
         filters["acoustic_features"] = acoustic_features
         filters["current_feature"] = current_feature
@@ -71,6 +72,7 @@ def register_callbacks():
         # set weather variables and default ranges
         action = FETCH_WEATHER
         data = dispatch(action, **payload)
+        # TODO: these shouldn't be hard coded
         variables = [
             'temperature_2m', 'precipitation', 'rain', 'snowfall',
             'wind_speed_10m', 'wind_speed_100m', 'wind_direction_10m',

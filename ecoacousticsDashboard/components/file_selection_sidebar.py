@@ -421,6 +421,9 @@ def FileSelectionSidebar(
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
+        Output(sibling, "span", allow_duplicate=True),
+        Output(f"{context}-file-sidebar", "span", allow_duplicate=True),
+        Output(f"{context}-file-sidebar", "style", allow_duplicate=True),
         Input(f"{context}-file-sidebar-include-button", "n_clicks"),
         State("dataset-select", "value"),
         State(f"{context}-file-sidebar-store", "data"),
@@ -455,10 +458,13 @@ def FileSelectionSidebar(
         selection_id = len(file_filter.keys()) + 1
         file_filter[selection_id] = list(file_ids)
         filters["files"] = file_filter
-        return filters
+        return filters, 12, 0, style_hidden
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
+        Output(sibling, "span", allow_duplicate=True),
+        Output(f"{context}-file-sidebar", "span", allow_duplicate=True),
+        Output(f"{context}-file-sidebar", "style", allow_duplicate=True),
         Input(f"{context}-file-sidebar-disclude-button", "n_clicks"),
         State(f"{context}-file-sidebar-store", "data"),
         State("filter-store", "data"),
@@ -487,10 +493,13 @@ def FileSelectionSidebar(
         selection_id = len(file_filter.keys()) + 1
         file_filter[selection_id] = list(file_ids)
         filters["files"] = file_filter
-        return filters
+        return filters, 12, 0, style_hidden
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
+        Output(sibling, "span", allow_duplicate=True),
+        Output(f"{context}-file-sidebar", "span", allow_duplicate=True),
+        Output(f"{context}-file-sidebar", "style", allow_duplicate=True),
         Input(f"{context}-file-sidebar-undo-button", "n_clicks"),
         State("filter-store", "data"),
         prevent_initial_call=True,
@@ -513,10 +522,15 @@ def FileSelectionSidebar(
         selection_ids = list(map(int, file_filters.keys()))
         file_filters.pop(str(max(selection_ids)), None)
         filters["files"] = file_filters
-        return filters
+        if not len(file_filters):
+            return filters, 12, 0, style_hidden
+        return filters, no_update, no_update, no_update
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
+        Output(sibling, "span", allow_duplicate=True),
+        Output(f"{context}-file-sidebar", "span", allow_duplicate=True),
+        Output(f"{context}-file-sidebar", "style", allow_duplicate=True),
         Input(f"{context}-file-sidebar-reset-button", "n_clicks"),
         State("filter-store", "data"),
         prevent_initial_call=True,
@@ -534,6 +548,6 @@ def FileSelectionSidebar(
         if not n_clicks or not len(filters["files"]):
             return no_update
         filters["files"] = {}
-        return filters
+        return filters, 12, 0, style_hidden
 
     return component

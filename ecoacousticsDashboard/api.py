@@ -27,7 +27,7 @@ def filter_sites_query(sites, filters):
     return f"site_id in ({site_ids})"
 
 def filter_files_query(filters):
-    file_ids = ", ".join([f"'{file_id}'" for file_id in filters["files"]])
+    file_ids = ", ".join([f"{file_id}" for file_id in itertools.chain(*filters["files"].values())])
     return f"file_id not in ({file_ids})"
 
 def filter_dates_query(filters):
