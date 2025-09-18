@@ -14,19 +14,16 @@ from io import StringIO
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_FILES
+from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from utils import list2tuple, send_download
 
 PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name, filters):
-    return dispatch(
-        FETCH_FILES,
-        dataset_name=dataset_name,
-        dates=list2tuple(filters["date_range"]),
-        locations=list2tuple(filters["current_sites"]),
-        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
-    )
+    action = FETCH_FILES
+    payload = dict(dataset_name=dataset_name, filters=filters)
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 def plot(
     df: pd.DataFrame,
@@ -43,8 +40,8 @@ def plot(
         x="date",
         y="time",
         opacity=opacity / 100,
-        hover_name="file_name",
-        hover_data=["file_id", "timestamp"],
+        hover_name="file_id",
+        hover_data=["file_name", "timestamp"],
         color=color,
         symbol=symbol,
         facet_row=facet_row,
@@ -87,7 +84,6 @@ def register_callbacks():
         Input("times-symbol-select", "value"),
         Input("times-facet-row-select", "value"),
         Input("times-facet-column-select", "value"),
-        State("dataset-category-orders", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -98,8 +94,9 @@ def register_callbacks():
         symbol: str,
         facet_row: str,
         facet_col: str,
-        category_orders: Dict[str, List[str]],
     ) -> go.Figure:
+        options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
+        category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         data = fetch_data(dataset_name, filters)
         fig = plot(
             data,
@@ -111,6 +108,7 @@ def register_callbacks():
             labels=dict(date="Date", time="Hour"),
             category_orders=category_orders,
         )
+        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
         fig.update_layout(title_text="Recording Times")
         fig.update_traces(marker=dict(size=dot_size))
         return fig

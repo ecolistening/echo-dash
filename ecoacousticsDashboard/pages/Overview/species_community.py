@@ -50,12 +50,14 @@ layout = dmc.Box([
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     options=("Site Level", "Spatial"),
                     label="Group columns by...",
+                    value="location",
                 ),
                 DatasetOptionsSelect(
                     id="species-community-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     options=("Time of Day", "Temporal"),
                     label="Facet columns by...",
+                    value="dddn",
                 ),
                 DatasetOptionsSelect(
                     id="species-community-facet-row-select",
@@ -101,25 +103,28 @@ layout = dmc.Box([
                 ),
             ],
         ),
-        # dmc.Group(
-        #     grow=True,
-        #     children=[
-        #         dmc.RadioGroup(
-        #             id="view-mode-radio-select",
-        #             value="expand",
-        #             label="Select view mode",
-        #             size="sm",
-        #             mb=10,
-        #             children=dmc.Group(
-        #                 my=10,
-        #                 children=[
-        #                     dmc.Radio(key, value=value)
-        #                     for key, value in [("Pagination (alphabetical)", "alphabetical"), ("Pagination (by 10)", "paginate"), ("Full View", "expand")]
-        #                 ],
-        #             ),
-        #         ),
-        #     ],
-        # ),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        children="Detection Threshold",
+                        size="sm",
+                        ta="right",
+                    ),
+                    dmc.Slider(
+                        id="species-threshold-slider",
+                        min=0.0, max=0.99,
+                        step=0.1, value=0.5,
+                        persistence=True,
+                        marks=[
+                            dict(value=i, label=np.format_float_positional(i, precision=1))
+                            for i in np.arange(0.0, 0.99, 0.1)
+                        ],
+                    ),
+                ]),
+            ],
+        ),
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(

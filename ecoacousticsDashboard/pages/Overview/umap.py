@@ -13,7 +13,7 @@ from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from components.file_selection_sidebar import FileSelectionSidebar
+from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from components.figure_download_widget import FigureDownloadWidget
 
 PAGE_NAME = "UMAP"
@@ -24,30 +24,6 @@ dash.register_page(
     title=PAGE_TITLE,
     name=PAGE_NAME,
 )
-
-def FileSelectionSidebarIcon():
-    return dmc.HoverCard(
-        children=[
-            dmc.HoverCardTarget(
-                children=dmc.ActionIcon(
-                    DashIconify(
-                        icon="fluent:multiselect-16-filled",
-                        width=24,
-                    ),
-                    id="toggle-file-sidebar",
-                    variant="light",
-                    color="blue",
-                    size="lg",
-                    n_clicks=0,
-                ),
-            ),
-            dmc.HoverCardDropdown(
-                children=[
-                    dmc.Text("Toggle file selection sidebar"),
-                ]
-            )
-        ],
-    )
 
 layout = dmc.Box([
     FilterPanel([
@@ -70,6 +46,7 @@ layout = dmc.Box([
                     id="umap-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Colour by",
+                    value="location",
                 ),
                 DatasetOptionsSelect(
                     id="umap-symbol-select",
@@ -95,7 +72,7 @@ layout = dmc.Box([
                         dmc.Group(
                             grow=True,
                             children=[
-                                FileSelectionSidebarIcon(),
+                                FileSelectionSidebarIcon(context="umap"),
                                 DataDownloadWidget(
                                     context="umap",
                                 ),
@@ -185,6 +162,7 @@ layout = dmc.Box([
             ],
         ),
         FileSelectionSidebar(
+            context="umap",
             graph="umap-graph",
             sibling="umap-graph-container",
             span=5,

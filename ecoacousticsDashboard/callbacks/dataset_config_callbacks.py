@@ -22,10 +22,12 @@ def register_callbacks():
         Input("dataset-select", "value"),
     )
     def get_dataset_config(dataset_name: str) -> Dict[str, Any]:
+        if not dataset_name:
+            return no_update
         trigger_id = ctx.triggered_id
         action = FETCH_DATASET_CONFIG
-        params = dict(dataset_name=dataset_name)
-        logger.debug(f"{trigger_id=} {action=} {params=}")
+        payload = dict(dataset_name=dataset_name)
+        logger.debug(f"{trigger_id=} {action=} {payload=}")
         return dispatch(action, dataset_name=dataset_name)
 
     @callback(
@@ -40,11 +42,13 @@ def register_callbacks():
         site_labels: List[str],
         save_button: int,
     ) -> List[str]:
+        if not dataset_name:
+            return no_update
         trigger_id = ctx.triggered_id
         action = SET_DATASET_CONFIG
-        params = dict(dataset_name=dataset_name, site_labels=site_labels)
-        logger.debug(f"{trigger_id=} {action=} {params=}")
-        return dispatch(action, **params)
+        payload = dict(dataset_name=dataset_name, site_labels=site_labels)
+        logger.debug(f"{trigger_id=} {action=} {payload=}")
+        return dispatch(action, **payload)
 
     @callback(
         Output("dataset-settings-sites-form", "children"),
@@ -53,9 +57,18 @@ def register_callbacks():
     def set_sites_form(
         dataset_name: str
     ) -> List[dmc.TextInput]:
-        params = dict(dataset_name=dataset_name)
-        config = dispatch(FETCH_DATASET_CONFIG, **params)
-        tree = dispatch(FETCH_DATASET_SITES_TREE, **params)
+        if not dataset_name:
+            return no_update
+        payload = dict(dataset_name=dataset_name)
+
+        action = FETCH_DATASET_CONFIG
+        logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+        config = dispatch(action, **payload)
+
+        action = FETCH_DATASET_SITES_TREE
+        logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+        tree = dispatch(action, **payload)
+
         return [
             dmc.TextInput(
                 label=f"Level {i}",
@@ -70,6 +83,8 @@ def register_callbacks():
         Input("dataset-select", "value"),
     )
     def set_dataset_settings_text(dataset_name: str):
+        if not dataset_name:
+            return no_update
         return f"Settings for the {dataset_name} dataset"
 
     @callback(
@@ -84,22 +99,3 @@ def register_callbacks():
         elif ctx.triggered_id == "dataset-settings-cancel-button":
             return False
         return False
-
-    @callback(
-        Output("dataset-category-orders", "data"),
-        Input("dataset-select", "value"),
-    )
-    def load_categories(
-        dataset_name: str,
-    ) -> Dict[str, List[str]]:
-        category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
-        return category_orders
-
-    @callback(
-        Output("dataset-options", "data"),
-        Input("dataset-select", "value"),
-    )
-    def load_options(
-        dataset_name: str,
-    ) -> Dict[str, List[str]]:
-        return dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)

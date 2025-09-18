@@ -8,25 +8,24 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, dcc
+from dash import html, dcc, ctx
 from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
+from loguru import logger
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_BIRDNET_SPECIES
+from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from utils import list2tuple, send_download
 from utils import sketch
 
 PLOT_HEIGHT = 800
 
-def fetch_data(dataset_name, filters):
-    return dispatch(
-        FETCH_BIRDNET_SPECIES,
-        dataset_name=dataset_name,
-        dates=list2tuple(filters["date_range"]),
-        locations=list2tuple(filters["current_sites"]),
-        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
-    )
+def fetch_data(dataset_name, threshold, filters):
+    action = FETCH_BIRDNET_SPECIES
+    payload = dict(dataset_name=dataset_name, threshold=threshold, filters=filters)
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 plot_types = {
     "Scatter": functools.partial(
@@ -110,10 +109,9 @@ def register_callbacks():
         State("dataset-select", "value"),
         Input("filter-store", "data"),
         Input("species-richness-plot-type-select", "value"),
-        Input("species-richness-threshold-slider", "value"),
+        Input("species-threshold-slider", "value"),
         Input("species-richness-facet-row-select", "value"),
         Input("species-richness-facet-column-select", "value"),
-        State("dataset-category-orders", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -122,11 +120,12 @@ def register_callbacks():
         threshold: str,
         facet_row: str,
         facet_col: str,
-        category_orders: Dict[str, List[str]],
     ) -> go.Figure:
-        data = fetch_data(dataset_name, filters)
+        options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
+        category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
+        data = fetch_data(dataset_name, threshold, filters)
         data = (
-            data[data["confidence"] >= threshold]
+            data
             .groupby(list(filter(None, set(["hour", facet_row, facet_col]))))["species"]
             .nunique()
             .reset_index(name="richness")
@@ -139,13 +138,15 @@ def register_callbacks():
             facet_col=facet_col,
             category_orders=category_orders,
         )
+        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
         fig.update_layout(
             barmode='stack',
             height=PLOT_HEIGHT,
+            margin=dict(t=80),
             title=dict(
                 text=f"Polar Plot of Species Richness by Time of Day",
                 x=0.5,
-                y=0.97,
+                y=0.99,
                 font=dict(size=24),
             )
         )

@@ -74,13 +74,13 @@ layout = dmc.Box([
                     id="species-richness-facet-row-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet rows by",
-                    value="sitelevel_1",
+                    value="dddn",
                 ),
                 DatasetOptionsSelect(
                     id="species-richness-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet columns by",
-                    value="dddn",
+                    value="location",
                 ),
                 dmc.Flex(
                     p="1rem",
@@ -104,6 +104,7 @@ layout = dmc.Box([
             ],
         ),
         dmc.Group(
+            grow=True,
             children=[
                 dmc.Stack([
                     dmc.Text(
@@ -112,7 +113,7 @@ layout = dmc.Box([
                         ta="right",
                     ),
                     dmc.Slider(
-                        id="species-richness-threshold-slider",
+                        id="species-threshold-slider",
                         min=0.0, max=1.0,
                         step=0.1,
                         value=0.5,

@@ -15,6 +15,7 @@ from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
+from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from components.footer import Footer
 
 PAGE_NAME = 'index-scatter'
@@ -57,6 +58,7 @@ layout = dmc.Box([
                     id="index-scatter-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Colour by",
+                    value="location",
                 ),
                 DatasetOptionsSelect(
                     id="index-scatter-symbol-select",
@@ -72,6 +74,7 @@ layout = dmc.Box([
                     id="index-scatter-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet columns by",
+                    value="month",
                 ),
                 dmc.Flex(
                     p="1rem",
@@ -82,6 +85,7 @@ layout = dmc.Box([
                         dmc.Group(
                             grow=True,
                             children=[
+                                FileSelectionSidebarIcon(context="index-scatter"),
                                 DataDownloadWidget(
                                     context="index-scatter",
                                 ),
@@ -118,9 +122,26 @@ layout = dmc.Box([
         ),
     ]),
     dmc.Space(h="sm"),
-    dcc.Loading(
-        dcc.Graph(id=f"index-scatter-graph"),
-    ),
+    dmc.Grid([
+        dmc.GridCol(
+            id="index-scatter-graph-container",
+            span=12,
+            children=[
+                dcc.Loading([
+                    dcc.Graph(id="index-scatter-graph"),
+                ]),
+            ],
+        ),
+        FileSelectionSidebar(
+            context="index-scatter",
+            graph="index-scatter-graph",
+            sibling="index-scatter-graph-container",
+            span=5,
+        ),
+    ]),
+    # dcc.Loading(
+    #     dcc.Graph(id=f"index-scatter-graph"),
+    # ),
     dbc.Offcanvas(
         id="index-scatter-page-info",
         is_open=False,

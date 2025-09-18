@@ -18,7 +18,34 @@ from utils.webhost import AudioAPI
 
 PAGE_LIMIT = 10
 
+def FileSelectionSidebarIcon(
+    context: str,
+):
+    return dmc.HoverCard(
+        children=[
+            dmc.HoverCardTarget(
+                children=dmc.ActionIcon(
+                    DashIconify(
+                        icon="fluent:multiselect-16-filled",
+                        width=24,
+                    ),
+                    id=f"{context}-toggle-file-sidebar",
+                    variant="light",
+                    color="blue",
+                    size="lg",
+                    n_clicks=0,
+                ),
+            ),
+            dmc.HoverCardDropdown(
+                children=[
+                    dmc.Text("Toggle file selection sidebar"),
+                ]
+            )
+        ],
+    )
+
 def FileSelectionSidebar(
+    context: str,
     graph: str,
     sibling: str,
     span: int = 4
@@ -52,11 +79,11 @@ def FileSelectionSidebar(
     }
 
     component = dmc.GridCol(
-        id="file-sidebar",
+        id=f"{context}-file-sidebar",
         span=0,
         style=style_hidden,
         children=html.Div([
-            dcc.Store(id="file-sidebar-store"),
+            dcc.Store(id=f"{context}-file-sidebar-store"),
             dmc.Stack(
                 m="1rem",
                 children=[
@@ -65,7 +92,7 @@ def FileSelectionSidebar(
                         children=[
                             dmc.Button(
                                 "Selected",
-                                id="file-sidebar-disclude-button",
+                                id=f"{context}-file-sidebar-disclude-button",
                                 leftSection=DashIconify(icon="cil:filter"),
                                 variant="light",
                                 color="red",
@@ -73,7 +100,7 @@ def FileSelectionSidebar(
                             ),
                             dmc.Button(
                                 "Others",
-                                id="file-sidebar-include-button",
+                                id=f"{context}-file-sidebar-include-button",
                                 leftSection=DashIconify(icon="cil:filter"),
                                 variant="light",
                                 color="green",
@@ -81,7 +108,7 @@ def FileSelectionSidebar(
                             ),
                             dmc.Button(
                                 "Undo",
-                                id="file-sidebar-undo-button",
+                                id=f"{context}-file-sidebar-undo-button",
                                 leftSection=DashIconify(icon="cil:action-undo"),
                                 variant="light",
                                 color="blue",
@@ -89,7 +116,7 @@ def FileSelectionSidebar(
                             ),
                             dmc.Button(
                                 "Reset",
-                                id="file-sidebar-reset-button",
+                                id=f"{context}-file-sidebar-reset-button",
                                 leftSection=DashIconify(icon="fluent:arrow-reset-20-filled"),
                                 variant="light",
                                 color="blue",
@@ -107,7 +134,7 @@ def FileSelectionSidebar(
                                         icon="system-uicons:cross",
                                         width=24,
                                     ),
-                                    id="file-close-sidebar",
+                                    id=f"{context}-file-close-sidebar",
                                     variant="light",
                                     size="lg",
                                     n_clicks=0,
@@ -119,7 +146,7 @@ def FileSelectionSidebar(
                         grow=True,
                         children=[
                             dmc.Text(
-                                id="file-sidebar-files-count",
+                                id=f"{context}-file-sidebar-files-count",
                                 size="sm",
                             ),
                         ],
@@ -128,7 +155,7 @@ def FileSelectionSidebar(
                         grow=True,
                         children=[
                             dmc.Pagination(
-                                id="file-sidebar-files-pagination",
+                                id=f"{context}-file-sidebar-files-pagination",
                                 total=1,
                                 value=1,
                                 size="sm",
@@ -140,7 +167,7 @@ def FileSelectionSidebar(
                         grow=True,
                         children=[
                             dmc.Accordion(
-                                id="file-sidebar-files-accordion",
+                                id=f"{context}-file-sidebar-files-accordion",
                                 chevronPosition="right",
                                 value=[],
                                 children=[],
@@ -154,17 +181,19 @@ def FileSelectionSidebar(
 
     @callback(
         Output(sibling, "span", allow_duplicate=True),
-        Output("file-sidebar", "span", allow_duplicate=True),
-        Output("file-sidebar", "style", allow_duplicate=True),
-        State("file-sidebar", "style"),
-        Input("file-close-sidebar", "n_clicks"),
-        Input("toggle-file-sidebar", "n_clicks"),
+        Output(f"{context}-file-sidebar", "span", allow_duplicate=True),
+        Output(f"{context}-file-sidebar", "style", allow_duplicate=True),
+        State(f"{context}-file-sidebar", "style"),
+        Input(f"{context}-file-close-sidebar", "n_clicks"),
+        Input(f"{context}-toggle-file-sidebar", "n_clicks"),
+        Input("dataset-select", "value"),
         prevent_initial_call=True
     )
     def toggle_selection_sidebar(
         current_style: Dict[str, str],
         close: int,
         n_clicks: int,
+        dataset_name: str,
     ) -> Tuple[int, int, Dict[str, str]]:
         """Toggle the sidebar
 
@@ -186,7 +215,7 @@ def FileSelectionSidebar(
         sidebar_style: dict
             Updated styling of the sidebar element (resetting display)
         """
-        if current_style == style_visible:
+        if ctx.triggered_id == "dataset-select" or current_style == style_visible:
             return (
                 sibling_span := 12,
                 sidebar_span := 0,
@@ -200,14 +229,14 @@ def FileSelectionSidebar(
 
     @callback(
         Output(sibling, "span", allow_duplicate=True),
-        Output("file-sidebar", "span", allow_duplicate=True),
-        Output("file-sidebar", "style", allow_duplicate=True),
-        Output("file-sidebar-store", "data"),
-        Output("file-sidebar-files-count", "children", allow_duplicate=True),
-        Output("file-sidebar-files-pagination", "total"),
-        State("dataset-select", "value"),
-        State("file-sidebar", "span"),
-        State("file-sidebar", "style"),
+        Output(f"{context}-file-sidebar", "span", allow_duplicate=True),
+        Output(f"{context}-file-sidebar", "style", allow_duplicate=True),
+        Output(f"{context}-file-sidebar-store", "data"),
+        Output(f"{context}-file-sidebar-files-count", "children", allow_duplicate=True),
+        Output(f"{context}-file-sidebar-files-pagination", "total"),
+        Input("dataset-select", "value"),
+        State(f"{context}-file-sidebar", "span"),
+        State(f"{context}-file-sidebar", "style"),
         Input(graph, "selectedData"),
         Input(graph, "clickData"),
         prevent_initial_call=True,
@@ -248,7 +277,7 @@ def FileSelectionSidebar(
             The total number of pages for pagination
         """
         selected_data = lassoo_data or clicked_data
-        if selected_data is None or len((points := selected_data['points'])) == 0:
+        if ctx.triggered_id == "dataset-select" or selected_data is None or len((points := selected_data['points'])) == 0:
             return (
                 sibling_span := 12 - current_span,
                 sidebar_span := current_span,
@@ -257,12 +286,8 @@ def FileSelectionSidebar(
                 selected_text := "",
                 total_pages := 1,
             )
-        data = dispatch(
-            FETCH_FILES,
-            dataset_name=dataset_name,
-            file_ids=tuple([point["hovertext"] for point in points]),
-        )
-        data = data[["file_id", "file_name", "file_path"]]
+        data = dispatch(FETCH_FILES, dataset_name=dataset_name)
+        data = data.loc[data["file_id"].isin([point["hovertext"] for point in points]), ["file_id", "file_path"]]
         total = len(data)
         start = 1
         end = min(total, PAGE_LIMIT * start)
@@ -277,18 +302,18 @@ def FileSelectionSidebar(
         )
 
     @callback(
-        Output("file-sidebar-files-accordion", "children"),
-        Output("file-sidebar-files-count", "children", allow_duplicate=True),
-        State("file-sidebar-store", "data"),
-        Input("file-sidebar-files-pagination", "value"),
-        Input("file-sidebar-files-pagination", "total"),
+        Output(f"{context}-file-sidebar-files-accordion", "children"),
+        Output(f"{context}-file-sidebar-files-count", "children", allow_duplicate=True),
+        State(f"{context}-file-sidebar-store", "data"),
+        Input(f"{context}-file-sidebar-files-pagination", "value"),
+        Input(f"{context}-file-sidebar-files-pagination", "total"),
         prevent_initial_call=True,
     )
     def change_page(
         selected_json_data: str,
         current_page: int,
         total_pages: int,
-    ) -> html.Div:
+    ) -> dmc.Box:
         """Populate the current page with an accordion for each file
 
         Parameters
@@ -323,10 +348,10 @@ def FileSelectionSidebar(
             dmc.AccordionItem(
                 value=row["file_path"],
                 children=[
-                    dmc.AccordionControl(row["file_name"]),
+                    dmc.AccordionControl(row["file_path"].split("/")[-1]),
                     dmc.AccordionPanel(
-                        html.Div(
-                            id={"type": "file-sidebar-file-data", "index": row["file_path"]},
+                        dmc.Box(
+                            id={"type": f"{context}-file-sidebar-file-data", "index": row["file_path"]},
                             children=[],
                         )
                     )
@@ -343,11 +368,11 @@ def FileSelectionSidebar(
         return accordion_items, selected_text
 
     @callback(
-        Output({"type": "file-sidebar-file-data", "index": MATCH}, "children"),
+        Output({"type": f"{context}-file-sidebar-file-data", "index": MATCH}, "children"),
         State("dataset-select", "value"),
-        State("file-sidebar-store", "data"),
-        State({"type": "file-sidebar-file-data", "index": MATCH}, "id"),
-        Input("file-sidebar-files-accordion", "value"),
+        State(f"{context}-file-sidebar-store", "data"),
+        State({"type": f"{context}-file-sidebar-file-data", "index": MATCH}, "id"),
+        Input(f"{context}-file-sidebar-files-accordion", "value"),
         prevent_initial_call=True,
     )
     def toggle_file_panel(
@@ -355,7 +380,7 @@ def FileSelectionSidebar(
         selected_json_data: str,
         matched: str,
         open_values: str,
-    ) -> html.Div:
+    ) -> dmc.Box:
         """Toggle the accordion panel for a single file,
         showing file metadata and a html audio element
 
@@ -379,21 +404,26 @@ def FileSelectionSidebar(
             raise exceptions.PreventUpdate
         config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name)
         audio_bytes, mime_type, _ = AudioAPI.get_audio_bytes(file_path, dataset_name, config)
-        return dmc.Box([
-            dcc.Loading(
-                html.Audio(
-                    id="audio-player",
-                    src=audio_bytes_to_enc(audio_bytes, mime_type),
-                    controls=True
-                ),
-            )
-        ])
+        if audio_bytes is not None:
+            return dmc.Box([
+                dcc.Loading(
+                    html.Audio(
+                        id="audio-player",
+                        src=audio_bytes_to_enc(audio_bytes, mime_type),
+                        controls=True,
+                    ),
+                )
+            ])
+        else:
+            return dmc.Box([
+                dmc.Text("Audio not available on server")
+            ])
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
-        Input("file-sidebar-include-button", "n_clicks"),
+        Input(f"{context}-file-sidebar-include-button", "n_clicks"),
         State("dataset-select", "value"),
-        State("file-sidebar-store", "data"),
+        State(f"{context}-file-sidebar-store", "data"),
         State("filter-store", "data"),
         prevent_initial_call=True,
     )
@@ -429,8 +459,8 @@ def FileSelectionSidebar(
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
-        Input("file-sidebar-disclude-button", "n_clicks"),
-        State("file-sidebar-store", "data"),
+        Input(f"{context}-file-sidebar-disclude-button", "n_clicks"),
+        State(f"{context}-file-sidebar-store", "data"),
         State("filter-store", "data"),
         prevent_initial_call=True,
     )
@@ -461,7 +491,7 @@ def FileSelectionSidebar(
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
-        Input("file-sidebar-undo-button", "n_clicks"),
+        Input(f"{context}-file-sidebar-undo-button", "n_clicks"),
         State("filter-store", "data"),
         prevent_initial_call=True,
     )
@@ -487,7 +517,7 @@ def FileSelectionSidebar(
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
-        Input("file-sidebar-reset-button", "n_clicks"),
+        Input(f"{context}-file-sidebar-reset-button", "n_clicks"),
         State("filter-store", "data"),
         prevent_initial_call=True,
     )

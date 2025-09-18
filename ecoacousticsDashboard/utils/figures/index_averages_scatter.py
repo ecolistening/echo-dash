@@ -11,7 +11,6 @@ def plot(
     df: pd.DataFrame,
     time_agg: str = "1W",
     color: str | None = None,
-    labels: Dict[str, str] | None = None,
     **kwargs: Any,
 ) -> go.Figure:
     df = (
@@ -29,7 +28,6 @@ def plot(
         color=color,
         facet_row="dddn",
         markers=True,
-        labels=labels,
         **kwargs,
     )
     fig.update_traces(marker=dict(size=4))

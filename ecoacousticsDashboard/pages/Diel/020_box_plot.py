@@ -15,6 +15,7 @@ from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.acoustic_feature_filter import AcousticFeatureFilter
+from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from components.figure_download_widget import FigureDownloadWidget
 from components.footer import Footer
 
@@ -57,17 +58,19 @@ layout = dmc.Box([
                 DatasetOptionsSelect(
                     id="index-box-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Colour by"
+                    label="Colour by",
+                    value="location",
                 ),
                 DatasetOptionsSelect(
                     id="index-box-facet-row-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Facet rows by"
+                    label="Facet rows by",
                 ),
                 DatasetOptionsSelect(
                     id="index-box-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Facet columns by"
+                    label="Facet columns by",
+                    value="year",
                 ),
                 dmc.Flex(
                     p="1rem",
@@ -78,6 +81,7 @@ layout = dmc.Box([
                         dmc.Group(
                             grow=True,
                             children=[
+                                FileSelectionSidebarIcon(context="index-box"),
                                 DataDownloadWidget(
                                     context="index-box",
                                 ),
@@ -91,6 +95,7 @@ layout = dmc.Box([
             ],
         ),
         dmc.Group(
+            grow=True,
             children=[
                 dmc.Stack([
                     dmc.Text(
@@ -122,9 +127,23 @@ layout = dmc.Box([
         ),
     ]),
     dmc.Space(h="sm"),
-    dcc.Loading(
-        dcc.Graph(id="index-box-graph"),
-    ),
+    dmc.Grid([
+        dmc.GridCol(
+            id="index-box-graph-container",
+            span=12,
+            children=[
+                dcc.Loading([
+                    dcc.Graph(id="index-box-graph"),
+                ]),
+            ],
+        ),
+        FileSelectionSidebar(
+            context="index-box",
+            graph="index-box-graph",
+            sibling="index-box-graph-container",
+            span=5,
+        ),
+    ]),
     dbc.Offcanvas(
         id="index-box-page-info",
         is_open=False,

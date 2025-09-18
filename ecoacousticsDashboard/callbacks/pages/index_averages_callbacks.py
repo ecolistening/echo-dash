@@ -10,25 +10,21 @@ import plotly.graph_objs as go
 from dash import html, dcc, callback, ctx, no_update
 from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
+from loguru import logger
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
+from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from utils.figures.index_averages_scatter import plot
 from utils import list2tuple, capitalise_each, send_download
 
 PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name, filters):
-    return dispatch(
-        FETCH_ACOUSTIC_FEATURES,
-        dataset_name=dataset_name,
-        dates=list2tuple(filters["date_range"]),
-        feature=filters["current_feature"],
-        feature_range=list2tuple(filters["current_feature_range"]),
-        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-        locations=list2tuple(filters["current_sites"]),
-        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
-    )
+    action = FETCH_ACOUSTIC_FEATURES
+    payload = dict(dataset_name=dataset_name, filters=filters)
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 def register_callbacks():
     @callback(
@@ -49,7 +45,6 @@ def register_callbacks():
         # Input(outliers_tickbox, "checked"),
         # Input(colours_tickbox, "checked"),
         # Input(separate_plots_tickbox, "checked"),
-        State("dataset-category-orders", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -59,17 +54,19 @@ def register_callbacks():
         # outliers,
         # colour_locations,
         # separate_plots,
-        category_orders: Dict[str, List[str]],
     ) -> go.Figure:
+        options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
+        category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         data = fetch_data(dataset_name, filters)
         fig = plot(
             data,
             time_agg,
             color=color,
-            labels=dict(timestamp="Time", value_mean=capitalise_each(filters["current_feature"])),
+            labels=dict(timestamp="Time", value_mean="value"),
             category_orders=category_orders,
         )
-        fig.update_layout(title_text="Seasonal Descriptor Averages")
+        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+        fig.update_layout(title_text=f"{capitalise_each(filters['current_feature'])} Seasonal Averages")
         return fig
 
     @callback(

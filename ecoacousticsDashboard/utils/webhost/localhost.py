@@ -11,16 +11,15 @@ class Localhost():
         return self.active
 
     def get_audio_bytes(self, audio_path):
-        print(f"rqst {audio_path}")
         if not self.active:
             logger.warning(f"Accessed host {type(self).__name__} despite being inactive.")
 
         src_path = os.path.join(self.sound_file_path, audio_path)
+        logger.debug(f"Fetching {src_path}")
         audio_bytes = None
         filetype = None
-        
+
         if os.path.isfile(src_path):
-            
             logger.debug(f"Open audio file \'{src_path}\'...")
             with open(src_path, "rb") as file:
                 try:

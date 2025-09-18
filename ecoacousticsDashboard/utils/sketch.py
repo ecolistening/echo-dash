@@ -2,6 +2,7 @@ import itertools
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import numpy as np
 
 from plotly.subplots import make_subplots
 from typing import Any, Dict, List
@@ -74,20 +75,34 @@ def bar_polar(
         data_frame["_col_facet"] = "All"
         facet_col = "_col_facet"
 
-    row_categories = category_orders.get(facet_row, sorted(data_frame[facet_row].dropna().unique()))
-    col_categories = category_orders.get(facet_col, sorted(data_frame[facet_col].dropna().unique()))
+    row_categories = sorted(category_orders.get(facet_row, data_frame[facet_row].dropna().unique()))
+    col_categories = sorted(category_orders.get(facet_col, data_frame[facet_col].dropna().unique()))
     categories = list(itertools.product(row_categories, col_categories))
 
-    subplot_titles = [str(col_category) for col_category in col_categories if facet_col != "_col_facet"]
+    column_titles = [str(col_category) for col_category in col_categories if facet_col != "_col_facet"]
+    row_titles = [str(row_category) for row_category in row_categories if facet_col != "_row_facet"]
 
+    # figure out of we need to drop any plots
+    subsets = []
+    row_categories = []
+    col_categories = []
+    for i, (row_category, col_category) in enumerate(categories):
+        if not data_frame[(data_frame[facet_row] == row_category) & (data_frame[facet_col] == col_category)].empty:
+            row_categories.append(row_category)
+            col_categories.append(col_category)
+
+    row_categories = np.unique(row_categories).tolist()
+    col_categories = np.unique(col_categories).tolist()
     num_rows = len(row_categories)
     num_cols = len(col_categories)
+    categories = list(itertools.product(row_categories, col_categories))
 
     fig = make_subplots(
         rows=num_rows, cols=num_cols,
         specs=[[dict(type="polar")]*num_cols for _ in range(num_rows)],
-        subplot_titles=subplot_titles,
-        horizontal_spacing=0.05,
+        row_titles=row_titles,
+        column_titles=column_titles,
+        horizontal_spacing=0.1,
         vertical_spacing=0.05,
     )
 
@@ -107,22 +122,6 @@ def bar_polar(
             **kwargs
         )
         fig.add_trace(trace, row=row, col=col)
-
-    if facet_row != "_row_facet":
-        for i, row_category in enumerate(row_categories):
-            fig.add_annotation(dict(
-                text=str(row_category),
-                x=1.05,
-                y=1 - (i + 0.5) / num_rows,
-                xref="paper",
-                yref="paper",
-                align="right",
-                xanchor="right",
-                yanchor="middle",
-                textangle=90,
-                showarrow=False,
-                font=dict(size=14),
-            ))
 
     angular_title = angularaxis.pop("title", "")
 

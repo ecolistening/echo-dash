@@ -16,14 +16,10 @@ from utils import list2tuple, send_download
 from utils.figures.calendar import plot
 
 def fetch_data(dataset_name, filters):
-    return dispatch(
-        FETCH_FILES,
-        dataset_name=dataset_name,
-        dates=list2tuple(filters["date_range"]),
-        locations=list2tuple(filters["current_sites"]),
-        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
-    )
+    action = FETCH_FILES
+    payload = dict(dataset_name=dataset_name, filters=filters)
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 def register_callbacks():
     @callback(
@@ -46,6 +42,7 @@ def register_callbacks():
     ) -> Dict[str, Any]:
         data = fetch_data(dataset_name, filters)
         fig = plot(data)
+        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
         fig.update_layout(title_text="Recording Dates")
         return fig
 

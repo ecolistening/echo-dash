@@ -54,43 +54,21 @@ class Dataset:
 
     @functools.cached_property
     def solar(self):
-        return pd.read_parquet(self.path / "solar_table.parquet").set_index(["site_id", "date"])
+        return pd.read_parquet(self.path / "solar_table.parquet")
 
     @functools.cached_property
     def weather(self):
-        return pd.read_parquet(self.path / "weather_table.parquet").set_index(["site_id", "timestamp"])
+        return pd.read_parquet(self.path / "weather_table.parquet")
 
     @functools.cached_property
     def files(self):
         files = pd.read_parquet(self.path / "files_table.parquet")
         files["local_file_path"] = (self.audio_path / files["file_path"]).astype(str)
-        files["minute"] = files["timestamp"].dt.minute
-        files["hour"] = files["timestamp"].dt.hour
-        files["weekday"] = files["timestamp"].dt.day_name()
-        files["date"] = pd.to_datetime(files["timestamp"].dt.strftime('%Y-%m-%d'))
-        files["month"] = files["timestamp"].dt.month_name()
-        files["year"] = files["timestamp"].dt.year
-        files["time"] = files["timestamp"].dt.hour + files.timestamp.dt.minute / 60.0
-        files["nearest_hour"] = files["timestamp"].dt.round("h")
-        weather = self.weather
-        solar = self.solar
-        locations = self.locations
         return (
-            files
-            .merge(weather, left_on=["site_id", "nearest_hour"], right_on=["site_id", "timestamp"], suffixes=("", "_weather"))
-            .join(solar, on=["site_id", "date"])
-            .join(locations, on="site_id")
-        )
-
-    @functools.cached_property
-    def species_predictions(self):
-        species = self.species
-        files = self.files
-        return (
-            pd.read_parquet(self.path / "birdnet_species_probs_table.parquet")
-            .drop(["common_name", "label"], axis=1) # superfluous, exists on species table
-            .join(species.set_index("scientific_name"), on="scientific_name")
-            .join(files.set_index("file_id"), on="file_id", rsuffix="_files")
+            self.append_columns(files)
+            .merge(self.weather, left_on=["site_id", "nearest_hour"], right_on=["site_id", "timestamp"], suffixes=("", "_weather"))
+            .merge(self.solar, on=["site_id", "date"], how="left")
+            .merge(self.locations, on="site_id", how="left")
         )
 
     def save_config(self):
@@ -98,34 +76,34 @@ class Dataset:
             self.config.write(f)
 
     @functools.cached_property
-    def acoustic_features(self) -> pd.DataFrame:
-        files = self.files
-        return (
-            pd.read_parquet(self.path / "recording_acoustic_features_table.parquet")
-            .join(files.set_index("file_id"), on="file_id", rsuffix="_files")
-        )
-
-    @functools.cached_property
-    def acoustic_features_umap(self) -> pd.DataFrame:
+    def umap(self) -> Callable:
         with open(self.path / "umap" / "config.yaml", "rb") as f:
             config = pickle.load(f)
         scaler = RobustScaler()
         for attr_name, attr_value in config.items():
             setattr(scaler, attr_name, attr_value)
-        model = load_ParametricUMAP(self.path / "umap")
-        acoustic_features = self.acoustic_features
-        feature_idx = acoustic_features.feature.isin(config["feature_names_in_"])
-        index = acoustic_features.columns[~acoustic_features.columns.isin(["feature", "value"])]
-        data = (
-            acoustic_features[feature_idx]
-            .pivot(index=index, columns="feature", values="value")
-        )
-        data["x"], data["y"] = np.split(
-            make_pipeline(scaler, model).transform(data),
-            indices_or_sections=2,
-            axis=1,
-        )
-        return data.reset_index()
+        feature_column_names = config["feature_names_in_"]
+        model = make_pipeline(scaler, load_ParametricUMAP(self.path / "umap"))
+
+        def encode(data: pd.DataFrame) -> pd.DataFrame:
+            xy = model.transform(data.loc[:, feature_column_names])
+            data["x"], data["y"] = np.split(xy, indices_or_sections=2, axis=1)
+            return data
+
+        return encode
+
+    @staticmethod
+    def append_columns(data: pd.DataFrame) -> pd.DataFrame:
+        if "timestamp" in data.columns:
+            data["minute"] = data["timestamp"].dt.minute
+            data["hour"] = data["timestamp"].dt.hour
+            data["weekday"] = data["timestamp"].dt.day_name()
+            data["date"] = pd.to_datetime(data["timestamp"].dt.strftime('%Y-%m-%d'))
+            data["month"] = data["timestamp"].dt.month_name()
+            data["year"] = data["timestamp"].dt.year
+            data["time"] = data["timestamp"].dt.hour + data.timestamp.dt.minute / 60.0
+            data["nearest_hour"] = data["timestamp"].dt.round("h")
+        return data
 
     @staticmethod
     def _read_or_build_config(config_path) -> ConfigParser:

@@ -19,7 +19,10 @@ from utils import capitalise_each, send_download
 PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name):
-    return dispatch(FETCH_LOCATIONS, dataset_name=dataset_name).sort_values(by="location")
+    action = FETCH_LOCATIONS
+    payload = dict(dataset_name=dataset_name)
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 def plot(df):
     # calculate Zoom Level for World Map, https://docs.mapbox.com/help/glossary/zoom-level/#zoom-levels-and-geographical-distance
@@ -53,7 +56,7 @@ def Table(data: pd.DataFrame, caption: str = "") -> dmc.Table:
         ),
         dmc.TableTbody([
             dmc.TableTr([dmc.TableTd(record[col]) for col in data.columns])
-            for record in data.to_dict(orient="records")
+            for record in data.sort_values(by="location").to_dict(orient="records")
         ]),
         dmc.TableCaption(caption)
     ])
@@ -81,8 +84,7 @@ def register_callbacks():
         Input("dataset-select", "value"),
     )
     def update_graph(dataset_name):
-        logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=}")
-        data = fetch_data(dataset_name)
+        data = fetch_data(dataset_name).sort_values(by="location")
         fig = plot(data)
         return fig
 
@@ -99,7 +101,7 @@ def register_callbacks():
         clicks,
     ) -> Dict[str, Any]:
         return send_download(
-            fetch_data(dataset_name),
+            fetch_data(dataset_name).sort_values(by="location"),
             f"{dataset_name}_map_locations",
             ctx.triggered_id["index"],
         )

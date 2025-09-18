@@ -10,21 +10,20 @@ import plotly.graph_objs as go
 from dash import html, dcc, callback, ctx, no_update
 from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
+from loguru import logger
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_DATASET_OPTIONS, FETCH_FILE_WEATHER
+from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from utils import list2tuple, send_download
 
 PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name, filters):
-    return dispatch(
-        FETCH_FILE_WEATHER,
-        dataset_name=dataset_name,
-        dates=list2tuple(filters["date_range"]),
-        locations=list2tuple(filters["current_sites"]),
-        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
-    )
+    action = FETCH_FILE_WEATHER
+    payload = dict(dataset_name=dataset_name, filters=filters)
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 def plot(
     df: pd.DataFrame,
@@ -83,7 +82,6 @@ def register_callbacks():
         Input("weather-hourly-time-aggregation", "value"),
         Input("weather-hourly-colour-select", "value"),
         Input("weather-hourly-facet-row-select", "value"),
-        State("dataset-category-orders", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -92,8 +90,9 @@ def register_callbacks():
         time_agg: str,
         color: str,
         facet_row: str,
-        category_orders: Dict[str, List[str]],
     ) -> go.Figure:
+        options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
+        category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         data = fetch_data(dataset_name, filters)
         fig = plot(
             data,

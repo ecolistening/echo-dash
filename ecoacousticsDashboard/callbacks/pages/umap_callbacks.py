@@ -10,22 +10,20 @@ import plotly.graph_objs as go
 from dash import html, dcc, callback, ctx, no_update
 from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
+from loguru import logger
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_ACOUSTIC_FEATURES_UMAP
+from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from utils import list2tuple, send_download
 
 PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name, filters):
-    return dispatch(
-        FETCH_ACOUSTIC_FEATURES_UMAP,
-        dataset_name=dataset_name,
-        dates=list2tuple(filters["date_range"]),
-        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-        locations=list2tuple(filters["current_sites"]),
-        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
-    )
+    action = FETCH_ACOUSTIC_FEATURES_UMAP
+    payload = dict(dataset_name=dataset_name, filters=filters)
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 def plot(
     df: pd.DataFrame,
@@ -51,6 +49,7 @@ def plot(
         labels=labels,
         **kwargs,
     )
+    fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(
@@ -84,7 +83,6 @@ def register_callbacks():
         Input("umap-symbol-select", "value"),
         Input("umap-facet-row-select", "value"),
         Input("umap-facet-column-select", "value"),
-        State("dataset-category-orders", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -95,8 +93,9 @@ def register_callbacks():
         symbol: str,
         facet_row: str,
         facet_col: str,
-        category_orders: Dict[str, List[str]],
     ) -> go.Figure:
+        options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
+        category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         data = fetch_data(dataset_name, filters)
         fig = plot(
             data,
