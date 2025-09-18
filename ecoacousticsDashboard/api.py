@@ -181,13 +181,13 @@ def fetch_file_weather(
         pd.read_parquet(dataset.path / "weather_table.parquet")
         .query(f"{site_query} and {date_query} and {weather_query}")
         .assign(nearest_hour=lambda df: df["timestamp"])
+        .drop("timestamp", axis=1)
     )
     return dataset.append_columns(
         files
-        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="inner")
-        .drop("nearest_hour", axis=1)
+        .merge(weather, on=["site_id", "nearest_hour"], how="inner")
         .melt(id_vars=["file_id", "site_id", "nearest_hour", "timestamp"], var_name="variable", value_name="value")
-        .merge(sites, on="site_id", how="inner")
+        .merge(dataset.locations, on="site_id", how="inner")
     )
 
 # @functools.lru_cache(maxsize=10)
