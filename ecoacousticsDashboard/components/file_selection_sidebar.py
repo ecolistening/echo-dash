@@ -170,7 +170,7 @@ def FileSelectionSidebar(
                                 id=f"{context}-file-sidebar-files-accordion",
                                 chevronPosition="right",
                                 value=[],
-                                children=[],
+                                children="No files selected",
                             ),
                         ],
                     ),
@@ -332,7 +332,7 @@ def FileSelectionSidebar(
         """
         if selected_json_data == "" or selected_json_data is None:
             return (
-                accordion_items := [],
+                accordion_items := "No files selected",
                 selected_text := "",
             )
 
