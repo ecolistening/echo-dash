@@ -74,20 +74,20 @@ def NavBar():
                     orientation="horizontal",
                 ),
                 dmc.Space(h="1rem"),
-                dmc.Box([
-                    dmc.Text("Active Filters", size="md"),
-                    dmc.Text(id="filter-state", size="sm", span=True),
-                    dmc.Space(h="sm"),
-                    dmc.Box(id="date-range-filter-chips"),
-                    dmc.Space(h="sm"),
-                    dmc.Box(id="acoustic-feature-range-filter-chips"),
-                    dmc.Space(h="sm"),
-                    dmc.Box(id="weather-variable-filter-chips"),
-                    dmc.Space(h="sm"),
-                    dmc.Box(id="file-filter-chips"),
-                    dmc.Space(h="sm"),
-                    dmc.Box(id="site-filter-chips"),
-                ])
+                # dmc.Box([
+                #     dmc.Text("Active Filters", size="md"),
+                #     dmc.Text(id="filter-state", size="sm", span=True),
+                #     dmc.Space(h="sm"),
+                #     dmc.Box(id="date-range-filter-chips"),
+                #     dmc.Space(h="sm"),
+                #     dmc.Box(id="acoustic-feature-range-filter-chips"),
+                #     dmc.Space(h="sm"),
+                #     dmc.Box(id="weather-variable-filter-chips"),
+                #     dmc.Space(h="sm"),
+                #     dmc.Box(id="file-filter-chips"),
+                #     dmc.Space(h="sm"),
+                #     dmc.Box(id="site-filter-chips"),
+                # ])
             ]
         )
     )
