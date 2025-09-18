@@ -222,7 +222,7 @@ def fetch_acoustic_features(
         .merge(dataset.locations, on="site_id", how="inner")
     )
     features = (
-        pd.read_parquet(dataset.path / "recording_acoustic_features.parquet", columns=["file_id", "segment_id", filters["current_feature"]])
+        pd.read_parquet(dataset.path / "recording_acoustic_features.parquet", columns=["file_id", "segment_id", "duration", "offset", filters["current_feature"]])
         .query(f"{file_query} and {feature_query}")
         .assign(feature=lambda df: filters["current_feature"])
         .rename(columns={filters["current_feature"]: "value"})
