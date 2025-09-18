@@ -26,6 +26,7 @@ def DateRangeFilter():
                                         persistence=True,
                                         allowDeselect=False,
                                     ),
+                                    dmc.Button(id="date-picker-reset", children="Reset")
                                 ]
                             ),
                         ]

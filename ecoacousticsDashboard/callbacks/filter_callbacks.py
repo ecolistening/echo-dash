@@ -120,6 +120,19 @@ def register_callbacks():
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
+        Input("date-picker-reset", "n_clicks"),
+        State("filter-store", "data"),
+        prevent_initial_call=True,
+    )
+    def reset_dates_filter(
+        n_clicks,
+        filters,
+    ):
+        filters["date_range"] = filters["date_range_bounds"]
+        return filters
+
+    @callback(
+        Output("filter-store", "data", allow_duplicate=True),
         Input({"type": "active-filter-chip-group", "index": "date-range"}, "value"),
         State("filter-store", "data"),
         prevent_initial_call=True,
