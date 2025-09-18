@@ -13,26 +13,21 @@ from loguru import logger
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_FILES
+from api import dispatch, FETCH_FILES, DATASETS
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from utils import list2tuple, send_download
 
 PLOT_HEIGHT = 800
 
-def fetch_data(dataset_name, filters):
+def fetch_data(dataset_name, filters, **kwargs):
     action = FETCH_FILES
-    payload = dict(dataset_name=dataset_name, filters=filters)
+    payload = dict(dataset_name=dataset_name, filters=filters, **kwargs)
     logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
     return dispatch(action, **payload)
 
 def plot(
     df: pd.DataFrame,
     opacity: int = 100,
-    color: str | None = None,
-    symbol: str | None = None,
-    facet_row: str | None = None,
-    facet_col: str | None = None,
-    labels: Dict[str, str] | None = None,
     **kwargs: Any,
 ) -> go.Figure:
     fig = px.scatter(
@@ -42,19 +37,13 @@ def plot(
         opacity=opacity / 100,
         hover_name="file_id",
         hover_data=["file_name", "timestamp"],
-        color=color,
-        symbol=symbol,
-        facet_row=facet_row,
-        facet_col=facet_col,
-        labels=labels,
         **kwargs,
     )
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(
-            automargin=True,
             x=0.5,
-            y=1.00,
+            y=0.99,
             xanchor="center",
             yanchor="top",
             font=dict(size=24),
@@ -97,7 +86,7 @@ def register_callbacks():
     ) -> go.Figure:
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
-        data = fetch_data(dataset_name, filters)
+        data = fetch_data(dataset_name, filters, valid_only=False)
         fig = plot(
             data,
             opacity=opacity,

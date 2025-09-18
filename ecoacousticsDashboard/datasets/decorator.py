@@ -32,6 +32,7 @@ class DatasetDecorator:
     @property
     def option_groups_mapping(self) -> Dict[str, List]:
         return {
+            "File Level": self.file_level_columns,
             "Site Level": self.site_level_columns,
             "Time of Day": self.solar_columns,
             "Temporal": self.temporal_columns,
@@ -66,10 +67,18 @@ class DatasetDecorator:
         }
 
     @property
+    def file_level_columns(self) -> Dict[str, List[Any]]:
+        return {
+            "valid": {
+                "label": "Valid",
+            }
+        }
+
+    @property
     def site_level_columns(self) -> Dict[str, List[Any]]:
         return {
             column: {
-                "order": list(self.dataset.locations[column].unique()),
+                "order": sorted(self.dataset.locations[column].unique()),
                 "label": self.dataset.config.get('Site Hierarchy', column, fallback=column),
             }
             for column in self.dataset.locations.columns
