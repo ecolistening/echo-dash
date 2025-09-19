@@ -29,67 +29,54 @@ def fetch_data(dataset_name, threshold, filters):
 
 plot_types = {
     "Scatter": functools.partial(
-        sketch.scatter,
+        px.line,
         x='hour',
         y='richness',
-        marker=dict(
-            size=10,
-            opacity=1.0,
-            color="rgba(133, 143, 249, 1.0)",
-        ),
-        trace_height=400,
+        markers=True,
     ),
     "Scatter Polar": functools.partial(
         sketch.scatter_polar,
         r="richness",
         theta="hour",
-        mode="markers",
-        marker=dict(
-            size=10,
-            opacity=1.0,
-            color="rgba(133, 143, 249, 1.0)",
-        ),
-        fill="toself",
-        showlegend=False,
+        mode="markers+lines",
         radialaxis=dict(
             showticklabels=True,
             ticks="",
         ),
         angularaxis=dict(
             tickmode="array",
-            tickvals=(angles := list(range(0, 360, 45))),
+            tickvals=(angles := list(range(0, 360, 15))),
             ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
             direction="clockwise",
             rotation=90,
             ticks=""
         ),
-        trace_height=400,
     ),
-    "Bar Polar": functools.partial(
-        sketch.bar_polar,
-        r="richness",
-        theta="hour",
-        marker_line_width=2,
-        opacity=0.8,
-        showlegend=False,
-        marker=dict(
-            color="rgba(133, 143, 249, 0.6)",
-            line=dict(color="rgba(133, 143, 249, 1.0)", width=2)
-        ),
-        radialaxis=dict(
-            showticklabels=True,
-            ticks="",
-        ),
-        angularaxis=dict(
-            tickmode="array",
-            tickvals=(angles := list(range(0, 360, 45))),
-            ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
-            direction="clockwise",
-            rotation=90,
-            ticks=""
-        ),
-        trace_height=400,
-    ),
+    # "Bar Polar": functools.partial(
+    #     sketch.bar_polar,
+    #     r="richness",
+    #     theta="hour",
+    #     marker_line_width=2,
+    #     opacity=0.8,
+    #     showlegend=False,
+    #     marker=dict(
+    #         color="rgba(133, 143, 249, 0.6)",
+    #         line=dict(color="rgba(133, 143, 249, 1.0)", width=2)
+    #     ),
+    #     radialaxis=dict(
+    #         showticklabels=True,
+    #         ticks="",
+    #     ),
+    #     angularaxis=dict(
+    #         tickmode="array",
+    #         tickvals=(angles := list(range(0, 360, 15))),
+    #         ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
+    #         direction="clockwise",
+    #         rotation=90,
+    #         ticks=""
+    #     ),
+    #     trace_height=400,
+    # ),
 }
 
 def register_callbacks():
@@ -110,6 +97,7 @@ def register_callbacks():
         Input("filter-store", "data"),
         Input("species-richness-plot-type-select", "value"),
         Input("species-threshold-slider", "value"),
+        Input("species-richness-color-select", "value"),
         Input("species-richness-facet-row-select", "value"),
         Input("species-richness-facet-column-select", "value"),
     )
@@ -118,6 +106,7 @@ def register_callbacks():
         filters: Dict[str, Any],
         plot_type: str,
         threshold: str,
+        color: str,
         facet_row: str,
         facet_col: str,
     ) -> go.Figure:
@@ -126,16 +115,20 @@ def register_callbacks():
         data = fetch_data(dataset_name, threshold, filters)
         data = (
             data
-            .groupby(list(filter(None, set(["hour", facet_row, facet_col]))))["species"]
+            .groupby(list(filter(None, set(["hour", color, facet_row, facet_col]))))["species"]
             .nunique()
             .reset_index(name="richness")
         )
-        # TODO: refactor
         plot = plot_types[plot_type]
         fig = plot(
             data_frame=data,
+            color=color,
             facet_row=facet_row,
             facet_col=facet_col,
+            labels={
+                "r": "Species Richness",
+                "theta": "Hour",
+            },
             category_orders=category_orders,
         )
         fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))

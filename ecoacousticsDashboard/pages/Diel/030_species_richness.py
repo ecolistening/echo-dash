@@ -29,7 +29,7 @@ dash.register_page(
 
 PLOT_HEIGHT = 800
 
-plot_types = ["Scatter", "Scatter Polar", "Bar Polar"]
+plot_types = ["Scatter", "Scatter Polar"]
 
 layout = dmc.Box([
     FilterPanel([
@@ -60,7 +60,7 @@ layout = dmc.Box([
                 dmc.Select(
                     id="species-richness-plot-type-select",
                     label="Select plot type",
-                    value="Bar Polar",
+                    value="Scatter Polar",
                     data=[
                         dict(value=plot_type, label=plot_type)
                         for plot_type in plot_types
@@ -71,16 +71,21 @@ layout = dmc.Box([
                     persistence=True,
                 ),
                 DatasetOptionsSelect(
+                    id="species-richness-color-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    label="Colour by",
+                    value="location",
+                ),
+                DatasetOptionsSelect(
                     id="species-richness-facet-row-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet rows by",
-                    value="dddn",
                 ),
                 DatasetOptionsSelect(
                     id="species-richness-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet columns by",
-                    value="location",
+                    value="year",
                 ),
                 dmc.Flex(
                     p="1rem",

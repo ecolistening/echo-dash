@@ -12,44 +12,6 @@ __ALL__ = [
     "scatter_polar",
 ]
 
-def scatter(
-    data_frame: pd.DataFrame,
-    x: str,
-    y: str,
-    facet_row: str,
-    facet_col: str,
-    color: str | None = None,
-    width: str | None = None,
-    category_orders: Dict[str, List[Any]] = {},
-    trace_height: int = 200,
-    **kwargs,
-) -> go.Figure:
-    if facet_row is None:
-        data_frame["_row_facet"] = "All"
-        facet_row = "_row_facet"
-    if facet_col is None:
-        data_frame["_col_facet"] = "All"
-        facet_col = "_col_facet"
-
-    row_categories = category_orders.get(facet_row, sorted(data_frame[facet_row].dropna().unique()))
-    num_rows = len(row_categories)
-
-    fig = px.scatter(
-        data_frame,
-        x=x,
-        y=y,
-        facet_row=facet_row,
-        facet_col=facet_col,
-        category_orders=category_orders,
-    )
-
-    fig.update_traces(**kwargs)
-
-    fig.update_layout(
-        height=num_rows * trace_height,
-    )
-    return fig
-
 def bar_polar(
     data_frame: pd.DataFrame,
     r: str,
@@ -57,17 +19,38 @@ def bar_polar(
     facet_row: str,
     facet_col: str,
     color: str | None = None,
-    width: str | None = None,
+    hover_name: str = None,
+    hover_data: List[str] = None,
+    labels: Dict[str, str] = None,
     category_orders: Dict[str, List[Any]] = {},
     radialaxis: Dict[str, Any] = {},
     angularaxis: Dict[str, Any] = {},
-    trace_height: int = 200,
-    # trace_width: int = 200,
     **kwargs
 ) -> go.Figure:
     """
     Plotly express doesn't yet support faceted grids for polar plots, hence...
     """
+    labels = labels or {}
+    hover_data = hover_data or []
+    custom_cols = [col for col in hover_data if col in data_frame.columns]
+    customdata = data_frame[custom_cols].to_numpy() if custom_cols else None
+
+    template = ""
+    if hover_name:
+        template += f"<b>%{{customdata[0]}}</b><br>"
+        custom_cols = [hover_name] + custom_cols
+        customdata = data_frame[custom_cols].to_numpy()
+
+    template += (
+        f"<b>{labels.get(r, r)}</b>: %{{r}}<br>"
+        f"<b>{labels.get(theta, theta)}</b>: %{{theta}}<br>"
+    )
+
+    start_idx = 1 if hover_name else 0
+    for i, col in enumerate(custom_cols[start_idx:], start=start_idx):
+        template += f"<b>{labels.get(col, col)}</b>: %{{customdata[{i}]}}<br>"
+    template += "<extra></extra>"
+
     if facet_row is None:
         data_frame["_row_facet"] = "All"
         facet_row = "_row_facet"
@@ -78,9 +61,6 @@ def bar_polar(
     row_categories = sorted(category_orders.get(facet_row, data_frame[facet_row].dropna().unique()))
     col_categories = sorted(category_orders.get(facet_col, data_frame[facet_col].dropna().unique()))
     categories = list(itertools.product(row_categories, col_categories))
-
-    column_titles = [str(col_category) for col_category in col_categories if facet_col != "_col_facet"]
-    row_titles = [str(row_category) for row_category in row_categories if facet_col != "_row_facet"]
 
     # figure out of we need to drop any plots
     subsets = []
@@ -96,6 +76,13 @@ def bar_polar(
     num_rows = len(row_categories)
     num_cols = len(col_categories)
     categories = list(itertools.product(row_categories, col_categories))
+
+    column_titles = []
+    for col_category in col_categories:
+        column_titles.append(col_category if facet_col != "_col_facet" else "")
+    row_titles = []
+    for row_category in row_categories:
+        row_titles.append(row_category if facet_row != "_row_facet" else "")
 
     fig = make_subplots(
         rows=num_rows, cols=num_cols,
@@ -119,37 +106,17 @@ def bar_polar(
         trace = go.Barpolar(
             r=subset[r],
             theta=subset[theta].unique() * 360 / 24,
+            customdata=customdata,
+            hovertemplate=template,
             **kwargs
         )
         fig.add_trace(trace, row=row, col=col)
-
-    angular_title = angularaxis.pop("title", "")
-
-    for row_i in range(num_rows):
-        for col_i in range(num_cols):
-            subplot_i = row_i * num_cols + col_i + 1
-            polar_key = 'polar' if subplot_i == 1 else f'polar{subplot_i}'
-            domain = fig.layout[polar_key].domain
-            fig.add_annotation(dict(
-                text=str(angular_title),
-                x=domain.x[1] - 0.01,
-                y=domain.y[1] - 0.01,
-                xref="paper",
-                yref="paper",
-                showarrow=False,
-                font=dict(size=14),
-                align="center"
-            ))
 
     radialaxis["range"] = [0, data_frame[r].max()]
     for i in range(1, num_rows * num_cols + 1):
         fig.update_layout({
             f"polar{i if i > 1 else ''}": dict(radialaxis=radialaxis, angularaxis=angularaxis),
         })
-
-    fig.update_layout(
-        height=num_rows * trace_height,
-    )
 
     return fig
 
@@ -160,98 +127,104 @@ def scatter_polar(
     facet_row: str,
     facet_col: str,
     color: str | None = None,
-    width: str | None = None,
     category_orders: Dict[str, List[Any]] = {},
     radialaxis: Dict[str, Any] = {},
     angularaxis: Dict[str, Any] = {},
-    trace_height: int = 200,
+    labels: Dict[str, str] = None,
+    mode: str = "markers+lines",
+    line_close: bool = True,
     **kwargs
 ) -> go.Figure:
     """
     Plotly express doesn't yet support faceted grids for polar plots, hence...
     """
+    labels = labels or {}
+
     if facet_row is None:
         data_frame["_row_facet"] = "All"
         facet_row = "_row_facet"
     if facet_col is None:
         data_frame["_col_facet"] = "All"
         facet_col = "_col_facet"
+    if color is None:
+        data_frame["_color"] = "All"
+        color = "_color"
 
-    row_categories = category_orders.get(facet_row, sorted(data_frame[facet_row].dropna().unique()))
-    col_categories = category_orders.get(facet_col, sorted(data_frame[facet_col].dropna().unique()))
+    row_categories = sorted(category_orders.get(facet_row, data_frame[facet_row].dropna().unique()))
+    col_categories = sorted(category_orders.get(facet_col, data_frame[facet_col].dropna().unique()))
+    color_categories = sorted(category_orders.get(color, data_frame[color].dropna().unique()))
     categories = list(itertools.product(row_categories, col_categories))
 
-    subplot_titles = [str(col_category) for col_category in col_categories if facet_col != "_col_facet"]
+    # figure out of we need to drop any plots
+    subsets = []
+    row_categories = []
+    col_categories = []
+    for i, (row_category, col_category) in enumerate(categories):
+        if not data_frame[(data_frame[facet_row] == row_category) & (data_frame[facet_col] == col_category)].empty:
+            row_categories.append(row_category)
+            col_categories.append(col_category)
 
+    row_categories = np.unique(row_categories).tolist()
+    col_categories = np.unique(col_categories).tolist()
     num_rows = len(row_categories)
     num_cols = len(col_categories)
+    categories = list(itertools.product(row_categories, col_categories))
+
+    column_titles = []
+    for col_category in col_categories:
+        column_titles.append(col_category if facet_col != "_col_facet" else "")
+    row_titles = []
+    for row_category in row_categories:
+        row_titles.append(row_category if facet_row != "_row_facet" else "")
 
     fig = make_subplots(
         rows=num_rows, cols=num_cols,
         specs=[[dict(type="polar")]*num_cols for _ in range(num_rows)],
-        subplot_titles=subplot_titles,
-        horizontal_spacing=0.05,
+        row_titles=row_titles,
+        column_titles=column_titles,
+        horizontal_spacing=0.1,
         vertical_spacing=0.05,
     )
 
+    palette = px.colors.qualitative.Plotly
+    color_map = {cat: palette[i % len(palette)] for i, cat in enumerate(color_categories)}
     for i, (row_category, col_category) in enumerate(categories):
         row = i // num_cols + 1
         col = i % num_cols + 1
-        show_colourbar = (row == 1 and col == 1)
+        for j, color_category in enumerate(color_categories):
+            subset = data_frame[
+                (data_frame[facet_row] == row_category) &
+                (data_frame[facet_col] == col_category) &
+                (data_frame[color] == color_category)
+            ].sort_values(by=theta)
 
-        subset = data_frame[
-            (data_frame[facet_row] == row_category) &
-            (data_frame[facet_col] == col_category)
-        ].sort_values(by=[theta, facet_row, facet_col])
+            if subset.empty:
+                _r = [None]
+                _theta = [None]
+            else:
+                _r = subset[r].tolist()
+                _theta = (subset[theta].unique() * 360 / 24).tolist()
+                if line_close:
+                    _r = _r + [_r[0]]
+                    _theta = _theta + [_theta[0]]
 
-        trace = go.Scatterpolar(
-            r=subset[r],
-            theta=subset[theta].unique() * 360 / 24,
-            **kwargs
-        )
-        fig.add_trace(trace, row=row, col=col)
-
-    if facet_row != "_row_facet":
-        for i, row_category in enumerate(row_categories):
-            fig.add_annotation(dict(
-                text=str(row_category),
-                x=1.05,
-                y=1 - (i + 0.5) / num_rows,
-                xref="paper",
-                yref="paper",
-                align="right",
-                xanchor="right",
-                yanchor="middle",
-                textangle=90,
-                showarrow=False,
-                font=dict(size=14),
-            ))
-
-    angular_title = angularaxis.pop("title", "")
-    for row_i in range(num_rows):
-        for col_i in range(num_cols):
-            subplot_i = row_i * num_cols + col_i + 1
-            polar_key = 'polar' if subplot_i == 1 else f'polar{subplot_i}'
-            domain = fig.layout[polar_key].domain
-            fig.add_annotation(dict(
-                text=str(angular_title),
-                x=domain.x[1] - 0.01,
-                y=domain.y[1] - 0.01,
-                xref="paper",
-                yref="paper",
-                showarrow=False,
-                font=dict(size=14),
-                align="center"
-            ))
+            trace = go.Scatterpolar(
+                r=_r,
+                theta=_theta,
+                hovertemplate="".join([f"<b>{name}</b>: %{{{col}}}<br>" for col, name in labels.items()]),
+                name=color_category,
+                line=dict(color=color_map[color_category]),
+                marker=dict(color=color_map[color_category]),
+                mode=mode,
+                showlegend=(row == 1 and col == len(col_categories)),
+                **kwargs
+            )
+            fig.add_trace(trace, row=row, col=col)
 
     radialaxis["range"] = [0, data_frame[r].max()]
     for i in range(1, num_rows * num_cols + 1):
         fig.update_layout({
             f"polar{i if i > 1 else ''}": dict(radialaxis=radialaxis, angularaxis=angularaxis),
         })
-
-    fig.update_layout(
-        height=num_rows * trace_height,
-    )
 
     return fig
