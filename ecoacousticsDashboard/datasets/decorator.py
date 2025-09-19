@@ -122,11 +122,11 @@ class DatasetDecorator:
     def spatial_columns(self) -> Dict[str, List[Any]]:
         return {
             "location": {
-                "order": self.dataset.locations["location"].unique(),
+                "order": sorted(self.dataset.locations["location"].unique()),
                 "label": "Location"
             },
             "site": {
-                "order": self.dataset.locations["site"].unique(),
+                "order": sorted(self.dataset.locations["site"].unique()),
                 "label": "Site"
             },
             "recorder": {
