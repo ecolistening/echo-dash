@@ -35,7 +35,7 @@ def filter_dates_query(filters):
 
 def filter_weather_query(filters):
     return " and ".join([
-        f"{variable_name} >= {params['variable_range'][0]} and {variable_name} <= {params['variable_range'][1]}"
+        f"(({variable_name} >= {params['variable_range'][0]} and {variable_name} <= {params['variable_range'][1]}) or {variable_name}.isnull())"
         for variable_name, params in filters["weather_variables"].items()
     ])
 
@@ -133,18 +133,17 @@ def fetch_files(
 
     files = (
         pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
-        .query(f"{'valid == True and ' if valid_only else ''}{file_query} and {date_query} and {site_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"])
+        .query(f"valid == True and {file_query} and {date_query} and {site_query}")
+        .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
     weather = (
         pd.read_parquet(dataset.path / "weather_table.parquet")
-        .query(f"{site_query} and {date_query} and {weather_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"])
+        .rename(columns=dict(timestamp="nearest_hour"))
     )
     return dataset.append_columns(
-        files
-        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="left")
-        .drop("nearest_hour", axis=1)
+        files.merge(weather, on=["site_id", "nearest_hour"], how="left")
+        .query(weather_query)
+        .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
 
@@ -178,18 +177,16 @@ def fetch_file_weather(
 
     files = (
         pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
+        .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
         .query(f"valid == True and {file_query} and {date_query} and {site_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"])
     )
     weather = (
         pd.read_parquet(dataset.path / "weather_table.parquet")
-        .query(f"{site_query} and {date_query} and {weather_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"])
-        .drop("timestamp", axis=1)
+        .rename(columns=dict(timestamp="nearest_hour"))
     )
     return dataset.append_columns(
-        files
-        .merge(weather, on=["site_id", "nearest_hour"], how="left")
+        files.merge(weather, on=["site_id", "nearest_hour"], how="left")
+        .query(weather_query)
         .melt(id_vars=["file_id", "site_id", "nearest_hour", "timestamp"], var_name="variable", value_name="value")
         .merge(dataset.locations, on="site_id", how="left")
     )
@@ -210,19 +207,18 @@ def fetch_acoustic_features(
     feature_query = filter_feature_query(filters)
 
     files = (
-        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "file_name", "file_path", "valid", "site_id", "dddn", "timestamp"])
+        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
         .query(f"valid == True and {file_query} and {date_query} and {site_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"])
+        .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
     weather = (
         pd.read_parquet(dataset.path / "weather_table.parquet")
-        .query(f"{site_query} and {date_query} and {weather_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"])
+        .rename(columns=dict(timestamp="nearest_hour"))
     )
     file_site_weather = (
-        files
-        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="left")
-        .drop("nearest_hour", axis=1)
+        files.merge(weather, on=["site_id", "nearest_hour"], how="left")
+        .query(weather_query)
+        .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
     features = (
@@ -251,7 +247,17 @@ def fetch_birdnet_species(
     files = (
         pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
         .query(f"valid == True and {file_query} and {date_query} and {site_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"])
+        .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
+    )
+    weather = (
+        pd.read_parquet(dataset.path / "weather_table.parquet")
+        .rename(columns=dict(timestamp="nearest_hour"))
+    )
+    file_site_weather = (
+        files.merge(weather, on=["site_id", "nearest_hour"], how="left")
+        .query(weather_query)
+        .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
+        .merge(dataset.locations, on="site_id", how="left")
     )
     species = (
         pd.read_parquet(
@@ -262,19 +268,8 @@ def fetch_birdnet_species(
     )
     species_probs = (
         pd.read_parquet(dataset.path / "birdnet_species_probs.parquet", columns=["file_id", "scientific_name", "confidence"])
-        .query(f"confidence >= {threshold} and file_id in ({', '.join([f'{file_id}' for file_id in files.file_id])})")
+        .query(f"confidence >= {threshold} and file_id in ({', '.join([f'{file_id}' for file_id in file_site_weather.file_id])})")
         .assign(detected=lambda df: [1] * len(df))
-    )
-    weather = (
-        pd.read_parquet(dataset.path / "weather_table.parquet")
-        .query(f"{site_query} and {date_query} and {weather_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"])
-    )
-    file_site_weather = (
-        files
-        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="left")
-        .drop("nearest_hour", axis=1)
-        .merge(dataset.locations, on="site_id", how="left")
     )
     return dataset.append_columns(
         species_probs
@@ -295,24 +290,26 @@ def fetch_acoustic_features_umap(
     weather_query = filter_weather_query(filters)
 
     files = (
-        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "file_name", "file_path", "valid", "site_id", "dddn", "timestamp"])
+        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
         .query(f"valid == True and {file_query} and {date_query} and {site_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"])
+        .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
     weather = (
         pd.read_parquet(dataset.path / "weather_table.parquet")
-        .query(f"{site_query} and {date_query} and {weather_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"])
+        .rename(columns=dict(timestamp="nearest_hour"))
+    )
+    file_site_weather = (
+        files.merge(weather, on=["site_id", "nearest_hour"], how="left")
+        .query(weather_query)
+        .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
+        .merge(dataset.locations, on="site_id", how="left")
     )
     features = dataset.umap(
         pd.read_parquet(dataset.path / "recording_acoustic_features.parquet")
         .query(f"file_id in ({', '.join([f'{file_id}' for file_id in files.file_id])})")
     )
     return dataset.append_columns(
-        files
-        .merge(weather[["site_id", "nearest_hour"]], on=["site_id", "nearest_hour"], how="left")
-        .drop("nearest_hour", axis=1)
-        .merge(dataset.locations, on="site_id", how="inner")
+        file_site_weather
         .merge(features, on="file_id", how="left")
     )
 
