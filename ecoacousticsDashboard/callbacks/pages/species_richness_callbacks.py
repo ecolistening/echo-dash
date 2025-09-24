@@ -29,10 +29,11 @@ def fetch_data(dataset_name, threshold, filters):
 
 plot_types = {
     "Scatter": functools.partial(
-        px.line,
+        px.scatter,
         x='hour',
         y='richness',
-        markers=True,
+        # mode="markers",
+        # markers=True,
     ),
     "Scatter Polar": functools.partial(
         sketch.scatter_polar,
@@ -115,7 +116,7 @@ def register_callbacks():
         data = fetch_data(dataset_name, threshold, filters)
         data = (
             data
-            .groupby(list(filter(None, set(["hour", color, facet_row, facet_col]))))["species"]
+            .groupby(list(filter(None, set(["hour", "date", color, facet_row, facet_col]))))["species"]
             .nunique()
             .reset_index(name="richness")
         )
@@ -132,6 +133,7 @@ def register_callbacks():
             category_orders=category_orders,
         )
         fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+        fig.update_yaxes(rangemode="tozero")
         fig.update_layout(
             barmode='stack',
             height=PLOT_HEIGHT,

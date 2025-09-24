@@ -11,6 +11,28 @@ __ALL__ = [
     "bar_polar",
     "scatter_polar",
 ]
+def safe_polar_subplot_params(rows=1, cols=1, target_spacing=0.05):
+    if rows < 1 or cols < 1:
+        raise ValueError("rows and cols must be >= 1")
+    num_h_gaps = max(cols - 1, 0)
+    num_v_gaps = max(rows - 1, 0)
+    max_validator_h = 0 if num_h_gaps == 0 else 1 / num_h_gaps
+    max_validator_v = 0 if num_v_gaps == 0 else 1 / num_v_gaps
+    total_width = 1.0
+    total_height = 1.0
+    max_domain_h = 0 if num_h_gaps == 0 else total_width / cols / 2
+    max_domain_v = 0 if num_v_gaps == 0 else total_height / rows / 2
+    h_spacing = min(target_spacing, max_validator_h, max_domain_h)
+    v_spacing = min(target_spacing, max_validator_v, max_domain_v)
+    col_width = (total_width - num_h_gaps * h_spacing) / cols
+    row_height = (total_height - num_v_gaps * v_spacing) / rows
+    return {
+        "column_widths": [col_width] * cols,
+        "row_heights": [row_height] * rows,
+        "horizontal_spacing": h_spacing,
+        "vertical_spacing": v_spacing,
+    }
+
 
 def bar_polar(
     data_frame: pd.DataFrame,
@@ -89,8 +111,7 @@ def bar_polar(
         specs=[[dict(type="polar")]*num_cols for _ in range(num_rows)],
         row_titles=row_titles,
         column_titles=column_titles,
-        horizontal_spacing=0.1,
-        vertical_spacing=0.05,
+        **safe_polar_subplot_params(rows=num_rows, cols=num_cols, target_spacing=0.05)
     )
 
     for i, (row_category, col_category) in enumerate(categories):
@@ -182,8 +203,7 @@ def scatter_polar(
         specs=[[dict(type="polar")]*num_cols for _ in range(num_rows)],
         row_titles=row_titles,
         column_titles=column_titles,
-        horizontal_spacing=0.1,
-        vertical_spacing=0.05,
+        **safe_polar_subplot_params(rows=num_rows, cols=num_cols, target_spacing=0.05)
     )
 
     palette = px.colors.qualitative.Plotly
@@ -197,25 +217,51 @@ def scatter_polar(
                 (data_frame[facet_col] == col_category) &
                 (data_frame[color] == color_category)
             ].sort_values(by=theta)
+            # plot boundary points
+            subset_max = (
+                subset
+                .groupby(list(set([theta, facet_row, facet_col, color])))[r]
+                .max()
+                .reset_index(name=r)
+            )
+
+            if subset_max.empty:
+                _r = [None]
+                _theta = [None]
+            else:
+                _r = subset_max[r].tolist()
+                _theta = (subset_max[theta] * 360 / 24).tolist()
+                _r = _r + [_r[0]]
+                _theta = _theta + [_theta[0]]
+
+            trace = go.Scatterpolar(
+                r=_r,
+                theta=_theta,
+                name=color_category,
+                line=dict(color=color_map[color_category]),
+                marker=dict(color=color_map[color_category]),
+                mode="markers+lines",
+                showlegend=False,
+                fill="toself",
+                **kwargs
+            )
+            fig.add_trace(trace, row=row, col=col)
 
             if subset.empty:
                 _r = [None]
                 _theta = [None]
             else:
                 _r = subset[r].tolist()
-                _theta = (subset[theta].unique() * 360 / 24).tolist()
-                if line_close:
-                    _r = _r + [_r[0]]
-                    _theta = _theta + [_theta[0]]
+                _theta = (subset[theta] * 360 / 24).tolist()
 
+            # plot individual points
             trace = go.Scatterpolar(
                 r=_r,
                 theta=_theta,
                 hovertemplate="".join([f"<b>{name}</b>: %{{{col}}}<br>" for col, name in labels.items()]),
                 name=color_category,
-                line=dict(color=color_map[color_category]),
+                mode="markers",
                 marker=dict(color=color_map[color_category]),
-                mode=mode,
                 showlegend=(row == 1 and col == len(col_categories)),
                 **kwargs
             )
