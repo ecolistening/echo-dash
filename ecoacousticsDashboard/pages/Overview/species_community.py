@@ -65,13 +65,6 @@ layout = dmc.Box([
                     options=("Species Habitat", "Functional Groups"),
                     label="Row facet by...",
                 ),
-                dmc.Stack([
-                    dmc.Text(
-                        children="Detection Threshold",
-                        size="sm",
-                        ta="right",
-                    ),
-                ]),
                 dmc.Flex(
                     p="1rem",
                     align="center",
