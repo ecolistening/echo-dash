@@ -385,8 +385,7 @@ def register_callbacks():
         slider_ids: List[str],
         filters: Filters,
     ) -> Filters:
-        triggered_id = ctx.triggered_id
-        if not triggered_id:
+        if not ctx.triggered_id:
             return no_update
         variable_name = ctx.triggered_id["index"]
         variable_params = filters["weather_variables"][variable_name]
