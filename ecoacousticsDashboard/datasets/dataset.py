@@ -44,7 +44,10 @@ class Dataset:
         locations = pd.read_parquet(self.path / "locations_table.parquet")
         locations["site"] = self.dataset_name + "/" + locations["site_name"]
         for level, values in locations.site.str.split('/', expand=True).iloc[:, 1:].to_dict(orient='list').items():
-            locations[f"sitelevel_{level}"] = values
+            if all(x.strip().isdigit() for x in values):
+                locations[f"sitelevel_{level}"] = list(map(int, values))
+            else:
+                locations[f"sitelevel_{level}"] = values
         return locations
 
     @functools.cached_property

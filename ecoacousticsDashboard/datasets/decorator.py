@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import attrs
+import functools
 
 from loguru import logger
 from typing import Any, Dict, Tuple, List
@@ -9,6 +10,9 @@ from datasets.dataset import Dataset
 from utils import floor, ceil
 
 DEFAULT_OPTION_GROUPS = ("Site Level", "Time of Day", "Temporal")# "Spatial")
+WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+DDDN = ["dawn", "day", "dusk", "night"]
 
 @attrs.define
 class DatasetDecorator:
@@ -74,30 +78,30 @@ class DatasetDecorator:
             }
         }
 
-    @property
+    @functools.cached_property
     def site_level_columns(self) -> Dict[str, List[Any]]:
         return {
             column: {
-                "order": sorted(self.dataset.locations[column].unique()),
+                "order": sorted(self.dataset.files[column].unique()),
                 "label": self.dataset.config.get('Site Hierarchy', column, fallback=column),
             }
             for column in self.dataset.locations.columns
             if column.startswith("sitelevel_")
         }
 
-    @property
+    @functools.cached_property
     def solar_columns(self) -> Dict[str, List[Any]]:
         # # FIXME -> will be fixed when solar data is present
         # if len(self.dataset.dates):
         #     opt_groups += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
         return {
             "dddn": {
-                "order": ["dawn", "day", "dusk", "night"],
+                "order": sorted(self.dataset.files["dddn"].unique(), key=lambda x: DDDN.index(x)),
                 "label": "Dawn/Day/Dusk/Night",
             },
         }
 
-    @property
+    @functools.cached_property
     def temporal_columns(self) -> Dict[str, List[Any]]:
         return {
             "hour": {
@@ -105,11 +109,11 @@ class DatasetDecorator:
                 "label": "Hour",
             },
             "weekday": {
-                "order": ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                "order": sorted(self.dataset.files["weekday"].unique(), key=lambda x: WEEKDAYS.index(x)),
                 "label": "Week Day",
             },
             "month": {
-                "order": ['January','February','March','April','May','June','July','August','September','October','November','December'],
+                "order": sorted(self.dataset.files["month"].unique(), key=lambda x: MONTHS.index(x)),
                 "label": "Month",
             },
             "year": {
@@ -118,7 +122,7 @@ class DatasetDecorator:
             },
         }
 
-    @property
+    @functools.cached_property
     def spatial_columns(self) -> Dict[str, List[Any]]:
         return {
             "location": {
@@ -135,7 +139,7 @@ class DatasetDecorator:
             },
         }
 
-    @property
+    @functools.cached_property
     def weather_columns(self) -> Dict[str, List[Any]]:
         return (
             self.temperature_columns |
@@ -143,7 +147,7 @@ class DatasetDecorator:
             self.wind_columns
         )
 
-    @property
+    @functools.cached_property
     def temperature_columns(self) -> Dict[str, List[Any]]:
         return {
             "temperature_2m": {
@@ -153,7 +157,7 @@ class DatasetDecorator:
             },
         }
 
-    @property
+    @functools.cached_property
     def precipitation_columns(self) -> Dict[str, List[Any]]:
         return {
             "precipitation": {
@@ -173,7 +177,7 @@ class DatasetDecorator:
             },
         }
 
-    @property
+    @functools.cached_property
     def wind_columns(self) -> Dict[str, List[Any]]:
         return {
             "wind_speed_10m": {
@@ -203,7 +207,7 @@ class DatasetDecorator:
             },
         }
 
-    @property
+    @functools.cached_property
     def species_habitat_columns(self) -> Dict[str, List[Any]]:
         return {
             "habitat_type": {
@@ -216,7 +220,7 @@ class DatasetDecorator:
             },
         }
 
-    @property
+    @functools.cached_property
     def species_functional_group_columns(self) -> Dict[str, List[Any]]:
         return {
             "trophic_niche": {
