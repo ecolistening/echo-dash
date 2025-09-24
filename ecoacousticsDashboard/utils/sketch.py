@@ -159,6 +159,9 @@ def scatter_polar(
     """
     Plotly express doesn't yet support faceted grids for polar plots, hence...
     """
+    if data_frame.empty:
+        return go.Figure()
+
     labels = labels or {}
 
     if facet_row is None:

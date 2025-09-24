@@ -17,6 +17,9 @@ def species_matrix(
     category_orders: Dict[str, Any] | None = None,
     color: str = "#1f77b4",
 ) -> go.Figure:
+    if df.empty:
+        return go.Figure()
+
     counts = (
         df.groupby([*list(filter(None, [axis_group, facet_col, facet_row])), "species"])["detected"]
         .sum()
