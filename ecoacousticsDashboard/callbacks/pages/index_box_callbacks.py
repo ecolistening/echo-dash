@@ -67,9 +67,12 @@ def register_callbacks():
             facet_row=facet_row,
             facet_col=facet_col,
             # facet_col_wrap=4,
-            labels=dict(
-                value=capitalise_each(filters["current_feature"]),
-            ),
+            labels={
+                "value": capitalise_each(filters["current_feature"]),
+                color: options.get(color, {}).get("label", color),
+                facet_row: options.get(facet_row, {}).get("label", facet_row),
+                facet_col: options.get(facet_col, {}).get("label", facet_col),
+            },
             points="outliers" if outliers else False,
             category_orders=category_orders,
         )

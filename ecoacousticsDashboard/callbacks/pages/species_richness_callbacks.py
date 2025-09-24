@@ -46,7 +46,7 @@ plot_types = {
         ),
         angularaxis=dict(
             tickmode="array",
-            tickvals=(angles := list(range(0, 360, 15))),
+            tickvals=(angles := list(range(0, 360, 45))),
             ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
             direction="clockwise",
             rotation=90,
@@ -129,6 +129,9 @@ def register_callbacks():
             labels={
                 "r": "Species Richness",
                 "theta": "Hour",
+                color: options.get(color, {}).get("label", color),
+                facet_row: options.get(facet_row, {}).get("label", facet_row),
+                facet_col: options.get(facet_col, {}).get("label", facet_col),
             },
             category_orders=category_orders,
         )

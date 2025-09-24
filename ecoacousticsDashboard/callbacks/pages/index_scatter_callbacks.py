@@ -68,10 +68,14 @@ def register_callbacks():
             symbol=symbol,
             facet_row=facet_row,
             facet_col=facet_col,
-            labels=dict(
-                hour="Hour",
-                value=capitalise_each(filters["current_feature"]),
-            ),
+            labels={
+                "hour": "Hour",
+                "value": capitalise_each(filters["current_feature"]),
+                color: options.get(color, {}).get("label", color),
+                symbol: options.get(symbol, {}).get("label", symbol),
+                facet_row: options.get(facet_row, {}).get("label", facet_row),
+                facet_col: options.get(facet_col, {}).get("label", facet_col),
+            },
             category_orders=category_orders,
         )
         fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))

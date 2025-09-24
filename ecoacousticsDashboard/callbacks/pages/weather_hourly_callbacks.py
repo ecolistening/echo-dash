@@ -100,10 +100,17 @@ def register_callbacks():
             time_agg=time_agg,
             color=color,
             facet_row=facet_row,
-            labels=dict(nearest_hour="Time", value_mean="value"),
+            labels={
+                "nearest_hour": "Time",
+                "value_mean": "Value",
+                color: options.get(color, {}).get("label", color),
+                facet_row: options.get(facet_row, {}).get("label", facet_row),
+            },
             category_orders=category_orders,
         )
-        fig.update_layout(title_text=variable)
+        fig.update_layout(
+            title_text=options.get(variable, {}).get("label", variable)
+        )
         return fig
 
     @callback(

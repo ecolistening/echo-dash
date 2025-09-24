@@ -62,7 +62,11 @@ def register_callbacks():
             data,
             time_agg,
             color=color,
-            labels=dict(timestamp="Time", value_mean="value"),
+            labels={
+                "timestamp": "Time",
+                "value_mean": "Value",
+                color: options.get(color, {}).get("label", color),
+            },
             category_orders=category_orders,
         )
         fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))

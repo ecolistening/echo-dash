@@ -104,7 +104,14 @@ def register_callbacks():
             symbol=symbol,
             facet_row=facet_row,
             facet_col=facet_col,
-            labels=dict(x="UMAP Dim 1", y="UMAP Dim 2"),
+            labels={
+                "x": "UMAP Dim 1",
+                "y": "UMAP Dim 2",
+                color: options.get(color, {}).get("label", color),
+                facet_row: options.get(facet_row, {}).get("label", facet_row),
+                facet_col: options.get(facet_col, {}).get("label", facet_col),
+                symbol: options.get(symbol, {}).get("label", symbol),
+            },
             category_orders=category_orders,
         )
         fig.update_traces(marker=dict(size=dot_size))
