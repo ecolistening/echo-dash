@@ -88,58 +88,129 @@ def FileSelectionSidebar(
                 m="1rem",
                 children=[
                     dmc.Group(
-                        grow=True,
                         children=[
-                            dmc.Button(
-                                "Selected",
-                                id=f"{context}-file-sidebar-disclude-button",
-                                leftSection=DashIconify(icon="cil:filter"),
-                                variant="light",
-                                color="red",
-                                n_clicks=0,
+                            dmc.Flex(
+                                pl="1rem",
+                                align="center",
+                                justify="left",
+                                direction="row",
+                                children=[
+                                    dmc.Group(
+                                        children=[
+                                            dmc.HoverCard(
+                                                children=[
+                                                    dmc.HoverCardTarget(
+                                                        children=dmc.ActionIcon(
+                                                            DashIconify(
+                                                                icon="cil:filter",
+                                                                width=24,
+                                                            ),
+                                                            id=f"{context}-file-sidebar-disclude-button",
+                                                            variant="light",
+                                                            color="red",
+                                                            size="lg",
+                                                            n_clicks=0,
+                                                        ),
+                                                    ),
+                                                    dmc.HoverCardDropdown(
+                                                        dmc.Text("Filter Selected"),
+                                                    ),
+                                                ],
+                                            ),
+                                            dmc.HoverCard(
+                                                children=[
+                                                    dmc.HoverCardTarget(
+                                                        children=dmc.ActionIcon(
+                                                            DashIconify(
+                                                                icon="cil:filter",
+                                                                width=24,
+                                                            ),
+                                                            id=f"{context}-file-sidebar-include-button",
+                                                            variant="light",
+                                                            color="green",
+                                                            size="lg",
+                                                            n_clicks=0,
+                                                        ),
+                                                    ),
+                                                    dmc.HoverCardDropdown(
+                                                        dmc.Text("Filter Remaining"),
+                                                    ),
+                                                ],
+                                            ),
+                                            dmc.HoverCard(
+                                                children=[
+                                                    dmc.HoverCardTarget(
+                                                        children=dmc.ActionIcon(
+                                                            DashIconify(
+                                                                icon="cil:action-undo",
+                                                                width=24,
+                                                            ),
+                                                            id=f"{context}-file-sidebar-undo-button",
+                                                            variant="light",
+                                                            color="blue",
+                                                            size="lg",
+                                                            n_clicks=0,
+                                                        ),
+                                                    ),
+                                                    dmc.HoverCardDropdown(
+                                                        dmc.Text("Undo Last Filter"),
+                                                    ),
+                                                ],
+                                            ),
+                                            dmc.HoverCard(
+                                                children=[
+                                                    dmc.HoverCardTarget(
+                                                        children=dmc.ActionIcon(
+                                                            DashIconify(
+                                                                icon="fluent:arrow-reset-20-filled",
+                                                                width=24,
+                                                            ),
+                                                            id=f"{context}-file-sidebar-reset-button",
+                                                            variant="light",
+                                                            color="blue",
+                                                            size="lg",
+                                                            n_clicks=0,
+                                                        ),
+                                                    ),
+                                                    dmc.HoverCardDropdown(
+                                                        dmc.Text("Reset Filters"),
+                                                    ),
+                                                ],
+                                            ),
+                                        ]
+                                    )
+                                ]
                             ),
-                            dmc.Button(
-                                "Others",
-                                id=f"{context}-file-sidebar-include-button",
-                                leftSection=DashIconify(icon="cil:filter"),
-                                variant="light",
-                                color="green",
-                                n_clicks=0,
+                            dmc.Flex(
+                                pr="1rem",
+                                align="center",
+                                justify="right",
+                                direction="row",
+                                children=[
+                                    dmc.Group(
+                                        children=[
+                                            dmc.Box(
+                                                style={
+                                                    "padding": "1rem",
+                                                    "display": "flex",
+                                                    "align-content": "center",
+                                                    "justify-content": "right",
+                                                },
+                                                children=dmc.ActionIcon(
+                                                    DashIconify(
+                                                        icon="system-uicons:cross",
+                                                        width=24,
+                                                    ),
+                                                    id=f"{context}-file-close-sidebar",
+                                                    variant="light",
+                                                    size="lg",
+                                                    n_clicks=0,
+                                                ),
+                                            )
+                                        ]
+                                    )
+                                ]
                             ),
-                            dmc.Button(
-                                "Undo",
-                                id=f"{context}-file-sidebar-undo-button",
-                                leftSection=DashIconify(icon="cil:action-undo"),
-                                variant="light",
-                                color="blue",
-                                n_clicks=0,
-                            ),
-                            dmc.Button(
-                                "Reset",
-                                id=f"{context}-file-sidebar-reset-button",
-                                leftSection=DashIconify(icon="fluent:arrow-reset-20-filled"),
-                                variant="light",
-                                color="blue",
-                                n_clicks=0,
-                            ),
-                            dmc.Box(
-                                style={
-                                    "padding": "1rem",
-                                    "display": "flex",
-                                    "align-content": "center",
-                                    "justify-content": "right",
-                                },
-                                children=dmc.ActionIcon(
-                                    DashIconify(
-                                        icon="system-uicons:cross",
-                                        width=24,
-                                    ),
-                                    id=f"{context}-file-close-sidebar",
-                                    variant="light",
-                                    size="lg",
-                                    n_clicks=0,
-                                ),
-                            )
                         ]
                     ),
                     dmc.Group(
