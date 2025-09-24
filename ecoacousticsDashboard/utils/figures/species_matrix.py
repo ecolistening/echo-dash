@@ -9,6 +9,42 @@ from typing import Any, Dict, List, Tuple
 MAX_HEIGHT = 2400
 CELL_HEIGHT = 40
 
+def compute_plotly_heights(K, cell_height=50, vertical_spacing=0.05):
+    n = len(K)
+    row_heights_px = [k * cell_height for k in K]
+    total_height = sum(row_heights_px) / (1 - vertical_spacing * (n - 1))
+    row_heights_rel = [h / sum(row_heights_px) for h in row_heights_px]
+    return int(total_height), row_heights_rel, row_heights_px
+
+def compute_plotly_layout(K, cell_height=50, vertical_spacing=0.05):
+    n = len(K)
+    row_heights_px = [k * cell_height for k in K]
+    total_height = sum(row_heights_px) / (1 - vertical_spacing*(n-1))
+    row_heights_rel = [h / sum(row_heights_px) for h in row_heights_px]
+    domains = []
+    y_start = 0
+    for h_rel in row_heights_rel[::-1]:
+        domains.append((y_start, y_start + h_rel))
+        y_start += h_rel + vertical_spacing
+        domains = domains[::-1]
+        title_y = [y1 + 0.001 for (_, y1) in domains]
+    return int(total_height), row_heights_rel, row_heights_px, title_y
+
+def compute_plotly_layout_with_offset(K, cell_height=50, vertical_spacing=0.05, title_offset=0.02):
+    n = len(K)
+    row_heights_px = [k * cell_height for k in K]
+    total_height = sum(row_heights_px) / (1 - vertical_spacing*(n-1) - n*title_offset)
+    row_heights_rel = [h / sum(row_heights_px) * (1 - n*title_offset) for h in row_heights_px]
+    domains = []
+    y_start = 0
+    import code; code.interact(local=locals())
+    for h_rel in row_heights_rel[::-1]:
+        domains.append((y_start, y_start + h_rel))
+        y_start += h_rel + vertical_spacing
+        domains = domains[::-1]
+        title_y = [y1 + title_offset for (_, y1) in domains]
+    return int(total_height), row_heights_rel, row_heights_px, title_y
+
 def species_matrix(
     df: pd.DataFrame,
     axis_group: str,
@@ -16,6 +52,8 @@ def species_matrix(
     facet_row: str | None = None,
     category_orders: Dict[str, Any] | None = None,
     color: str = "#1f77b4",
+    horizontal_spacing: float = 0.01,
+    vertical_spacing: float = 0.025,
 ) -> go.Figure:
     counts = (
         df.groupby([*list(filter(None, [axis_group, facet_col, facet_row])), "species"])["detected"]
@@ -83,25 +121,23 @@ def species_matrix(
             row_categories.append(row_cat)
             species_per_row.append(species_count_by_row)
     species_per_row = np.array(species_per_row)
-    height = CELL_HEIGHT * species_per_row.sum()
-    row_heights = list(species_per_row / species_per_row.sum())
+
+    height, row_heights, _, title_y = compute_plotly_layout_with_offset(
+        species_per_row,
+        cell_height=CELL_HEIGHT,
+        vertical_spacing=vertical_spacing,
+        title_offset=0.001,
+    )
 
     # col categories remain consistent width
     col_categories = category_orders.get(facet_col, counts[facet_col].unique())
-
     fig = make_subplots(
         rows=len(row_categories),
         cols=len(col_categories),
         row_heights=None if len(row_heights) == 1 else row_heights,
-        subplot_titles=[
-            "<br>".join(list(filter(None, [
-                str(r) if r != 'All' else None,
-                str(c) if c != 'All' else None
-            ])))
-            for r in row_categories
-            for c in col_categories
-        ],
-        horizontal_spacing=0.01,
+        # subplot_titles=subplot_titles,
+        horizontal_spacing=horizontal_spacing,
+        vertical_spacing=vertical_spacing,
     )
 
     for i, row_cat in enumerate(row_categories):
@@ -157,17 +193,30 @@ def species_matrix(
             axis_num = i * len(col_categories) + j
             updates[f"yaxis{axis_num}"] = dict(showticklabels=False)
 
-    fig.update_layout(
-        barmode='stack',
-        height=height,
-        **updates,
-        title=dict(
-            automargin=True,
-            x=0.5,
-            y=1.00,
-            xanchor="center",
-            yanchor="top",
-            font=dict(size=24),
-        ),
-    )
+    # subplot_titles = [
+    #     for r in row_categories
+    #     for c in col_categories
+    # ]
+    annotations = []
+    num_cols = len(col_categories)
+    x_positions = [(0.5 + i)/num_cols - 0.5/num_cols for i in range(num_cols)]
+    for i, r in enumerate(row_categories):
+        for j, c in enumerate(col_categories):
+            title = ", ".join(list(filter(None, [
+                str(r) if r != 'All' else None,
+                str(c) if c != 'All' else None
+            ])))
+            annotations.append(dict(
+                text=title,
+                x=x_positions[j],
+                y=title_y[i],
+                xref='paper',
+                yref='paper',
+                showarrow=False,
+                font=dict(size=16),
+                xanchor='center',
+            ))
+
+    fig.update_xaxes(side="top")
+    fig.update_layout(barmode='stack', annotations=annotations, height=height, **updates)
     return fig

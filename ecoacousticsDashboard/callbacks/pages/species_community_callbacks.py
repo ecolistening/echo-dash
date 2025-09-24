@@ -54,7 +54,17 @@ def register_callbacks():
         logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
         data = dispatch(action, **payload)
         fig = plot(data, axis_group, facet_col, facet_row, category_orders)
-        fig.update_layout(title_text=f"Species Matrix | p > {threshold}")
+        fig.update_layout(
+            margin=dict(t=120),
+            title=dict(
+                x=0.5,
+                y=0.99,
+                text=f"Species Matrix | p > {threshold}",
+                xanchor="center",
+                yanchor="top",
+                font=dict(size=24),
+            ),
+        )
         return fig
 
     @callback(
