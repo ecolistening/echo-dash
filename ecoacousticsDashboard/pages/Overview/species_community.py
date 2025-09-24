@@ -71,16 +71,6 @@ layout = dmc.Box([
                         size="sm",
                         ta="right",
                     ),
-                    dmc.Slider(
-                        id="species-community-threshold-slider",
-                        min=0.0, max=0.99,
-                        step=0.1, value=0.5,
-                        persistence=True,
-                        marks=[
-                            dict(value=i, label=np.format_float_positional(i, precision=1))
-                            for i in np.arange(0.0, 0.99, 0.1)
-                        ],
-                    ),
                 ]),
                 dmc.Flex(
                     p="1rem",
