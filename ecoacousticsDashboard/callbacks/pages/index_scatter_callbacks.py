@@ -59,8 +59,8 @@ def register_callbacks():
         data = fetch_data(dataset_name, filters)
         fig = px.scatter(
             data_frame=data,
-            x='hour',
-            y='value',
+            x="time",
+            y="value",
             hover_name="file_id",
             hover_data=["file_name", "timestamp"],
             opacity=0.5,
@@ -69,7 +69,7 @@ def register_callbacks():
             facet_row=facet_row,
             facet_col=facet_col,
             labels={
-                "hour": "Hour",
+                "time": "Hour",
                 "value": capitalise_each(filters["current_feature"]),
                 color: options.get(color, {}).get("label", color),
                 symbol: options.get(symbol, {}).get("label", symbol),
