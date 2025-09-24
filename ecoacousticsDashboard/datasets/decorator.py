@@ -157,14 +157,19 @@ class DatasetDecorator:
             },
         }
 
+    # TODO
+    # @functools.cached_property
+    # def acoustic_feature_columns(self) -> Dict[str, List[Any]]:
+    #    pass
+
     @functools.cached_property
     def precipitation_columns(self) -> Dict[str, List[Any]]:
         return {
-            "precipitation": {
-                "label": "Total Precipitation (cm)",
-                "min": 0, # floor(self.dataset.weather["precipitation"].min()),
-                "max": ceil(self.dataset.weather["precipitation"].max()),
-            },
+            # "precipitation": {
+            #     "label": "Total Precipitation (cm)",
+            #     "min": 0, # floor(self.dataset.weather["precipitation"].min()),
+            #     "max": ceil(self.dataset.weather["precipitation"].max()),
+            # },
             "rain": {
                 "label": "Rain (cm)",
                 "min": 0, # floor(self.dataset.weather["rain"].min()),
