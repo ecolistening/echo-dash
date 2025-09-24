@@ -111,7 +111,7 @@ def bar_polar(
         specs=[[dict(type="polar")]*num_cols for _ in range(num_rows)],
         row_titles=row_titles,
         column_titles=column_titles,
-        **safe_polar_subplot_params(rows=num_rows, cols=num_cols, target_spacing=0.05)
+        **safe_polar_subplot_params(rows=num_rows, cols=num_cols, target_spacing=0.1)
     )
 
     for i, (row_category, col_category) in enumerate(categories):

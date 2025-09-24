@@ -143,7 +143,7 @@ def species_matrix(
                     text=data.values,
                     texttemplate="%{text}",
                     textfont={"size": 10, "color": "black"},
-                    showscale=(row == 1 and col == len(col_categories)),
+                    showscale=False,
                     zmin=z_min,
                     zmax=z_max,
                 ),
