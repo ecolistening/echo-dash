@@ -69,7 +69,7 @@ class Dataset:
 
     @functools.cached_property
     def files(self):
-        files = pd.read_parquet(self.path / "files_table.parquet")
+        files = pd.read_parquet(self.path / "files.parquet")
         files["local_file_path"] = (self.audio_path / files["file_path"]).astype(str)
         return (
             self.append_columns(files)
@@ -99,8 +99,7 @@ class Dataset:
 
         return encode
 
-    @staticmethod
-    def append_columns(data: pd.DataFrame) -> pd.DataFrame:
+    def append_columns(self, data: pd.DataFrame) -> pd.DataFrame:
         if "timestamp" in data.columns:
             data["minute"] = data["timestamp"].dt.minute
             data["hour"] = data["timestamp"].dt.hour
@@ -127,7 +126,7 @@ class Dataset:
     def _build_base_filters(self):
         filters = {}
         # date filters
-        data = pd.read_parquet(self.path / "files_table.parquet")
+        data = pd.read_parquet(self.path / "files.parquet")
         min_date = data["timestamp"].dt.date.min().strftime("%Y-%m-%d")
         max_date = data["timestamp"].dt.date.max().strftime("%Y-%m-%d")
         filters["date_range_bounds"] = [min_date, max_date]

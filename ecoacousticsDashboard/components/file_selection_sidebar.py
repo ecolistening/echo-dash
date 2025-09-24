@@ -13,6 +13,7 @@ from loguru import logger
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_FILES, FETCH_DATASET_CONFIG
+from api import filter_dict_to_tuples
 from utils import audio_bytes_to_enc
 from utils.webhost import AudioAPI
 
@@ -306,6 +307,7 @@ def FileSelectionSidebar(
         Output(f"{context}-file-sidebar-files-count", "children", allow_duplicate=True),
         Output(f"{context}-file-sidebar-files-pagination", "total"),
         Input("dataset-select", "value"),
+        State("filter-store", "data"),
         State(f"{context}-file-sidebar", "span"),
         State(f"{context}-file-sidebar", "style"),
         Input(graph, "selectedData"),
@@ -314,6 +316,7 @@ def FileSelectionSidebar(
     )
     def toggle_selection_sidebar(
         dataset_name: str,
+        filters: Dict[str, Any],
         current_span: int,
         current_style: Dict[str, str],
         lassoo_data: Dict[str, Any],
@@ -357,7 +360,7 @@ def FileSelectionSidebar(
                 selected_text := "",
                 total_pages := 1,
             )
-        data = dispatch(FETCH_FILES, dataset_name=dataset_name)
+        data = dispatch(FETCH_FILES, dataset_name=dataset_name, **filter_dict_to_tuples(filters))
         data = data.loc[data["file_id"].isin([point["hovertext"] for point in points]), ["file_id", "file_path"]]
         total = len(data)
         start = 1
@@ -523,7 +526,7 @@ def FileSelectionSidebar(
         """
         if not n_clicks: return no_update
         selected_file_ids = pd.read_json(StringIO(selected_json_data), orient="table")["file_id"]
-        data = dispatch(FETCH_FILES, dataset_name=dataset_name)
+        data = dispatch(FETCH_FILES, dataset_name=dataset_name, **filter_dict_to_tuples(filters))
         file_ids = set(data.loc[~data["file_id"].isin(selected_file_ids), "file_id"].tolist())
         file_filter = filters["files"]
         selection_id = len(file_filter.keys()) + 1
