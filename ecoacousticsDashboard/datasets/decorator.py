@@ -8,7 +8,7 @@ from typing import Any, Dict, Tuple, List
 from datasets.dataset import Dataset
 from utils import floor, ceil
 
-DEFAULT_OPTION_GROUPS = ("Site Level", "Time of Day", "Temporal", "Spatial")
+DEFAULT_OPTION_GROUPS = ("Site Level", "Time of Day", "Temporal")# "Spatial")
 
 @attrs.define
 class DatasetDecorator:

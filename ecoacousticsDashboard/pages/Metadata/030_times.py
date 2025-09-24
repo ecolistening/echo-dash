@@ -59,27 +59,27 @@ layout = dmc.Box([
                 DatasetOptionsSelect(
                     id="times-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("File Level", "Site Level", "Time of Day", "Temporal", "Spatial"),
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
                     label="Colour by",
                     value="valid",
                 ),
                 DatasetOptionsSelect(
                     id="times-symbol-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("File Level", "Site Level", "Time of Day", "Temporal", "Spatial"),
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
                     label="Symbol by",
                 ),
                 DatasetOptionsSelect(
                     id="times-facet-row-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("File Level", "Site Level", "Time of Day", "Temporal", "Spatial"),
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
                     label="Facet rows by",
                     value="recorder",
                 ),
                 DatasetOptionsSelect(
                     id="times-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("File Level", "Site Level", "Time of Day", "Temporal", "Spatial"),
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
                     label="Facet columns by",
                 ),
                 dmc.Flex(

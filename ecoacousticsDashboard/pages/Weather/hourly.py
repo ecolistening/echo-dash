@@ -71,14 +71,14 @@ layout = dmc.Box([
                 DatasetOptionsSelect(
                     id="weather-hourly-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Spatial",),
+                    options=("Site Level",),
                     label="Colour by",
                     value="location",
                 ),
                 DatasetOptionsSelect(
                     id="weather-hourly-facet-row-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Spatial",),
+                    options=("Site Level",),
                     label="Facet rows by",
                     value="location",
                 ),

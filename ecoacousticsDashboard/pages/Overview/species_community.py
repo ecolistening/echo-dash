@@ -48,7 +48,7 @@ layout = dmc.Box([
                 DatasetOptionsSelect(
                     id="species-community-axis-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Site Level", "Spatial"),
+                    options=("Site Level",), # "Spatial"),
                     label="Column facet 1 by...",
                     value="location",
                 ),

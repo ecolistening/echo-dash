@@ -69,7 +69,7 @@ layout = dmc.Box([
                 DatasetOptionsSelect(
                     id="index-averages-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Spatial",),
+                    options=("Site Level",),
                     label="Colour by",
                     value="location",
                 ),
