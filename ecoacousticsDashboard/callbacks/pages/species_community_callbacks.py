@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_BIRDNET_SPECIES
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
+from api import filter_dict_to_tuples
 from utils.figures.species_matrix import species_matrix as plot
 from utils import list2tuple, send_download
 
@@ -50,7 +51,7 @@ def register_callbacks():
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         action = FETCH_BIRDNET_SPECIES
-        payload = dict(dataset_name=dataset_name, threshold=threshold, filters=filters)
+        payload = dict(dataset_name=dataset_name, threshold=threshold, **filter_dict_to_tuples(filters))
         logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
         data = dispatch(action, **payload)
         fig = plot(data, axis_group, facet_col, facet_row, category_orders)

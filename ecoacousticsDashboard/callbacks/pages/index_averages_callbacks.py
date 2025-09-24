@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
+from api import filter_dict_to_tuples
 from utils.figures.index_averages_scatter import plot
 from utils import list2tuple, capitalise_each, send_download
 
@@ -22,7 +23,7 @@ PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name, filters):
     action = FETCH_ACOUSTIC_FEATURES
-    payload = dict(dataset_name=dataset_name, filters=filters)
+    payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters))
     logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
     return dispatch(action, **payload)
 

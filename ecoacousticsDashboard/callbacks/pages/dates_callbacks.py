@@ -12,12 +12,13 @@ from io import StringIO
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_FILES
+from api import filter_dict_to_tuples
 from utils import list2tuple, send_download
 from utils.figures.calendar import plot
 
 def fetch_data(dataset_name, filters):
     action = FETCH_FILES
-    payload = dict(dataset_name=dataset_name, filters=filters)
+    payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters))
     logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
     return dispatch(action, **payload)
 

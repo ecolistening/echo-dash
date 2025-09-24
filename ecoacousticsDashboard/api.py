@@ -17,30 +17,42 @@ from datasets.dataset_loader import DatasetLoader
 from datasets.dataset import Dataset
 from datasets.decorator import DatasetDecorator
 from utils import list2tuple, hashify
-from utils.filter import filter_data
 
 DATASETS = DatasetLoader(root_dir)
 
-def filter_sites_query(sites, filters):
-    sites = sites[sites['site'].isin([l.strip('/') for l in filters["current_sites"]])].reset_index()
+def filter_dict_to_tuples(filters):
+    return {
+        "current_sites": list2tuple(filters["current_sites"]),
+        "current_date_range": list2tuple(filters["date_range"]),
+        "current_feature": (filters["current_feature"], list2tuple(filters["current_feature_range"])),
+        "current_file_ids": list2tuple(list(itertools.chain(*filters["files"].values()))),
+        "current_weather": list2tuple([
+            (variable_name, list2tuple(params["variable_range"]))
+            for variable_name, params in filters["weather_variables"].items()
+        ]),
+    }
+
+def filter_sites_query(sites, selected_sites):
+    sites = sites[sites['site'].isin([l.strip('/') for l in selected_sites])].reset_index()
     site_ids = ", ".join([f"'{site_id}'" for site_id in sites.site_id])
     return f"site_id in ({site_ids})"
 
-def filter_files_query(filters):
-    file_ids = ", ".join([f"{file_id}" for file_id in itertools.chain(*filters["files"].values())])
+def filter_files_query(file_ids):
+    file_ids = ", ".join([f"{file_id}" for file_id in file_ids])
     return f"file_id not in ({file_ids})"
 
-def filter_dates_query(filters):
-    return f"timestamp >= '{filters['date_range'][0]}' and timestamp <= '{filters['date_range'][1]}'"
+def filter_dates_query(date_range):
+    return f"timestamp >= '{date_range[0]}' and timestamp <= '{date_range[1]}'"
 
-def filter_weather_query(filters):
+def filter_weather_query(weather_variables):
     return " and ".join([
-        f"(({variable_name} >= {params['variable_range'][0]} and {variable_name} <= {params['variable_range'][1]}) or {variable_name}.isnull())"
-        for variable_name, params in filters["weather_variables"].items()
+        f"(({variable_name} >= {variable_range[0]} and {variable_name} <= {variable_range[1]}) or {variable_name}.isnull())"
+        for variable_name, variable_range in weather_variables
     ])
 
-def filter_feature_query(filters):
-    return f"`{filters['current_feature']}` >= {filters['current_feature_range'][0]} and `{filters['current_feature']}` <= {filters['current_feature_range'][1]}"
+def filter_feature_query(feature_name_and_range):
+    current_feature, current_feature_range = feature_name_and_range
+    return f"`{current_feature}` >= {current_feature_range[0]} and `{current_feature}` <= {current_feature_range[1]}"
 
 @functools.lru_cache(maxsize=1)
 def fetch_datasets():
@@ -52,6 +64,12 @@ def fetch_dataset(
 ) -> Dataset:
     dataset = DATASETS.get_dataset(dataset_name)
     return dataset
+
+def fetch_base_filters(
+    dataset_name: str
+) -> Dataset:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.filters
 
 def set_current_dataset(
     dataset_name: str,
@@ -90,14 +108,14 @@ def set_dataset_config(
         for section in dataset.config.sections()
     }
 
-# @functools.lru_cache(maxsize=3)
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_options(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).options
 
-# @functools.lru_cache(maxsize=3)
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_dropdown_option_groups(
     dataset_name: str,
     options: Tuple[str] = (),
@@ -106,109 +124,28 @@ def fetch_dataset_dropdown_option_groups(
     decorator = DatasetDecorator(dataset)
     return decorator.drop_down_select_option_groups(options)
 
-# @functools.lru_cache(maxsize=3)
+@functools.lru_cache(maxsize=3)
 def fetch_dataset_category_orders(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).category_orders
 
-# @functools.lru_cache(maxsize=3)
+@functools.lru_cache(maxsize=3)
 def fetch_files(
     dataset_name: str,
-    filters: Dict[str, Any] = {},
+    current_sites: Tuple[str, ...],
+    current_date_range: Tuple[str, ...],
+    current_feature: Tuple[str, Tuple[float, ...]],
+    current_file_ids: Tuple[str, ...],
+    current_weather: Tuple[str, Tuple[float, ...]],
     valid_only: bool = True,
+    **kwargs: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    if not len(filters):
-        return (
-            pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "file_path", "file_name", "valid", "site_id", "dddn", "timestamp"])
-            .merge(dataset.locations, on="site_id", how="left")
-        )
-
-    file_query = filter_files_query(filters)
-    site_query = filter_sites_query(dataset.locations, filters)
-    date_query = filter_dates_query(filters)
-    weather_query = filter_weather_query(filters)
-
     files = (
         pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
-        .query(f"valid == True and {file_query} and {date_query} and {site_query}")
-        .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
-    )
-    weather = (
-        pd.read_parquet(dataset.path / "weather_table.parquet")
-        .rename(columns=dict(timestamp="nearest_hour"))
-    )
-    return dataset.append_columns(
-        files.merge(weather, on=["site_id", "nearest_hour"], how="left")
-        .query(weather_query)
-        .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
-        .merge(dataset.locations, on="site_id", how="left")
-    )
-
-# @functools.lru_cache(maxsize=3)
-def fetch_locations(
-    dataset_name: str,
-) -> pd.DataFrame:
-    dataset = DATASETS.get_dataset(dataset_name)
-    return dataset.locations
-
-# @functools.lru_cache(maxsize=3)
-def fetch_weather(
-    dataset_name: str,
-) -> pd.DataFrame:
-    dataset = DATASETS.get_dataset(dataset_name)
-    return pd.read_parquet(dataset.path / "weather_table.parquet")
-
-# @functools.lru_cache(maxsize=10)
-def fetch_file_weather(
-    dataset_name: str,
-    filters: Dict[str, Any] = {},
-) -> pd.DataFrame:
-    dataset = DATASETS.get_dataset(dataset_name)
-    if not len(filters):
-        return pd.read_parquet(dataset.path / "weather_table.parquet")
-
-    file_query = filter_files_query(filters)
-    site_query = filter_sites_query(dataset.locations, filters)
-    date_query = filter_dates_query(filters)
-    weather_query = filter_weather_query(filters)
-
-    files = (
-        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
-        .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
-        .query(f"valid == True and {file_query} and {date_query} and {site_query}")
-    )
-    weather = (
-        pd.read_parquet(dataset.path / "weather_table.parquet")
-        .rename(columns=dict(timestamp="nearest_hour"))
-    )
-    return dataset.append_columns(
-        files.merge(weather, on=["site_id", "nearest_hour"], how="left")
-        .query(weather_query)
-        .melt(id_vars=["file_id", "site_id", "nearest_hour", "timestamp"], var_name="variable", value_name="value")
-        .merge(dataset.locations, on="site_id", how="left")
-    )
-
-# @functools.lru_cache(maxsize=10)
-def fetch_acoustic_features(
-    dataset_name: str,
-    filters: Dict[str, Any] = {},
-) -> pd.DataFrame:
-    dataset = DATASETS.get_dataset(dataset_name)
-    if not len(filters):
-        return pd.read_parquet(dataset.path / "recording_acoustic_features.parquet")
-
-    file_query = filter_files_query(filters)
-    site_query = filter_sites_query(dataset.locations, filters)
-    date_query = filter_dates_query(filters)
-    weather_query = filter_weather_query(filters)
-    feature_query = filter_feature_query(filters)
-
-    files = (
-        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
-        .query(f"valid == True and {file_query} and {date_query} and {site_query}")
+        .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
     weather = (
@@ -217,15 +154,84 @@ def fetch_acoustic_features(
     )
     file_site_weather = (
         files.merge(weather, on=["site_id", "nearest_hour"], how="left")
-        .query(weather_query)
+        .query(filter_weather_query(current_weather))
+        .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
+        .merge(dataset.locations, on="site_id", how="left")
+    )
+    return dataset.append_columns(file_site_weather)
+
+@functools.lru_cache(maxsize=3)
+def fetch_locations(
+    dataset_name: str,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.locations
+
+@functools.lru_cache(maxsize=3)
+def fetch_weather(
+    dataset_name: str,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return pd.read_parquet(dataset.path / "weather_table.parquet")
+
+@functools.lru_cache(maxsize=10)
+def fetch_file_weather(
+    dataset_name: str,
+    current_sites: Tuple[str, ...],
+    current_date_range: Tuple[str, ...],
+    current_feature: Tuple[str, Tuple[float, ...]],
+    current_file_ids: Tuple[str, ...],
+    current_weather: Tuple[str, Tuple[float, ...]],
+    **kwargs: Any,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    files = (
+        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
+        .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
+        .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
+    )
+    weather = (
+        pd.read_parquet(dataset.path / "weather_table.parquet")
+        .rename(columns=dict(timestamp="nearest_hour"))
+    )
+    return dataset.append_columns(
+        files.merge(weather, on=["site_id", "nearest_hour"], how="left")
+        .query(filter_weather_query(current_weather))
+        .merge(dataset.locations, on="site_id", how="left")
+        .melt(id_vars=["file_id", "site_id", "nearest_hour", "timestamp", *dataset.locations.columns], var_name="variable", value_name="value")
+    )
+
+@functools.lru_cache(maxsize=10)
+def fetch_acoustic_features(
+    dataset_name: str,
+    current_sites: Tuple[str, ...],
+    current_date_range: Tuple[str, ...],
+    current_feature: Tuple[str, Tuple[float, ...]],
+    current_file_ids: Tuple[str, ...],
+    current_weather: Tuple[str, Tuple[float, ...]],
+    **kwargs: Any,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    files = (
+        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
+        .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
+        .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
+    )
+    weather = (
+        pd.read_parquet(dataset.path / "weather_table.parquet")
+        .rename(columns=dict(timestamp="nearest_hour"))
+    )
+    file_site_weather = (
+        files.merge(weather, on=["site_id", "nearest_hour"], how="left")
+        .query(filter_weather_query(current_weather))
         .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
     features = (
-        pd.read_parquet(dataset.path / "recording_acoustic_features.parquet", columns=["file_id", "segment_id", "duration", "offset", filters["current_feature"]])
-        .query(f"file_id in ({', '.join([f'{file_id}' for file_id in files.file_id])}) and {feature_query}")
-        .assign(feature=lambda df: filters["current_feature"])
-        .rename(columns={filters["current_feature"]: "value"})
+        pd.read_parquet(dataset.path / "recording_acoustic_features.parquet", columns=["file_id", "segment_id", "duration", "offset", current_feature[0]])
+        .query(f"file_id in ({', '.join([f'{file_id}' for file_id in file_site_weather.file_id])}) and {filter_feature_query(current_feature)}")
+        .assign(feature=lambda df: current_feature[0])
+        .rename(columns={current_feature[0]: "value"})
     )
     return dataset.append_columns(features.merge(file_site_weather, on="file_id", how="left"))
 
@@ -233,20 +239,19 @@ def fetch_acoustic_features(
 def fetch_birdnet_species(
     dataset_name: str,
     threshold: float,
-    filters: Dict[str, Any] = {},
+    current_sites: Tuple[str, ...],
+    current_date_range: Tuple[str, ...],
+    current_feature: Tuple[str, Tuple[float, ...]],
+    current_file_ids: Tuple[str, ...],
+    current_weather: Tuple[str, Tuple[float, ...]],
+    **kwargs: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     decorator = DatasetDecorator(dataset)
-    sites = dataset.locations
-
-    file_query = filter_files_query(filters)
-    site_query = filter_sites_query(dataset.locations, filters)
-    date_query = filter_dates_query(filters)
-    weather_query = filter_weather_query(filters)
 
     files = (
         pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
-        .query(f"valid == True and {file_query} and {date_query} and {site_query}")
+        .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
     weather = (
@@ -255,7 +260,7 @@ def fetch_birdnet_species(
     )
     file_site_weather = (
         files.merge(weather, on=["site_id", "nearest_hour"], how="left")
-        .query(weather_query)
+        .query(filter_weather_query(current_weather))
         .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
@@ -280,18 +285,18 @@ def fetch_birdnet_species(
 # @functools.lru_cache(maxsize=4)
 def fetch_acoustic_features_umap(
     dataset_name: str,
-    filters: Dict[str, Any],
+    current_sites: Tuple[str, ...],
+    current_date_range: Tuple[str, ...],
+    current_feature: Tuple[str, Tuple[float, ...]],
+    current_file_ids: Tuple[str, ...],
+    current_weather: Tuple[str, Tuple[float, ...]],
+    **kwargs: Any,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     dataset = DATASETS.get_dataset(dataset_name)
 
-    file_query = filter_files_query(filters)
-    site_query = filter_sites_query(dataset.locations, filters)
-    date_query = filter_dates_query(filters)
-    weather_query = filter_weather_query(filters)
-
     files = (
         pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
-        .query(f"valid == True and {file_query} and {date_query} and {site_query}")
+        .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
     weather = (
@@ -300,17 +305,17 @@ def fetch_acoustic_features_umap(
     )
     file_site_weather = (
         files.merge(weather, on=["site_id", "nearest_hour"], how="left")
-        .query(weather_query)
+        .query(filter_weather_query(current_weather))
         .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
-    features = dataset.umap(
+    xy = dataset.umap(
         pd.read_parquet(dataset.path / "recording_acoustic_features.parquet")
-        .query(f"file_id in ({', '.join([f'{file_id}' for file_id in files.file_id])})")
+        .query(f"file_id in ({', '.join([f'{file_id}' for file_id in file_site_weather.file_id])})")
     )
     return dataset.append_columns(
         file_site_weather
-        .merge(features, on="file_id", how="left")
+        .merge(xy, on="file_id", how="left")
     )
 
 from dash import exceptions
@@ -333,6 +338,7 @@ SET_CURRENT_DATASET = "set_current_dataset"
 FETCH_DATASET_CONFIG = "fetch_dataset_config"
 SET_DATASET_CONFIG = "set_dataset_config"
 FETCH_DATASET_SITES_TREE = "fetch_dataset_sites_tree"
+FETCH_BASE_FILTERS = "fetch_base_filters"
 
 FETCH_DATASET_OPTIONS = "fetch_dataset_options"
 FETCH_DATASET_CATEGORY_ORDERS = "fetch_dataset_category_orders"
@@ -353,6 +359,7 @@ API = {
     FETCH_DATASET_CONFIG: fetch_dataset_config,
     SET_DATASET_CONFIG: set_dataset_config,
     FETCH_DATASET_SITES_TREE: fetch_sites_tree,
+    FETCH_BASE_FILTERS: fetch_base_filters,
 
     FETCH_DATASET_OPTIONS: fetch_dataset_options,
     FETCH_DATASET_CATEGORY_ORDERS: fetch_dataset_category_orders,

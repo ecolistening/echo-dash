@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_BIRDNET_SPECIES
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
+from api import filter_dict_to_tuples
 from utils import list2tuple, send_download
 from utils import sketch
 
@@ -23,7 +24,7 @@ PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name, threshold, filters):
     action = FETCH_BIRDNET_SPECIES
-    payload = dict(dataset_name=dataset_name, threshold=threshold, filters=filters)
+    payload = dict(dataset_name=dataset_name, threshold=threshold, **filter_dict_to_tuples(filters))
     logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
     return dispatch(action, **payload)
 

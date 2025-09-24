@@ -68,6 +68,7 @@ layout = dmc.Box([
                     id="distributions-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet columns by",
+                    value="dddn",
                 ),
                 dmc.Box([
                     dmc.Chip(

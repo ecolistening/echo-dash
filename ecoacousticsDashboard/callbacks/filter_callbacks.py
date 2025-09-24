@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Tuple
 
 from api import dispatch
 from api import FETCH_DATASET_SITES_TREE, FETCH_DATASET_CONFIG, FETCH_DATASET_SITES_TREE, FETCH_DATASET_DROPDOWN_OPTION_GROUPS
-from api import FETCH_FILES, FETCH_ACOUSTIC_FEATURES, FETCH_WEATHER
+from api import FETCH_BASE_FILTERS, FETCH_FILES, FETCH_ACOUSTIC_FEATURES, FETCH_WEATHER
 from components.environmental_filter import EnvironmentalFilterSliderAccordion
 from components.site_level_filter import SiteLevelHierarchyAccordion, TreeNodeChip
 from utils.webhost import AudioAPI
@@ -28,75 +28,23 @@ def register_callbacks():
     @callback(
         Output("filter-store", "data"),
         Input("dataset-select", "value"),
-        State("filter-store", "data"),
     )
     def init_dataset_filters(
         dataset_name: str,
-        filters: Filters,
     ) -> Filters:
-        filters = {}
+        action = FETCH_BASE_FILTERS
         payload = dict(dataset_name=dataset_name)
-
-        # set dates and date range
-        action = FETCH_FILES
-        data = dispatch(FETCH_FILES, **payload)
-        min_date = data.timestamp.dt.date.min().strftime("%Y-%m-%d")
-        max_date = data.timestamp.dt.date.max().strftime("%Y-%m-%d")
-        date_range = [min_date, max_date]
-        filters["date_range_bounds"] = date_range
-        filters["date_range"] = date_range
-
-        # set feature and feature range
-        action = FETCH_ACOUSTIC_FEATURES
-        data = dispatch(action, **payload)
-        # TODO: these shouldn't be hard coded
-        features = [
-            'acoustic complexity index', 'acoustic evenness index',
-            'bioacoustic index', 'log acoustic evenness index',
-            'log root mean square', 'log(1-temporal entropy)', 'root mean square',
-            'spectral centroid', 'spectral entropy', 'spectral flux',
-            'temporal entropy', 'zero crossing rate'
-        ]
+        filters = dispatch(action, **payload)
+        filters["date_range"] = filters["date_range_bounds"]
+        features = list(filters["acoustic_features"].keys())
         current_feature = filters.get("current_feature", features[0])
-        feature_data = data.loc[:, current_feature]
-        feature_min = floor(feature_data.min(), precision=2)
-        feature_max = ceil(feature_data.max(), precision=2)
-        acoustic_features = {}
-        for feature in features:
-            df = data.loc[:, feature]
-            acoustic_features[feature] = [floor(df.min(), precision=2), ceil(df.max(), precision=2)]
-        filters["acoustic_features"] = acoustic_features
         filters["current_feature"] = current_feature
         filters["current_feature_range"] = list(filters["acoustic_features"][current_feature])
-
-        # set weather variables and default ranges
-        action = FETCH_WEATHER
-        data = dispatch(action, **payload)
-        # TODO: these shouldn't be hard coded
-        variables = [
-            'temperature_2m', 'rain', 'snowfall',
-            'wind_speed_10m', 'wind_speed_100m', 'wind_direction_10m',
-            'wind_direction_100m', 'wind_gusts_10m'
-        ]
-        weather_variables = {}
-        for variable in variables:
-            df = data.loc[:, variable]
-            variable_ranges = {}
-            variable_range = [floor(df.min()), ceil(df.max())]
-            variable_ranges["variable_range_bounds"] = variable_range
-            variable_ranges["variable_range"] = variable_range
-            weather_variables[variable] = variable_ranges
-        filters["weather_variables"] = weather_variables
-
-        # set site filters
-        action = FETCH_DATASET_SITES_TREE
-        tree = dispatch(action, **payload)
-        sites = list(bt.tree_to_dict(tree).keys())[1:]
-        filters["tree"] = sites
-        filters["current_sites"] = sites
-        # file filters defaults to empty
+        for variable in filters["weather_variables"].keys():
+            filters["weather_variables"][variable]["variable_range"] = filters["weather_variables"][variable]["variable_range_bounds"]
+        filters["current_sites"] = filters["tree"]
         filters["files"] = {}
-        logger.debug(f"{ctx.triggered_id=} {filters=}")
+        logger.debug(f"{ctx.triggered_id=} {action} {payload} {filters=}")
         return filters
 
     # ------ DATES FILTER ----- #
@@ -398,7 +346,6 @@ def register_callbacks():
         if not update:
             return no_update
         filters["weather_variables"][variable_name]["variable_range"] = current_range
-        logger.debug(f"{filters=}")
         return filters
 
     # @callback(
@@ -413,7 +360,8 @@ def register_callbacks():
     #     chip_ids: List[str],
     #     filters: Filters,
     # ) -> Filters:
-    #     triggered_id = ctx.triggered_id
+    #     if not ctx.triggered_id:
+    #         return no_update
     #     variable_name = ctx.triggered_id["index"]
     #     variable_params = filters["weather_variables"][variable_name]
     #     ids, values = chip_ids, chip_values
@@ -504,16 +452,19 @@ def register_callbacks():
     @callback(
         Output("site-level-filter-group", "children"),
         Input("dataset-select", "value"),
-        Input("dataset-config", "data"),
     )
     def init_site_level_filters(
         dataset_name: str,
-        config: Dict[str, str],
     ) -> dmc.Stack:
         action = FETCH_DATASET_SITES_TREE
         payload = dict(dataset_name=dataset_name)
         logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
         tree = dispatch(action, **payload)
+
+        action = FETCH_DATASET_CONFIG
+        payload = dict(dataset_name=dataset_name)
+        logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+        config = dispatch(action, **payload)
         return SiteLevelHierarchyAccordion(tree=tree, config=config.get("Site Hierarchy"))
 
     @callback(
@@ -559,18 +510,21 @@ def register_callbacks():
         Input("filter-store", "data"),
         State({"type": "checklist-locations-hierarchy", "index": ALL}, "value"),
         State("dataset-select", "value"),
-        Input("dataset-config", "data"),
         prevent_initial_call=True,
     )
     def update_site_level_filters(
         filters: str,
         current_sites,
         dataset_name: str,
-        config: Dict[str, str]
     ) -> Tuple[List[TreeNodeChip], List[str]]:
+        # TODO: to prevent exception when changing dataaset, we should return the node chip rather than its values
+        # as the number of site chips may have changed
         sites = filters["current_sites"]
-        tree = bt.list_to_tree(filters["tree"])
-        config = config.get("Site Hierarchy", {})
+
+        payload = dict(dataset_name=dataset_name)
+        tree = dispatch(FETCH_DATASET_SITES_TREE, **payload)
+        config = dispatch(FETCH_DATASET_CONFIG, **payload)
+
         values = []
         if not len(sites):
             # if all sites have been de-selected, re-select all of them

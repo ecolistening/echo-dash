@@ -15,13 +15,14 @@ from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_FILES, DATASETS
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
+from api import filter_dict_to_tuples
 from utils import list2tuple, send_download
 
 PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name, filters, **kwargs):
     action = FETCH_FILES
-    payload = dict(dataset_name=dataset_name, filters=filters, **kwargs)
+    payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters), **kwargs)
     logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
     return dispatch(action, **payload)
 

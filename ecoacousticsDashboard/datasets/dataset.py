@@ -13,6 +13,8 @@ from sklearn.preprocessing import RobustScaler
 from typing import Any, Callable, Dict, List, Tuple, Iterable
 from umap.parametric_umap import load_ParametricUMAP
 
+from utils import floor, ceil
+
 @attrs.define
 class Dataset:
     dataset_path: str
@@ -21,6 +23,7 @@ class Dataset:
     dataset_name: str = attrs.field(init=False)
     audio_path: str = attrs.field(init=False)
     config: ConfigParser = attrs.field(init=False)
+    filters: Dict[str, Any] = attrs.field(init=False)
 
     @property
     def path(self):
@@ -31,6 +34,7 @@ class Dataset:
         self.dataset_name = self.config.get("Dataset", "name")
         self.dataset_id = self.config.get("Dataset", "id")
         self.audio_path = Path(self.config.get("Dataset", "audio_path"))
+        self.filters = self._build_base_filters()
 
     @functools.cached_property
     def species(self):
@@ -119,3 +123,47 @@ class Dataset:
             if not config.has_section('Site Hierarchy'):
                 config.add_section('Site Hierarchy')
         return config
+
+    def _build_base_filters(self):
+        filters = {}
+        # date filters
+        data = pd.read_parquet(self.path / "files_table.parquet")
+        min_date = data["timestamp"].dt.date.min().strftime("%Y-%m-%d")
+        max_date = data["timestamp"].dt.date.max().strftime("%Y-%m-%d")
+        filters["date_range_bounds"] = [min_date, max_date]
+        # feature filters
+        features = [
+            'acoustic complexity index', 'acoustic evenness index',
+            'bioacoustic index', 'log acoustic evenness index',
+            'log root mean square', 'log(1-temporal entropy)', 'root mean square',
+            'spectral centroid', 'spectral entropy', 'spectral flux',
+            'temporal entropy', 'zero crossing rate'
+        ]
+        data = pd.read_parquet(self.path / "recording_acoustic_features.parquet")
+        acoustic_features = {}
+        for feature in features:
+            df = data.loc[:, feature]
+            acoustic_features[feature] = [floor(df.min(), precision=2), ceil(df.max(), precision=2)]
+            filters["acoustic_features"] = acoustic_features
+        # weather filters
+        variables = [
+            'temperature_2m', 'rain', 'snowfall',
+            'wind_speed_10m', 'wind_speed_100m', 'wind_direction_10m',
+            'wind_direction_100m', 'wind_gusts_10m'
+        ]
+        data = pd.read_parquet(self.path / "weather_table.parquet")
+        weather_variables = {}
+        for variable in variables:
+            df = data.loc[:, variable]
+            variable_ranges = {}
+            variable_range = [floor(df.min()), ceil(df.max())]
+            variable_ranges["variable_range_bounds"] = variable_range
+            weather_variables[variable] = variable_ranges
+            filters["weather_variables"] = weather_variables
+        # site filters
+        data = pd.read_parquet(self.path / "locations_table.parquet")
+        data["site"] = self.dataset_name + "/" + data["site_name"]
+        tree = bt.dataframe_to_tree(data, path_col="site")
+        sites = list(bt.tree_to_dict(tree).keys())[1:]
+        filters["tree"] = sites
+        return filters

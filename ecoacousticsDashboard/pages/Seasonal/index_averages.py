@@ -73,15 +73,6 @@ layout = dmc.Box([
                     label="Colour by",
                     value="location",
                 ),
-                dmc.SegmentedControl(
-                    id="index-averages-time-aggregation",
-                    data=[
-                        {"value": opt["frequency"], "label": opt["description"]}
-                        for opt in windows_options
-                    ],
-                    value=windows_options[3]["frequency"],
-                    persistence=True,
-                ),
                 # dmc.Chip(
                 #     'Colour by Recorder',
                 #     value='colour',
@@ -122,6 +113,27 @@ layout = dmc.Box([
                         ),
                     ],
                 ),
+            ],
+        ),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Time Aggregation",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.SegmentedControl(
+                        id="index-averages-time-aggregation",
+                        data=[
+                            {"value": opt["frequency"], "label": opt["description"]}
+                            for opt in windows_options
+                        ],
+                        value="1D",
+                        persistence=True,
+                    ),
+                ]),
             ],
         ),
     ]),
