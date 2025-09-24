@@ -74,7 +74,7 @@ def register_callbacks():
         data = dispatch(action, **payload)
         # TODO: these shouldn't be hard coded
         variables = [
-            'temperature_2m', 'precipitation', 'rain', 'snowfall',
+            'temperature_2m', 'rain', 'snowfall',
             'wind_speed_10m', 'wind_speed_100m', 'wind_direction_10m',
             'wind_direction_100m', 'wind_gusts_10m'
         ]
@@ -377,49 +377,59 @@ def register_callbacks():
         Output("filter-store", "data", allow_duplicate=True),
         Input({"type": "weather-variable-range-slider", "index": ALL}, "value"),
         State({"type": "weather-variable-range-slider", "index": ALL}, "id"),
-        Input({"type": "weather-variable-chip-group", "index": ALL}, "value"),
-        State({"type": "weather-variable-chip-group", "index": ALL}, "id"),
         State("filter-store", "data"),
         prevent_initial_call=True,
     )
     def update_weather_filter(
         slider_values: List[str],
         slider_ids: List[str],
-        chip_values: List[str],
-        chip_ids: List[str],
         filters: Filters,
     ) -> Filters:
         triggered_id = ctx.triggered_id
-        if isinstance(ctx.triggered_id, dict) and triggered_id["type"] == "weather-variable-range-slider":
-            variable_name = ctx.triggered_id["index"]
-            variable_params = filters["weather_variables"][variable_name]
-            ids, values = slider_ids, slider_values
-            context = [(id["index"], current_range) for id, current_range in zip(ids, values) if id["index"] == variable_name]
-            if not len(context):
-                return no_update
-            _, current_range = context[0]
-            update = current_range != variable_params['variable_range']
-            if not update:
-                return no_update
-            filters["weather_variables"][variable_name]["variable_range"] = current_range
-            return filters
-        elif isinstance(ctx.triggered_id, dict) and triggered_id["type"] == "weather-variable-chip-group":
-            variable_name = ctx.triggered_id["index"]
-            variable_params = filters["weather_variables"][variable_name]
-            ids, values = chip_ids, chip_values
-            context = [(id["index"], current_range) for id, current_range in zip(ids, values) if id["index"] == variable_name]
-            if not len(context):
-                return no_update
-            _, current_range = context[0]
-            selected_values = {prefix: float(value) for prefix, value in map(lambda s: s.split("="), current_range)}
-            variable_min, variable_max = variable_params["variable_range_bounds"]
-            current_range = [selected_values.get("start_value", variable_min), selected_values.get("end_value", variable_max)]
-            update = current_range != variable_params['variable_range']
-            if not update:
-                return no_update
-            filters["weather_variables"][variable_name]["variable_range"] = current_range
-            return filters
-        return no_update
+        if not triggered_id:
+            return no_update
+        variable_name = ctx.triggered_id["index"]
+        variable_params = filters["weather_variables"][variable_name]
+        ids, values = slider_ids, slider_values
+        context = [(id["index"], current_range) for id, current_range in zip(ids, values) if id["index"] == variable_name]
+        if not len(context):
+            return no_update
+        _, current_range = context[0]
+        update = current_range != variable_params['variable_range']
+        if not update:
+            return no_update
+        filters["weather_variables"][variable_name]["variable_range"] = current_range
+        logger.debug(f"{filters=}")
+        return filters
+
+    # @callback(
+    #     Output("filter-store", "data", allow_duplicate=True),
+    #     Input({"type": "weather-variable-chip-group", "index": ALL}, "value"),
+    #     State({"type": "weather-variable-chip-group", "index": ALL}, "id"),
+    #     State("filter-store", "data"),
+    #     prevent_initial_call=True,
+    # )
+    # def update_weather_filter(
+    #     chip_values: List[str],
+    #     chip_ids: List[str],
+    #     filters: Filters,
+    # ) -> Filters:
+    #     triggered_id = ctx.triggered_id
+    #     variable_name = ctx.triggered_id["index"]
+    #     variable_params = filters["weather_variables"][variable_name]
+    #     ids, values = chip_ids, chip_values
+    #     context = [(id["index"], current_range) for id, current_range in zip(ids, values) if id["index"] == variable_name]
+    #     if not len(context):
+    #         return no_update
+    #     _, current_range = context[0]
+    #     selected_values = {prefix: float(value) for prefix, value in map(lambda s: s.split("="), current_range)}
+    #     variable_min, variable_max = variable_params["variable_range_bounds"]
+    #     current_range = [selected_values.get("start_value", variable_min), selected_values.get("end_value", variable_max)]
+    #     update = current_range != variable_params['variable_range']
+    #     if not update:
+    #         return no_update
+    #     filters["weather_variables"][variable_name]["variable_range"] = current_range
+    #     return filters
 
     @callback(
         Output({"type": "weather-variable-range-slider", "index": ALL}, "value"),
