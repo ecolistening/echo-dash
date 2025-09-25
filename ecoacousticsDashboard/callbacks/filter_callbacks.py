@@ -16,7 +16,8 @@ from typing import Any, Dict, List, Tuple
 
 from api import dispatch
 from api import FETCH_DATASET_SITES_TREE, FETCH_DATASET_CONFIG, FETCH_DATASET_SITES_TREE, FETCH_DATASET_DROPDOWN_OPTION_GROUPS
-from api import FETCH_BASE_FILTERS, FETCH_FILES, FETCH_ACOUSTIC_FEATURES, FETCH_WEATHER
+from api import FETCH_BASE_FILTERS, FETCH_FILES, FETCH_ACOUSTIC_FEATURES, FETCH_WEATHER, FETCH_FILE_WEATHER, FETCH_BIRDNET_SPECIES, FETCH_ACOUSTIC_FEATURES_UMAP
+from api import filter_dict_to_tuples
 from components.environmental_filter import EnvironmentalFilterSliderAccordion
 from components.site_level_filter import SiteLevelHierarchyAccordion, TreeNodeChip
 from utils.webhost import AudioAPI
@@ -46,6 +47,26 @@ def register_callbacks():
         filters["files"] = {}
         logger.debug(f"{ctx.triggered_id=} {action} {payload} {filters=}")
         return filters
+
+    @callback(
+        Output("precache", "data"),
+        State("dataset-select", "value"),
+        Input("filter-store", "data"),
+    )
+    def precache_api_requests(dataset_name: str, filters: Dict[str, Any]) -> None:
+        if not dataset_name:
+            return no_update
+
+        logger.debug(f"{ctx.triggered_id=} caching on load")
+        payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters))
+        dispatch(FETCH_FILES, **payload)
+        dispatch(FETCH_FILE_WEATHER, **payload)
+        dispatch(FETCH_ACOUSTIC_FEATURES_UMAP, **payload)
+        dispatch(FETCH_ACOUSTIC_FEATURES, **payload)
+        dispatch(FETCH_BIRDNET_SPECIES, threshold=0.5, **payload)
+
+        return no_update
+
 
     # ------ DATES FILTER ----- #
 

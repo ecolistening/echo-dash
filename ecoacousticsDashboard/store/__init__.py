@@ -7,4 +7,5 @@ global_store = [
     dcc.Store(id="dataset-category-orders", data={}),
     dcc.Store(id="dataset-options", data={}),
     dcc.Store(id="filter-store", storage_type='local'),
+    dcc.Store(id="precache", storage_type='local'),
 ]
