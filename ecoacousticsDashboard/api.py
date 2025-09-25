@@ -21,16 +21,14 @@ from utils import list2tuple, hashify
 DATASETS = DatasetLoader(root_dir)
 
 def filter_dict_to_tuples(filters):
-    return {
+    filters_args = {
         "current_sites": list2tuple(filters["current_sites"]),
         "current_date_range": list2tuple(filters["date_range"]),
         "current_feature": (filters["current_feature"], list2tuple(filters["current_feature_range"])),
         "current_file_ids": list2tuple(list(itertools.chain(*filters["files"].values()))),
-        "current_weather": list2tuple([
-            (variable_name, list2tuple(params["variable_range"]))
-            for variable_name, params in filters["weather_variables"].items()
-        ]),
+        "current_weather": list2tuple([(variable_name, list2tuple(params["variable_range"])) for variable_name, params in filters["weather_variables"].items()]),
     }
+    return filters_args
 
 def filter_sites_query(sites, selected_sites):
     sites = sites[sites['site'].isin([l.strip('/') for l in selected_sites])].reset_index()
@@ -108,14 +106,12 @@ def set_dataset_config(
         for section in dataset.config.sections()
     }
 
-@functools.lru_cache(maxsize=3)
 def fetch_dataset_options(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).options
 
-@functools.lru_cache(maxsize=3)
 def fetch_dataset_dropdown_option_groups(
     dataset_name: str,
     options: Tuple[str] = (),
@@ -124,7 +120,6 @@ def fetch_dataset_dropdown_option_groups(
     decorator = DatasetDecorator(dataset)
     return decorator.drop_down_select_option_groups(options)
 
-@functools.lru_cache(maxsize=3)
 def fetch_dataset_category_orders(
     dataset_name: str
 ) -> Dict[str, Any]:
@@ -134,11 +129,11 @@ def fetch_dataset_category_orders(
 @functools.lru_cache(maxsize=3)
 def fetch_files(
     dataset_name: str,
-    current_sites: Tuple[str, ...],
-    current_date_range: Tuple[str, ...],
-    current_feature: Tuple[str, Tuple[float, ...]],
-    current_file_ids: Tuple[str, ...],
-    current_weather: Tuple[str, Tuple[float, ...]],
+    current_sites: Tuple[str, ...] = tuple(),
+    current_date_range: Tuple[str, ...] = tuple(),
+    current_feature: Tuple[str, Tuple[float, ...]] = tuple(),
+    current_file_ids: Tuple[str, ...] = tuple(),
+    current_weather: Tuple[str, Tuple[float, ...]] = tuple(),
     valid_only: bool = True,
     **kwargs: Any,
 ) -> pd.DataFrame:
@@ -235,7 +230,7 @@ def fetch_acoustic_features(
     )
     return dataset.append_columns(features.merge(file_site_weather, on="file_id", how="left"))
 
-# @functools.lru_cache(maxsize=10)
+@functools.lru_cache(maxsize=10)
 def fetch_birdnet_species(
     dataset_name: str,
     threshold: float,
@@ -282,7 +277,7 @@ def fetch_birdnet_species(
         .merge(file_site_weather, on="file_id", how="left")
     )
 
-# @functools.lru_cache(maxsize=4)
+@functools.lru_cache(maxsize=4)
 def fetch_acoustic_features_umap(
     dataset_name: str,
     current_sites: Tuple[str, ...],

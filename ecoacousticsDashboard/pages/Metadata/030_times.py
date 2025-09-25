@@ -74,7 +74,7 @@ layout = dmc.Box([
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
                     label="Facet rows by",
-                    value="recorder",
+                    value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
                     id="times-facet-column-select",

@@ -40,9 +40,9 @@ def register_callbacks():
     def set_dataset_config(
         dataset_name: str,
         site_labels: List[str],
-        save_button: int,
+        n_clicks: int,
     ) -> List[str]:
-        if not dataset_name:
+        if not dataset_name or n_clicks is None or n_clicks == 0:
             return no_update
         trigger_id = ctx.triggered_id
         action = SET_DATASET_CONFIG

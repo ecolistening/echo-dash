@@ -33,7 +33,9 @@ def DatasetOptionsSelect(
     )
     def init_select_options(dataset_name: str) -> List[Dict[str, str]]:
         payload = dict(dataset_name=dataset_name, options=list2tuple(options))
-        logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
-        return dispatch(action, **payload)
+        logger.debug(f"{ctx.triggered_id=} {action=} {payload=} {kwargs=}")
+        opts = dispatch(action, **payload)
+        logger.debug(f"{ctx.triggered_id=} {action=} {opts=} {kwargs=}")
+        return opts
 
     return dmc.Select(id=id, **select_options)

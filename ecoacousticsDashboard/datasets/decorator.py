@@ -82,7 +82,7 @@ class DatasetDecorator:
     def site_level_columns(self) -> Dict[str, List[Any]]:
         return {
             column: {
-                "order": sorted(self.dataset.files[column].unique()),
+                "order": list(map(str, sorted(self.dataset.files[column].unique()))),
                 "label": self.dataset.config.get('Site Hierarchy', column, fallback=column),
             }
             for column in self.dataset.locations.columns

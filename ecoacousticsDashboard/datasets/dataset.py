@@ -165,4 +165,5 @@ class Dataset:
         tree = bt.dataframe_to_tree(data, path_col="site")
         sites = list(bt.tree_to_dict(tree).keys())[1:]
         filters["tree"] = sites
+        filters["files"] = {}
         return filters

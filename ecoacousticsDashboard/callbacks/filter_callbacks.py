@@ -59,7 +59,9 @@ def register_callbacks():
         selected_dates: List[str],
         filters,
     ):
-        if selected_dates is not None and len(list(filter(None, selected_dates))) < 2:
+        if selected_dates is None:
+            return no_update
+        if len(list(filter(None, selected_dates))) < 2:
             return no_update
         if selected_dates == filters.get("date_range", None):
             return no_update
@@ -76,6 +78,8 @@ def register_callbacks():
         n_clicks,
         filters,
     ):
+        if n_clicks is None or n_clicks == 0:
+            return no_update
         filters["date_range"] = filters["date_range_bounds"]
         return filters
 

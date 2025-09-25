@@ -57,7 +57,7 @@ layout = dmc.Box([
                     id="distributions-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Colour by",
-                    value="location",
+                    value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
                     id="distributions-facet-row-select",

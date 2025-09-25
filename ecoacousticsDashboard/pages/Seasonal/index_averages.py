@@ -71,7 +71,7 @@ layout = dmc.Box([
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     options=("Site Level",),
                     label="Colour by",
-                    value="location",
+                    value="sitelevel_1",
                 ),
                 # dmc.Chip(
                 #     'Colour by Recorder',
