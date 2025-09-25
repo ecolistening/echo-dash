@@ -39,6 +39,7 @@ class DatasetDecorator:
             "File Level": self.file_level_columns,
             "Site Level": self.site_level_columns,
             "Time of Day": self.solar_columns,
+            "Time": self.time_columns,
             "Temporal": self.temporal_columns,
             "Spatial": self.spatial_columns,
             "Temperature": self.temperature_columns,
@@ -53,6 +54,7 @@ class DatasetDecorator:
         return (
             self.site_level_columns |
             self.solar_columns |
+            self.time_columns |
             self.temporal_columns |
             self.spatial_columns |
             self.temperature_columns |
@@ -91,14 +93,30 @@ class DatasetDecorator:
 
     @functools.cached_property
     def solar_columns(self) -> Dict[str, List[Any]]:
-        # # FIXME -> will be fixed when solar data is present
-        # if len(self.dataset.dates):
-        #     opt_groups += [{'value': f'hours after {c}', 'label': f'Hours after {c.capitalize()}', 'group': 'Time of Day', 'type': 'continuous'} for c in ('dawn', 'sunrise', 'noon', 'sunset', 'dusk')]
         return {
             "dddn": {
                 "order": sorted(self.dataset.files["dddn"].unique(), key=lambda x: DDDN.index(x)),
                 "label": "Dawn/Day/Dusk/Night",
             },
+        }
+
+    @functools.cached_property
+    def time_columns(self) -> Dict[str, List[Any]]:
+        return {
+            "time": {
+                "label": "Absolute Time",
+                "min": self.dataset.files["time"].min(),
+                "max": self.dataset.files["time"].max(),
+            },
+            **{
+                # FIXME: change these in soundade to snake case for application-wide consistency
+                f"hours after {c}": {
+                    "label": f"Hours After {c.capitalize()}",
+                    "min": self.dataset.files[f"hours after {c}"].min(),
+                    "max": self.dataset.files[f"hours after {c}"].max(),
+                }
+                for c in ["dawn", "sunrise", "noon", "sunset", "dusk"]
+            }
         }
 
     @functools.cached_property

@@ -139,7 +139,7 @@ def fetch_files(
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     files = (
-        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "file_path", "dddn", "timestamp"])
+        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
         .query(f"{'valid == True and ' if valid_only else ''}{filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
@@ -181,7 +181,7 @@ def fetch_file_weather(
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     files = (
-        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
+        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
         .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
     )
@@ -208,7 +208,7 @@ def fetch_acoustic_features(
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     files = (
-        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
+        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
         .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
@@ -245,7 +245,7 @@ def fetch_birdnet_species(
     decorator = DatasetDecorator(dataset)
 
     files = (
-        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
+        pd.read_parquet(dataset.path / "files.parquet", columns=["file_id", "valid", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
         .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )

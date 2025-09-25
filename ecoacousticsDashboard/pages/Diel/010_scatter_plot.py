@@ -55,6 +55,13 @@ layout = dmc.Box([
             grow=True,
             children=[
                 DatasetOptionsSelect(
+                    id="index-scatter-x-axis-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("Time",),
+                    label="X-axis",
+                    value="time",
+                ),
+                DatasetOptionsSelect(
                     id="index-scatter-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Colour by",
@@ -100,25 +107,46 @@ layout = dmc.Box([
         ),
         dmc.Group(
             grow=True,
-            children=dmc.Stack([
-                dmc.Text(
-                    "Dot Size",
-                    size="sm",
-                    ta="left",
-                ),
-                dmc.Slider(
-                    id="index-scatter-size-slider",
-                    min=1,
-                    max=20,
-                    step=1,
-                    value=6,
-                    marks=[
-                        {"value": i, "label": f"{i}"}
-                        for i in (1, 10, 20)
-                    ],
-                    persistence=True
-                )
-            ]),
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Dot Size",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="index-scatter-size-slider",
+                        min=1,
+                        max=20,
+                        step=1,
+                        value=6,
+                        marks=[
+                            {"value": i, "label": f"{i}"}
+                            for i in (1, 10, 20)
+                        ],
+                        persistence=True
+                    )
+                ]),
+                dmc.Stack([
+                    dmc.Text(
+                        "Opacity",
+                        size='sm',
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="index-scatter-opacity-slider",
+                        persistence=True,
+                        min=0,
+                        max=100,
+                        step=5,
+                        value=33,
+                        marks=[
+                            dict(value=i, label=f"{i}%")
+                            for i in range(0, 101, 20)
+                        ],
+                    )
+                ]),
+            ],
         ),
     ]),
     dmc.Space(h="sm"),
