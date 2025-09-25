@@ -50,11 +50,12 @@ def register_callbacks():
 
     @callback(
         Output("precache", "data"),
+        State("precache", "data"),
         State("dataset-select", "value"),
         Input("filter-store", "data"),
     )
-    def precache_api_requests(dataset_name: str, filters: Dict[str, Any]) -> None:
-        if not dataset_name:
+    def precache_api_requests(cached: bool | None, dataset_name: str, filters: Dict[str, Any]) -> None:
+        if cached or not dataset_name:
             return no_update
 
         logger.debug(f"{ctx.triggered_id=} caching on load")
@@ -65,7 +66,7 @@ def register_callbacks():
         dispatch(FETCH_ACOUSTIC_FEATURES, **payload)
         dispatch(FETCH_BIRDNET_SPECIES, threshold=0.5, **payload)
 
-        return no_update
+        return True
 
 
     # ------ DATES FILTER ----- #
