@@ -97,11 +97,14 @@ class Dataset:
     def append_columns(self, data: pd.DataFrame) -> pd.DataFrame:
         if "timestamp" in data.columns:
             data["minute"] = data["timestamp"].dt.minute
-            data["hour"] = data["timestamp"].dt.hour
+            data["hour_categorical"] = data["timestamp"].dt.hour.astype(str)
+            data["hour_continuous"] = data["timestamp"].dt.hour.astype(int)
+            data["week_of_year_continuous"] = data["timestamp"].dt.isocalendar()["week"].astype(int)
+            data["week_of_year_categorical"] = data["timestamp"].dt.isocalendar()["week"].astype(str)
             data["weekday"] = data["timestamp"].dt.day_name()
             data["date"] = pd.to_datetime(data["timestamp"].dt.strftime('%Y-%m-%d'))
             data["month"] = data["timestamp"].dt.month_name()
-            data["year"] = data["timestamp"].dt.year
+            data["year"] = data["timestamp"].dt.year.astype(str)
             data["time"] = data["timestamp"].dt.hour + data.timestamp.dt.minute / 60.0
             data["nearest_hour"] = data["timestamp"].dt.round("h")
         return data

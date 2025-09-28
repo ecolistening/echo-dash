@@ -62,10 +62,6 @@ def register_callbacks():
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         data = fetch_data(dataset_name, filters)
-        if color:
-            data[color] = data[color].astype(str)
-        if symbol:
-            data[symbol] = data[symbol].astype(str)
         fig = px.scatter(
             data_frame=data,
             x=x_axis,

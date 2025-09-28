@@ -122,9 +122,21 @@ class DatasetDecorator:
     @functools.cached_property
     def temporal_columns(self) -> Dict[str, List[Any]]:
         return {
-            "hour": {
+            "hour_continuous": {
                 "order": list(range(24)),
-                "label": "Hour",
+                "label": "Hour (Continuous)",
+            },
+            "hour_categorical": {
+                "order": list(map(str, range(24))),
+                "label": "Hour (Categorical)",
+            },
+            "week_of_year_continuous": {
+                "order": list(range(53)),
+                "label": "Week of Year (Continuous)",
+            },
+            "week_of_year_categorical": {
+                "order": list(map(str, range(53))),
+                "label": "Week of Year (Categorical)",
             },
             "weekday": {
                 "order": sorted(self.dataset.files["weekday"].unique(), key=lambda x: WEEKDAYS.index(x)),

@@ -65,6 +65,7 @@ def register_callbacks():
         dispatch(FETCH_ACOUSTIC_FEATURES_UMAP, **payload)
         dispatch(FETCH_ACOUSTIC_FEATURES, **payload)
         dispatch(FETCH_BIRDNET_SPECIES, threshold=0.5, **payload)
+        logger.debug(f"Filter caching {dataset_name} complete")
 
         return dataset_name
 
