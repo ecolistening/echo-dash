@@ -17,17 +17,13 @@ from utils import floor, ceil
 
 @attrs.define
 class Dataset:
-    dataset_path: str
+    path: str
 
     dataset_id: str = attrs.field(init=False)
     dataset_name: str = attrs.field(init=False)
     audio_path: str = attrs.field(init=False)
     config: ConfigParser = attrs.field(init=False)
     filters: Dict[str, Any] = attrs.field(init=False)
-
-    @property
-    def path(self):
-        return Path.cwd().parent / "data" / self.dataset_path
 
     def __attrs_post_init__(self) -> None:
         self.config = self._read_or_build_config(self.path / "config.ini")
@@ -69,8 +65,7 @@ class Dataset:
 
     @functools.cached_property
     def files(self):
-        files = pd.read_parquet(self.path / "files.parquet")
-        files["local_file_path"] = (self.audio_path / files["file_path"]).astype(str)
+        files = pd.read_parquet(self.path / "files_table.parquet")
         return (
             self.append_columns(files)
             .merge(self.weather, left_on=["site_id", "nearest_hour"], right_on=["site_id", "timestamp"], suffixes=("", "_weather"))
@@ -126,7 +121,7 @@ class Dataset:
     def _build_base_filters(self):
         filters = {}
         # date filters
-        data = pd.read_parquet(self.path / "files.parquet")
+        data = pd.read_parquet(self.path / "files_table.parquet")
         min_date = data["timestamp"].dt.date.min().strftime("%Y-%m-%d")
         max_date = data["timestamp"].dt.date.max().strftime("%Y-%m-%d")
         filters["date_range_bounds"] = [min_date, max_date]
@@ -138,7 +133,7 @@ class Dataset:
             'spectral centroid', 'spectral entropy', 'spectral flux',
             'temporal entropy', 'zero crossing rate'
         ]
-        data = pd.read_parquet(self.path / "recording_acoustic_features.parquet")
+        data = pd.read_parquet(self.path / "recording_acoustic_features_table.parquet")
         acoustic_features = {}
         for feature in features:
             df = data.loc[:, feature]

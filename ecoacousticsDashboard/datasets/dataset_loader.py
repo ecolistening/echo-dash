@@ -33,7 +33,7 @@ class DatasetLoader(Iterable):
         datasets = {}
         for dataset_path in datasets_dir:
             try:
-                ds = Dataset(dataset_path=dataset_path)
+                ds = Dataset(path=dataset_path)
                 datasets[ds.dataset_name] = ds
             except Exception as e:
                 logger.error(f"Unable to load dataset at {dataset_path}")
