@@ -82,14 +82,17 @@ class DatasetDecorator:
 
     @functools.cached_property
     def site_level_columns(self) -> Dict[str, List[Any]]:
-        return {
-            column: {
-                "order": list(map(str, sorted(self.dataset.files[column].unique()))),
-                "label": self.dataset.config.get('Site Hierarchy', column, fallback=column),
-            }
-            for column in self.dataset.locations.columns
-            if column.startswith("sitelevel_")
-        }
+        columns = {}
+        for column in self.dataset.locations.columns:
+            if column.startswith("sitelevel_"):
+                label = self.dataset.config.get('Site Hierarchy', column, fallback=column)
+                values = self.dataset.files[column].unique()
+                try:
+                    order = list(map(str, sorted(map(int, values))))
+                except ValueError:
+                    order = list(sorted(values))
+                columns[column] = {"label": label, "order": order}
+        return columns
 
     @functools.cached_property
     def solar_columns(self) -> Dict[str, List[Any]]:
