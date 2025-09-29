@@ -4,34 +4,27 @@ import dash_mantine_components as dmc
 import datetime as dt
 
 def DateRangeFilter():
-    return dmc.Accordion(
-        id="date-filter-accordion",
-        chevronPosition="right",
-        variant="separated",
-        radius="sm",
+    return dmc.Stack(
+        justify="flex-start",
         children=[
-            dmc.AccordionItem(
-                value="date-range",
+            dmc.Group(
+                justify="space-between",
                 children=[
-                    dmc.AccordionControl("Date Range"),
-                    dmc.AccordionPanel(
-                        children=[
-                            dmc.Stack(
-                                justify="flex-start",
-                                children=[
-                                    dmc.Text("Filter by Date"),
-                                    dmc.DatePicker(
-                                        id="date-picker",
-                                        type="range",
-                                        persistence=True,
-                                        allowDeselect=False,
-                                    ),
-                                    dmc.Button(id="date-picker-reset", children="Reset")
-                                ]
-                            ),
-                        ]
+                    dmc.Text("By Date", size="md", ta="left"),
+                    dmc.Button(
+                        id="date-picker-reset",
+                        children="Reset",
+                        color="blue",
+                        w=100
                     )
                 ]
-            )
-        ],
+            ),
+            dmc.DatePicker(
+                id="date-picker",
+                type="range",
+                persistence=True,
+                allowDeselect=False,
+                numberOfColumns=4,
+            ),
+        ]
     )

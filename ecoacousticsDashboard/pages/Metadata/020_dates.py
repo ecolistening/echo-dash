@@ -31,17 +31,16 @@ PLOT_HEIGHT = 800
 dash.register_page(__name__, title=PAGE_TITLE, name='Dates')
 
 layout = dmc.Box([
-    dcc.Store(id="dates-graph-data"),
     FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
+        dmc.Stack(
             children=[
                 SiteLevelFilter(),
+                dmc.Divider(variant="solid"),
                 DateRangeFilter(),
+                dmc.Divider(variant="solid"),
                 EnvironmentalFilter(),
             ]
-        ),
+        )
     ]),
     dmc.Space(h="sm"),
     ControlsPanel([

@@ -28,15 +28,15 @@ dash.register_page(
 
 layout = dmc.Box([
     FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
+        dmc.Stack(
             children=[
                 SiteLevelFilter(),
+                dmc.Divider(variant="solid"),
                 DateRangeFilter(),
+                dmc.Divider(variant="solid"),
                 EnvironmentalFilter(),
             ]
-        ),
+        )
     ]),
     dmc.Space(h="sm"),
     ControlsPanel([

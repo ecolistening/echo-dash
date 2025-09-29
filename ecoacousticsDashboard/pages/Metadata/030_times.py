@@ -38,17 +38,16 @@ dash.register_page(
 )
 
 layout = dmc.Box([
-    dcc.Store(id="times-graph-data"),
     FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
+        dmc.Stack(
             children=[
                 SiteLevelFilter(),
+                dmc.Divider(variant="solid"),
                 DateRangeFilter(),
+                dmc.Divider(variant="solid"),
                 EnvironmentalFilter(),
             ]
-        ),
+        )
     ]),
     dmc.Space(h="sm"),
     ControlsPanel([

@@ -22,7 +22,7 @@ from api import filter_dict_to_tuples
 from components.environmental_filter import EnvironmentalFilterSliderAccordion
 from components.site_level_filter import SiteLevelHierarchyAccordion, TreeNodeChip
 from utils.webhost import AudioAPI
-from utils import ceil, floor, audio_bytes_to_enc, index_to_float, float_to_index
+from utils import ceil, floor, audio_bytes_to_enc, index_to_float, float_to_index, capitalise_each
 
 Filters = Dict[str, Any]
 
@@ -139,55 +139,6 @@ def register_callbacks():
         min_date, max_date = filters["date_range_bounds"]
         return min_date, max_date, date_range
 
-    # @callback(
-    #     Output("date-range-filter-chips", "children"),
-    #     Input("filter-store", "data"),
-    #     prevent_initial_call=True,
-    # )
-    # def update_date_filter_chips(
-    #     filters: Filters,
-    # ) -> dmc.Accordion:
-    #     selected_dates = filters["date_range"]
-    #     if not len(selected_dates):
-    #         return []
-    #     date_range = [
-    #         f"{key}={selected_dates[i]}"
-    #         for i, key in enumerate(["start_date", "end_date"])
-    #     ]
-    #     return dmc.Accordion(
-    #         id="date-range-filters-accordion",
-    #         chevronPosition="right",
-    #         variant="separated",
-    #         radius="sm",
-    #         persistence=True,
-    #         children=[
-    #             dmc.AccordionItem(
-    #                 value="dates-filter",
-    #                 children=[
-    #                     dmc.AccordionControl("Date Range"),
-    #                     dmc.AccordionPanel(
-    #                         pb="1rem",
-    #                         children=dmc.ChipGroup(
-    #                             id={"type": "active-filter-chip-group", "index": "date-range"},
-    #                             value=date_range,
-    #                             multiple=True,
-    #                             children=[
-    #                                 dmc.Chip(
-    #                                     variant="outline",
-    #                                     icon=DashIconify(icon="bi-x-circle"),
-    #                                     value=value,
-    #                                     mt="xs",
-    #                                     children=value,
-    #                                 )
-    #                                 for value in date_range
-    #                             ]
-    #                         )
-    #                     )
-    #                 ]
-    #             )
-    #         ]
-    #     )
-
     # ------ ACOUSTIC FEATURE FILTER ----- #
 
     @callback(
@@ -249,61 +200,6 @@ def register_callbacks():
         filters["current_feature_range"] = feature_range
         return filters
 
-    # @callback(
-    #     Output("acoustic-feature-range-filter-chips", "children"),
-    #     Input("filter-store", "data"),
-    #     prevent_initial_call=True,
-    # )
-    # def update_acoustic_range_filter_chips(
-    #     filters,
-    # ) -> dmc.Accordion:
-    #     feature = filters["current_feature"]
-    #     feature_range = filters["current_feature_range"]
-    #     feature_range = [
-    #         f"{key}={feature_range[i]}"
-    #         for i, key in enumerate(["start_value", "end_value"])
-    #     ]
-    #     return dmc.Accordion(
-    #         id="active-acoustic-range-filters-accordion",
-    #         chevronPosition="right",
-    #         variant="separated",
-    #         persistence=True,
-    #         radius="sm",
-    #         children=[
-    #             dmc.AccordionItem(
-    #                 value="acoustic-range-filter",
-    #                 children=[
-    #                     dmc.AccordionControl("Acoustic Feature Range"),
-    #                     dmc.AccordionPanel(
-    #                         pb="1rem",
-    #                         children=[
-    #                             dmc.Text(
-    #                                 children=feature,
-    #                                 size="sm",
-    #                             ),
-    #                             dmc.Space(h="sm"),
-    #                             dmc.ChipGroup(
-    #                                 id={"type": "active-filter-chip-group", "index": "acoustic-feature"},
-    #                                 value=feature_range,
-    #                                 multiple=True,
-    #                                 children=[
-    #                                     dmc.Chip(
-    #                                         variant="outline",
-    #                                         icon=DashIconify(icon="bi-x-circle"),
-    #                                         value=value,
-    #                                         mt="xs",
-    #                                         children=value,
-    #                                     )
-    #                                     for value in feature_range
-    #                                 ]
-    #                             ),
-    #                         ]
-    #                     )
-    #                 ]
-    #             )
-    #         ]
-    #     )
-
     @callback(
         Output("feature-select", "value"),
         Output("feature-select", "data"),
@@ -312,7 +208,10 @@ def register_callbacks():
     def update_acoustic_feature_select(
         filters: Filters
     ) -> Tuple[str, List[str]]:
-        return filters["current_feature"], list(filters["acoustic_features"].keys())
+        return filters["current_feature"], [
+            dict(value=feature, label=capitalise_each(feature))
+            for feature  in list(filters["acoustic_features"].keys())
+        ]
 
     @callback(
         Output("feature-range-slider", "value"),
@@ -379,41 +278,10 @@ def register_callbacks():
         if not len(context):
             return no_update
         _, current_range = context[0]
-        update = current_range != variable_params['variable_range']
-        if not update:
+        if current_range == variable_params['variable_range']:
             return no_update
         filters["weather_variables"][variable_name]["variable_range"] = current_range
         return filters
-
-    # @callback(
-    #     Output("filter-store", "data", allow_duplicate=True),
-    #     Input({"type": "weather-variable-chip-group", "index": ALL}, "value"),
-    #     State({"type": "weather-variable-chip-group", "index": ALL}, "id"),
-    #     State("filter-store", "data"),
-    #     prevent_initial_call=True,
-    # )
-    # def update_weather_filter(
-    #     chip_values: List[str],
-    #     chip_ids: List[str],
-    #     filters: Filters,
-    # ) -> Filters:
-    #     if not ctx.triggered_id:
-    #         return no_update
-    #     variable_name = ctx.triggered_id["index"]
-    #     variable_params = filters["weather_variables"][variable_name]
-    #     ids, values = chip_ids, chip_values
-    #     context = [(id["index"], current_range) for id, current_range in zip(ids, values) if id["index"] == variable_name]
-    #     if not len(context):
-    #         return no_update
-    #     _, current_range = context[0]
-    #     selected_values = {prefix: float(value) for prefix, value in map(lambda s: s.split("="), current_range)}
-    #     variable_min, variable_max = variable_params["variable_range_bounds"]
-    #     current_range = [selected_values.get("start_value", variable_min), selected_values.get("end_value", variable_max)]
-    #     update = current_range != variable_params['variable_range']
-    #     if not update:
-    #         return no_update
-    #     filters["weather_variables"][variable_name]["variable_range"] = current_range
-    #     return filters
 
     @callback(
         Output({"type": "weather-variable-range-slider", "index": ALL}, "value"),
@@ -426,65 +294,10 @@ def register_callbacks():
     ) -> Tuple[str, List[str]]:
         filter_values = list(map(lambda params: params["variable_range"], filters["weather_variables"].values()))
         if filter_values == values:
-            return [no_update] * len(values)
+            return [no_update] * len(values), [no_update] * len(values)
         return filter_values
 
-    # @callback(
-    #     Output("weather-variable-filter-chips", "children"),
-    #     Input("filter-store", "data"),
-    #     prevent_initial_call=True,
-    # )
-    # def update_weather_filter_chips(
-    #     filters: Filters,
-    # ) -> dmc.Accordion:
-    #     return dmc.Accordion(
-    #         id="active-weather-variable-filters-accordion",
-    #         chevronPosition="right",
-    #         variant="separated",
-    #         radius="sm",
-    #         persistence=True,
-    #         children=[
-    #             dmc.AccordionItem(
-    #                 value="weather-variable-filter",
-    #                 children=[
-    #                     dmc.AccordionControl("Environmental"),
-    #                     dmc.AccordionPanel(
-    #                         pb="1rem",
-    #                         children=[
-    #                             dmc.Box([
-    #                                 dmc.Space(h="sm"),
-    #                                 dmc.Text(
-    #                                     children=variable_name,
-    #                                     size="sm",
-    #                                 ),
-    #                                 dmc.Space(h="sm"),
-    #                                 dmc.ChipGroup(
-    #                                     id={"type": "weather-variable-chip-group", "index": variable_name },
-    #                                     value=list(map(lambda s: "=".join(map(str, s)), zip(["start_value", "end_value"], variable_params["variable_range"]))),
-    #                                     multiple=True,
-    #                                     children=[
-    #                                         dmc.Chip(
-    #                                             variant="outline",
-    #                                             icon=DashIconify(icon="bi-x-circle"),
-    #                                             value=f"{suffix}={value}",
-    #                                             mt="xs",
-    #                                             children=f"{suffix}={value}",
-    #                                         )
-    #                                         for suffix, value in zip(["start_value", "end_value"], variable_params["variable_range"])
-    #                                     ],
-    #                                 ),
-    #                             ])
-    #                             for variable_name, variable_params in filters["weather_variables"].items()
-    #                         ]
-    #                     )
-    #                 ]
-    #             )
-    #         ]
-    #     )
-
-
     # ------ SITE LEVEL FILTER ----- #
-
 
     @callback(
         Output("site-level-filter-group", "children"),
@@ -577,6 +390,25 @@ def register_callbacks():
                 values.append([node.path_name for node in nodes if bool(bt.find_full_path(current_tree, node.path_name))])
         return values
 
+    # ------- FILE ID FILTER ------ #
+
+    @callback(
+        Output("filter-store", "data", allow_duplicate=True),
+        Input({"type": "active-filter-chip-group", "index": "file"}, "value"),
+        State("filter-store", "data"),
+        prevent_initial_call=True,
+    )
+    def remove_umap_selection(
+        values: bool,
+        filters: Dict[str, List[str]],
+    ) -> Dict[str, List[str]]:
+        file_filters = filters["files"]
+        # remove by index
+        filters["files"] = {value: file_filters[value] for value in values}
+        return filters
+
+    # ---- DUMP ---- #
+
     # @callback(
     #     Output("site-filter-chips", "children"),
     #     Input("filter-store", "data"),
@@ -645,8 +477,6 @@ def register_callbacks():
     #         ]
     #     )
 
-    # ------- FILE ID FILTER ------ #
-
     # @callback(
     #     Output("file-filter-chips", "children"),
     #     Input("filter-store", "data"),
@@ -691,18 +521,192 @@ def register_callbacks():
     #         ]
     #     )
 
-    @callback(
-        Output("filter-store", "data", allow_duplicate=True),
-        Input({"type": "active-filter-chip-group", "index": "file"}, "value"),
-        State("filter-store", "data"),
-        prevent_initial_call=True,
-    )
-    def remove_umap_selection(
-        values: bool,
-        filters: Dict[str, List[str]],
-    ) -> Dict[str, List[str]]:
-        file_filters = filters["files"]
-        # remove by index
-        filters["files"] = {value: file_filters[value] for value in values}
-        return filters
+
+    # @callback(
+    #     Output("date-range-filter-chips", "children"),
+    #     Input("filter-store", "data"),
+    #     prevent_initial_call=True,
+    # )
+    # def update_date_filter_chips(
+    #     filters: Filters,
+    # ) -> dmc.Accordion:
+    #     selected_dates = filters["date_range"]
+    #     if not len(selected_dates):
+    #         return []
+    #     date_range = [
+    #         f"{key}={selected_dates[i]}"
+    #         for i, key in enumerate(["start_date", "end_date"])
+    #     ]
+    #     return dmc.Accordion(
+    #         id="date-range-filters-accordion",
+    #         chevronPosition="right",
+    #         variant="separated",
+    #         radius="sm",
+    #         persistence=True,
+    #         children=[
+    #             dmc.AccordionItem(
+    #                 value="dates-filter",
+    #                 children=[
+    #                     dmc.AccordionControl("Date Range"),
+    #                     dmc.AccordionPanel(
+    #                         pb="1rem",
+    #                         children=dmc.ChipGroup(
+    #                             id={"type": "active-filter-chip-group", "index": "date-range"},
+    #                             value=date_range,
+    #                             multiple=True,
+    #                             children=[
+    #                                 dmc.Chip(
+    #                                     variant="outline",
+    #                                     icon=DashIconify(icon="bi-x-circle"),
+    #                                     value=value,
+    #                                     mt="xs",
+    #                                     children=value,
+    #                                 )
+    #                                 for value in date_range
+    #                             ]
+    #                         )
+    #                     )
+    #                 ]
+    #             )
+    #         ]
+    #     )
+
+    # @callback(
+    #     Output("weather-variable-filter-chips", "children"),
+    #     Input("filter-store", "data"),
+    #     prevent_initial_call=True,
+    # )
+    # def update_weather_filter_chips(
+    #     filters: Filters,
+    # ) -> dmc.Accordion:
+    #     return dmc.Accordion(
+    #         id="active-weather-variable-filters-accordion",
+    #         chevronPosition="right",
+    #         variant="separated",
+    #         radius="sm",
+    #         persistence=True,
+    #         children=[
+    #             dmc.AccordionItem(
+    #                 value="weather-variable-filter",
+    #                 children=[
+    #                     dmc.AccordionControl("Environmental"),
+    #                     dmc.AccordionPanel(
+    #                         pb="1rem",
+    #                         children=[
+    #                             dmc.Box([
+    #                                 dmc.Space(h="sm"),
+    #                                 dmc.Text(
+    #                                     children=variable_name,
+    #                                     size="sm",
+    #                                 ),
+    #                                 dmc.Space(h="sm"),
+    #                                 dmc.ChipGroup(
+    #                                     id={"type": "weather-variable-chip-group", "index": variable_name },
+    #                                     value=list(map(lambda s: "=".join(map(str, s)), zip(["start_value", "end_value"], variable_params["variable_range"]))),
+    #                                     multiple=True,
+    #                                     children=[
+    #                                         dmc.Chip(
+    #                                             variant="outline",
+    #                                             icon=DashIconify(icon="bi-x-circle"),
+    #                                             value=f"{suffix}={value}",
+    #                                             mt="xs",
+    #                                             children=f"{suffix}={value}",
+    #                                         )
+    #                                         for suffix, value in zip(["start_value", "end_value"], variable_params["variable_range"])
+    #                                     ],
+    #                                 ),
+    #                             ])
+    #                             for variable_name, variable_params in filters["weather_variables"].items()
+    #                         ]
+    #                     )
+    #                 ]
+    #             )
+    #         ]
+    #     )
+
+
+    # @callback(
+    #     Output("filter-store", "data", allow_duplicate=True),
+    #     Input({"type": "weather-variable-chip-group", "index": ALL}, "value"),
+    #     State({"type": "weather-variable-chip-group", "index": ALL}, "id"),
+    #     State("filter-store", "data"),
+    #     prevent_initial_call=True,
+    # )
+    # def update_weather_filter(
+    #     chip_values: List[str],
+    #     chip_ids: List[str],
+    #     filters: Filters,
+    # ) -> Filters:
+    #     if not ctx.triggered_id:
+    #         return no_update
+    #     variable_name = ctx.triggered_id["index"]
+    #     variable_params = filters["weather_variables"][variable_name]
+    #     ids, values = chip_ids, chip_values
+    #     context = [(id["index"], current_range) for id, current_range in zip(ids, values) if id["index"] == variable_name]
+    #     if not len(context):
+    #         return no_update
+    #     _, current_range = context[0]
+    #     selected_values = {prefix: float(value) for prefix, value in map(lambda s: s.split("="), current_range)}
+    #     variable_min, variable_max = variable_params["variable_range_bounds"]
+    #     current_range = [selected_values.get("start_value", variable_min), selected_values.get("end_value", variable_max)]
+    #     update = current_range != variable_params['variable_range']
+    #     if not update:
+    #         return no_update
+    #     filters["weather_variables"][variable_name]["variable_range"] = current_range
+    #     return filters
+
+    # @callback(
+    #     Output("acoustic-feature-range-filter-chips", "children"),
+    #     Input("filter-store", "data"),
+    #     prevent_initial_call=True,
+    # )
+    # def update_acoustic_range_filter_chips(
+    #     filters,
+    # ) -> dmc.Accordion:
+    #     feature = filters["current_feature"]
+    #     feature_range = filters["current_feature_range"]
+    #     feature_range = [
+    #         f"{key}={feature_range[i]}"
+    #         for i, key in enumerate(["start_value", "end_value"])
+    #     ]
+    #     return dmc.Accordion(
+    #         id="active-acoustic-range-filters-accordion",
+    #         chevronPosition="right",
+    #         variant="separated",
+    #         persistence=True,
+    #         radius="sm",
+    #         children=[
+    #             dmc.AccordionItem(
+    #                 value="acoustic-range-filter",
+    #                 children=[
+    #                     dmc.AccordionControl("Acoustic Feature Range"),
+    #                     dmc.AccordionPanel(
+    #                         pb="1rem",
+    #                         children=[
+    #                             dmc.Text(
+    #                                 children=feature,
+    #                                 size="sm",
+    #                             ),
+    #                             dmc.Space(h="sm"),
+    #                             dmc.ChipGroup(
+    #                                 id={"type": "active-filter-chip-group", "index": "acoustic-feature"},
+    #                                 value=feature_range,
+    #                                 multiple=True,
+    #                                 children=[
+    #                                     dmc.Chip(
+    #                                         variant="outline",
+    #                                         icon=DashIconify(icon="bi-x-circle"),
+    #                                         value=value,
+    #                                         mt="xs",
+    #                                         children=value,
+    #                                     )
+    #                                     for value in feature_range
+    #                                 ]
+    #                             ),
+    #                         ]
+    #                     )
+    #                 ]
+    #             )
+    #         ]
+    #     )
 
