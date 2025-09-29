@@ -82,12 +82,15 @@ def register_callbacks():
             height=PLOT_HEIGHT,
             margin=dict(t=80),
             title=dict(
-                text=f"Box Plot of Acoustic Descriptor by Time of Day",
                 x=0.5,
                 y=0.98,
                 font=dict(size=24),
             )
         )
+        fig.update_layout(title_text=(
+            f"{capitalise_each(filters['current_feature'])} by Time of Day | "
+            f"{filters['date_range'][0]} - {filters['date_range'][1]}"
+        ))
         return fig
 
     @callback(

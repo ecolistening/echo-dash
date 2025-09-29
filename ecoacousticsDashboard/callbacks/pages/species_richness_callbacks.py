@@ -143,11 +143,13 @@ def register_callbacks():
             height=PLOT_HEIGHT,
             margin=dict(t=80),
             title=dict(
-                text=f"Polar Plot of Species Richness by Time of Day",
                 x=0.5,
                 y=0.99,
                 font=dict(size=24),
             )
+        )
+        fig.update_layout(
+            title_text=f"Species Richness by Time of Day | p > {threshold}"
         )
         return fig
 
