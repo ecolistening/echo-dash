@@ -16,7 +16,7 @@ from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
-from components.footer import Footer
+from utils.content import get_content
 
 PAGE_NAME = "species-by-site"
 PAGE_TITLE = "Species by Site"
@@ -24,7 +24,7 @@ PAGE_TITLE = "Species by Site"
 dash.register_page(
     __name__,
     title=PAGE_TITLE,
-    name='Species Community',
+    name='Species Matrix',
 )
 
 layout = dmc.Box([
@@ -115,11 +115,9 @@ layout = dmc.Box([
             id="species-community-graph",
         ),
     ),
-    dbc.Offcanvas(
-        id="species-community-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("species-community"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/species-community")
     ),
 ])
 

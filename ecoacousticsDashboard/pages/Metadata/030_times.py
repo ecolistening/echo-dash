@@ -24,9 +24,8 @@ from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.figure_download_widget import FigureDownloadWidget
 from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
-from components.footer import Footer
 from utils import list2tuple
-from utils.content import get_tabs
+from utils.content import get_content
 
 PAGE_NAME = 'times'
 PAGE_TITLE = 'Recording Times'
@@ -166,11 +165,10 @@ layout = dmc.Box([
             span=5,
         ),
     ]),
-    dbc.Offcanvas(
-        id="times-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("times"),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/times")
     ),
 ])
 

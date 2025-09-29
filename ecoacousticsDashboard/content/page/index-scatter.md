@@ -1,2 +1,0 @@
-# Scatter Plot
-This plot shows the selected descriptor values by time of the day.

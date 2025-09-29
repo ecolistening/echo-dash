@@ -17,8 +17,8 @@ from api import dispatch, FETCH_LOCATIONS
 from components.controls_panel import ControlsPanel
 from components.data_download_widget import DataDownloadWidget
 from components.figure_download_widget import FigureDownloadWidget
-from components.footer import Footer
 from utils import capitalise_each
+from utils.content import get_content
 
 PAGE_NAME = 'map'
 PAGE_TITLE = 'Location Map'
@@ -74,13 +74,12 @@ layout = html.Div([
         dcc.Graph(id="map-graph"),
     ),
     dmc.Space(h="sm"),
-    dmc.Box(id="locations-table"),
-    dbc.Offcanvas(
-        id="map-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("map"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/map")
     ),
+    dmc.Space(h="sm"),
+    dmc.Box(id="locations-table"),
 ])
 
 def register_callbacks():

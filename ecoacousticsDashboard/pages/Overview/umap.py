@@ -15,6 +15,7 @@ from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from components.figure_download_widget import FigureDownloadWidget
+from utils.content import get_content
 
 PAGE_NAME = "UMAP"
 PAGE_TITLE = "UMAP of Soundscape Descriptors"
@@ -168,40 +169,10 @@ layout = dmc.Box([
             span=5,
         ),
     ]),
-    dbc.Offcanvas(
-        id="umap-page-info",
-        is_open=False,
-        placement="bottom",
-        children=dmc.Grid(
-            children=[
-                dmc.GridCol(
-                    span=4,
-                    children=[
-                        dmc.Title(PAGE_TITLE, order=2),
-                    ],
-                ),
-                dmc.Divider(
-                    variant="dotted",
-                    orientation="vertical"
-                ),
-                dmc.GridCol(
-                    span="auto",
-                    children=[
-                        dmc.Text(
-                            "UMAP is a method of projecting high-dimensional data onto fewer dimensions. "
-                            "The axes themselves have no precise meaning, other than defining the distance "
-                            "between the data points. ",
-                            span=True,
-                        ),
-                        dmc.Anchor(
-                            '[details]',
-                            href='https://pair-code.github.io/understanding-umap/',
-                            target="_blank", # target="_blank" opens link in a new tab
-                        ),
-                    ]
-                ),
-            ]
-        ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/umap")
     ),
 ])
 

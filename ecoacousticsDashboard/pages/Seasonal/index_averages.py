@@ -19,8 +19,8 @@ from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.acoustic_feature_filter import AcousticFeatureFilter
-from components.footer import Footer
 from utils import list2tuple, send_download
+from utils.content import get_content
 
 PAGE_NAME = "idx-averages"
 PAGE_TITLE = "Seasonal Descriptor Averages"
@@ -141,11 +141,15 @@ layout = dmc.Box([
     dcc.Loading(
         dcc.Graph(id="index-averages-graph"),
     ),
-    dbc.Offcanvas(
-        id="index-averages-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("index-averages"),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/acoustic-feature-seasonal-averages")
+    ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="feature-descriptor-content",
+        children=[],
     ),
 ])
 

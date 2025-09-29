@@ -36,26 +36,6 @@ def HoverIcons():
                     dmc.HoverCardTarget(
                         children=dmc.ActionIcon(
                             DashIconify(
-                                icon="uil:info-circle",
-                                width=24,
-                            ),
-                            id="info-icon",
-                            variant="light",
-                            color="blue",
-                            size="lg",
-                            n_clicks=0,
-                        ),
-                    ),
-                    dmc.HoverCardDropdown(
-                        dmc.Text("View page information"),
-                    )
-                ],
-            ),
-            dmc.HoverCard(
-                children=[
-                    dmc.HoverCardTarget(
-                        children=dmc.ActionIcon(
-                            DashIconify(
                                 icon="fluent:settings-32-regular",
                                 width=24,
                             ),

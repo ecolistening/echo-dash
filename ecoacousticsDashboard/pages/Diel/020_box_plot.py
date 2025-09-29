@@ -17,7 +17,7 @@ from components.environmental_filter import EnvironmentalFilter
 from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from components.figure_download_widget import FigureDownloadWidget
-from components.footer import Footer
+from utils.content import get_content
 
 PAGE_NAME = "index-box-plot"
 PAGE_TITLE = "Box Plot of Acoustic Descriptor by Time of Day"
@@ -99,7 +99,7 @@ layout = dmc.Box([
             children=[
                 dmc.Stack([
                     dmc.Text(
-                        "Group by Time",
+                        "Time Aggregation",
                         size="sm",
                         ta="left",
                     ),
@@ -144,11 +144,15 @@ layout = dmc.Box([
             span=5,
         ),
     ]),
-    dbc.Offcanvas(
-        id="index-box-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("index-box"),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/acoustic-feature-box")
+    ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="feature-descriptor-content",
+        children=[],
     ),
 ])
 

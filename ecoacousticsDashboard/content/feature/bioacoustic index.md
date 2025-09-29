@@ -1,4 +1,5 @@
-# Bioacoustic Index
+## Bioacoustic Index
+
 The Bioacoustic Index, from Boelman et al. 2007, is calculated as the “area under each curve included all frequency bands associated with the dB value that was greater than the minimum dB value for each curve. The area values are thus a function of both the sound level and the number of frequency bands used by the avifauna”.
 
 Boelman, N. T., Asner, G. P., Hart, P. J., & Martin, R. E. (2007). Multi-trophic invasion resistance in Hawaii: Bioacoustics, field surveys, and airborne remote sensing. Ecological Applications, 17(8), 2137-2144. https://doi.org/10.1890/07-0004.1

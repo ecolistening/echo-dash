@@ -16,7 +16,7 @@ from components.environmental_filter import EnvironmentalFilter
 from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
 from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
-from components.footer import Footer
+from utils.content import get_content
 
 PAGE_NAME = 'index-scatter'
 PAGE_TITLE = 'Acoustic Descriptor by Time of Day'
@@ -167,14 +167,15 @@ layout = dmc.Box([
             span=5,
         ),
     ]),
-    # dcc.Loading(
-    #     dcc.Graph(id=f"index-scatter-graph"),
-    # ),
-    dbc.Offcanvas(
-        id="index-scatter-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("index-scatter"),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/acoustic-feature-scatter")
+    ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="feature-descriptor-content",
+        children=[],
     ),
 ])
 

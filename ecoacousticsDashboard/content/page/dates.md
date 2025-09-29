@@ -1,2 +1,3 @@
-# Recording Dates
-This plot shows the number of recordings captured each day.
+# About
+
+This calendar plot shows the total number of recordings captured each day across all recorders.

@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, dcc, ctx
+from dash import callback, ctx, no_update
 from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
 from loguru import logger
@@ -82,17 +82,6 @@ plot_types = {
 }
 
 def register_callbacks():
-    from dash import callback, ctx, no_update
-
-    @callback(
-        Output("species-richness-page-info", "is_open"),
-        Input("info-icon", "n_clicks"),
-        State("species-richness-page-info", "is_open"),
-        prevent_initial_call=True,
-    )
-    def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-        return not is_open
-
     @callback(
         Output("species-richness-graph", "figure"),
         State("dataset-select", "value"),

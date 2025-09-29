@@ -24,15 +24,6 @@ def fetch_data(dataset_name, filters):
 
 def register_callbacks():
     @callback(
-        Output("dates-page-info", "is_open"),
-        Input("info-icon", "n_clicks"),
-        State("dates-page-info", "is_open"),
-        prevent_initial_call=True,
-    )
-    def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-        return not is_open
-
-    @callback(
         Output("dates-graph", "figure"),
         State("dataset-select", "value"),
         Input("filter-store", "data"),

@@ -15,7 +15,7 @@ from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
-from components.footer import Footer
+from utils.content import get_content
 
 PAGE_NAME = 'distributions'
 PAGE_TITLE = 'Soundscape Descriptor Distributions'
@@ -107,11 +107,15 @@ layout = dmc.Box([
             id="distributions-graph"
         ),
     ),
-    dbc.Offcanvas(
-        id="distributions-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("distributions"),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/acoustic-feature-distributions")
+    ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="feature-descriptor-content",
+        children=[],
     ),
 ])
 

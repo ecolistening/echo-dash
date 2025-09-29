@@ -1,2 +1,5 @@
-# Species Matrix
-This plot shows the total count of each detected species as predicted by BirdNET V2.4. BirdNET returns probabilities for each species for each audio segment. A value can be used (across all species) to adjust the detection threshold using the slider in the control panel. Detections can be grouped according to spatial and site-level categories, temporal and diel categories and functional groups.
+# About
+
+The species matrix shows the total count of each detected species as predicted by BirdNET V2.4.
+
+BirdNET returns probabilities for each species for each audio segment. A value can be used (across all species) to adjust the detection threshold using the slider in the control panel. Detections can be grouped according to spatial and site-level categories, temporal and diel categories and functional groups.

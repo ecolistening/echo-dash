@@ -58,15 +58,6 @@ def Table(data: pd.DataFrame, caption: str = "") -> dmc.Table:
 
 def register_callbacks():
     @callback(
-        Output("map-page-info", "is_open"),
-        Input("info-icon", "n_clicks"),
-        State("map-page-info", "is_open"),
-        prevent_initial_call=True,
-    )
-    def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-        return not is_open
-
-    @callback(
         Output("locations-table", "children"),
         Input("dataset-select", "value"),
     )

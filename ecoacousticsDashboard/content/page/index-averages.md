@@ -1,2 +1,0 @@
-# Seasonal Descriptor Averages
-This plot shows the average of the selected descriptor values.

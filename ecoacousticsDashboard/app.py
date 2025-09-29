@@ -77,6 +77,9 @@ def create_dash_app() -> dash.Dash:
     from callbacks import filter_callbacks
     filter_callbacks.register_callbacks()
 
+    from callbacks import page_callbacks
+    page_callbacks.register_callbacks()
+
     for page in dash.page_registry.values():
         mod = __import__(page["module"], fromlist=["register_callbacks"])
         if hasattr(mod, "register_callbacks"):

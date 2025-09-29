@@ -18,8 +18,8 @@ from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from components.footer import Footer
 from utils import list2tuple
+from utils.content import get_content
 
 PAGE_NAME = "weather-hourly"
 PAGE_TITLE = "Hourly Weather"
@@ -129,11 +129,10 @@ layout = dmc.Box([
     dcc.Loading(
         dcc.Graph(id="weather-hourly-graph"),
     ),
-    dbc.Offcanvas(
-        id="weather-hourly-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("weather-hourly"),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/weather-hourly")
     ),
 ])
 

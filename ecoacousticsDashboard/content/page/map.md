@@ -1,2 +1,5 @@
-# Recording Map
-This map shows the location of the acoustic sensors used in the selected dataset.
+# About
+
+This map shows the location of the recording devices.
+
+The details of each recording device are provided in tabular form below for reference.
