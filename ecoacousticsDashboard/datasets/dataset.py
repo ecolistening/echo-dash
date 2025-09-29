@@ -3,7 +3,9 @@ import bigtree as bt
 import functools
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pickle
+import os
 
 from configparser import ConfigParser
 from pathlib import Path
@@ -31,6 +33,15 @@ class Dataset:
         self.dataset_id = self.config.get("Dataset", "id")
         self.audio_path = Path(self.config.get("Dataset", "audio_path"))
         self.filters = self._build_base_filters()
+
+    @property
+    def acoustic_feature_list(self):
+        ignore_columns = ['sr', 'segment_id', 'segment_idx', 'file_id', 'duration', 'offset', 'frame_length', 'hop_length', 'n_fft', 'feature_length']
+        file_path = list((self.path / "recording_acoustic_features_table.parquet").glob("*.parquet"))[0]
+        if not file_path:
+            raise Exception("Failed to read acoustic features table")
+        columns = [s.name for s in pa.parquet.ParquetFile(file_path).schema]
+        return [col for col in columns if col not in ignore_columns]
 
     @functools.cached_property
     def species(self):
@@ -126,16 +137,9 @@ class Dataset:
         max_date = data["timestamp"].dt.date.max().strftime("%Y-%m-%d")
         filters["date_range_bounds"] = [min_date, max_date]
         # feature filters
-        features = [
-            'acoustic complexity index', 'acoustic evenness index',
-            'bioacoustic index', 'log acoustic evenness index',
-            'log root mean square', 'log(1-temporal entropy)', 'root mean square',
-            'spectral centroid', 'spectral entropy', 'spectral flux',
-            'temporal entropy', 'zero crossing rate'
-        ]
         data = pd.read_parquet(self.path / "recording_acoustic_features_table.parquet")
         acoustic_features = {}
-        for feature in features:
+        for feature in self.acoustic_feature_list:
             df = data.loc[:, feature]
             acoustic_features[feature] = [floor(df.min(), precision=2), ceil(df.max(), precision=2)]
             filters["acoustic_features"] = acoustic_features

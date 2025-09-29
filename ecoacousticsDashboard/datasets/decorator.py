@@ -7,7 +7,7 @@ from loguru import logger
 from typing import Any, Dict, Tuple, List
 
 from datasets.dataset import Dataset
-from utils import floor, ceil
+from utils import floor, ceil, capitalise_each
 
 DEFAULT_OPTION_GROUPS = ("Site Level", "Time of Day", "Temporal")# "Spatial")
 WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -47,6 +47,7 @@ class DatasetDecorator:
             "Wind": self.wind_columns,
             "Species Habitat": self.species_habitat_columns,
             "Functional Groups": self.species_functional_group_columns,
+            "Acoustic Features": self.acoustic_feature_columns,
         }
 
     @property
@@ -61,7 +62,8 @@ class DatasetDecorator:
             self.precipitation_columns |
             self.wind_columns |
             self.species_habitat_columns |
-            self.species_functional_group_columns
+            self.species_functional_group_columns |
+            self.acoustic_feature_columns
         )
 
     @property
@@ -78,6 +80,15 @@ class DatasetDecorator:
             "valid": {
                 "label": "Valid",
             }
+        }
+
+    @functools.cached_property
+    def acoustic_feature_columns(self) -> Dict[str, List[Any]]:
+        return {
+            feature: {
+                "label": capitalise_each(feature),
+            }
+            for feature in self.dataset.acoustic_feature_list
         }
 
     @functools.cached_property
@@ -189,11 +200,6 @@ class DatasetDecorator:
                 "max": ceil(self.dataset.weather["temperature_2m"].max()),
             },
         }
-
-    # TODO
-    # @functools.cached_property
-    # def acoustic_feature_columns(self) -> Dict[str, List[Any]]:
-    #    pass
 
     @functools.cached_property
     def precipitation_columns(self) -> Dict[str, List[Any]]:

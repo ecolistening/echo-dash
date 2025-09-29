@@ -40,20 +40,22 @@ layout = dmc.Box([
                 EnvironmentalFilter(),
             ]
         ),
-        dmc.Space(h=10),
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                AcousticFeatureFilter(),
-            ]
-        ),
     ]),
     dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
             children=[
+                DatasetOptionsSelect(
+                    id="feature-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("Acoustic Features",),
+                    label="Acoustic Feature",
+                    value="bioacoustic index",
+                    searchable=True,
+                    clearable=False,
+                    allowDeselect=False,
+                ),
                 DatasetOptionsSelect(
                     id="index-scatter-x-axis-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
@@ -108,6 +110,19 @@ layout = dmc.Box([
         dmc.Group(
             grow=True,
             children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Acoustic Feature Range",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.RangeSlider(
+                        id="feature-range-slider",
+                        # persistence=True,
+                        precision=2,
+                        labelAlwaysOn=True,
+                    ),
+                ]),
                 dmc.Stack([
                     dmc.Text(
                         "Dot Size",

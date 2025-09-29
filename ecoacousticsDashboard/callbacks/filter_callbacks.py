@@ -4,6 +4,7 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import datetime as dt
 import itertools
+import numpy as np
 import pandas as pd
 
 from dash import callback, ctx, no_update, dcc
@@ -191,7 +192,6 @@ def register_callbacks():
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
-        Output("feature-range-slider", "value", allow_duplicate=True),
         Input("feature-select", "value"),
         State("filter-store", "data"),
         prevent_initial_call=True,
@@ -207,7 +207,7 @@ def register_callbacks():
         features = list(filters["acoustic_features"].keys())
         filters["current_feature"] = selected_feature
         filters["current_feature_range"] = feature_range
-        return filters, feature_range
+        return filters
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
@@ -219,7 +219,10 @@ def register_callbacks():
         selected_feature_range: List[float],
         filters,
     ):
-        if selected_feature_range == filters.get("current_feature_range", None):
+        feature_range = filters.get("current_feature_range", None)
+        if selected_feature_range == feature_range:
+            return no_update
+        if selected_feature_range[0] < feature_range[0] or selected_feature_range[1] > feature_range[1]:
             return no_update
         filters["current_feature_range"] = selected_feature_range
         feature_min, feature_max = selected_feature_range
@@ -301,19 +304,21 @@ def register_callbacks():
 
     @callback(
         Output("feature-select", "value"),
-        Output("feature-select", "data"),
+        # Output("feature-select", "data"),
         Input("filter-store", "data")
     )
     def update_acoustic_feature_select(
         filters: Filters
     ) -> Tuple[str, List[str]]:
-        return filters["current_feature"], list(filters["acoustic_features"].keys())
+        return filters["current_feature"] #, list(filters["acoustic_features"].keys())
 
     @callback(
         Output("feature-range-slider", "min"),
         Output("feature-range-slider", "max"),
         Output("feature-range-slider", "value"),
-        Output("feature-range-bounds", "children"),
+        Output("feature-range-slider", "marks"),
+        Output("feature-range-slider", "step"),
+        # Output("feature-range-bounds", "children"),
         Input("filter-store", "data")
     )
     def update_acoustic_feature_slider(
@@ -324,7 +329,10 @@ def register_callbacks():
         feature_bounds = filters["acoustic_features"][current_feature]
         feature_min, feature_max = feature_bounds
         range_description = f"{feature_min} - {feature_max}"
-        return feature_min, feature_max, feature_range, range_description
+        marks = [dict(value=i, label=f"f{floor(i, precision=2)}") for i in np.linspace(feature_min, feature_max, 5)],
+        step = (feature_min - feature_max) / 1000
+        logger.info(f"{feature_min=} {feature_max=} {feature_range=} {step=} {marks=}")
+        return feature_min, feature_max, feature_range, marks, step #, range_description
 
     # ------ WEATHER FILTER ----- #
 
