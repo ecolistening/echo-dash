@@ -31,15 +31,15 @@ def fetch_data(dataset_name, threshold, filters):
 plot_types = {
     "Scatter": functools.partial(
         px.scatter,
-        x='hour',
-        y='richness',
+        x="hour_continuous",
+        y="richness",
         # mode="markers",
         # markers=True,
     ),
     "Scatter Polar": functools.partial(
         sketch.scatter_polar,
         r="richness",
-        theta="hour",
+        theta="hour_continuous",
         mode="markers+lines",
         radialaxis=dict(
             showticklabels=True,
@@ -117,7 +117,7 @@ def register_callbacks():
         data = fetch_data(dataset_name, threshold, filters)
         data = (
             data
-            .groupby(list(filter(None, set(["hour", "date", color, facet_row, facet_col]))))["species"]
+            .groupby(list(filter(None, set(["hour_continuous", "date", color, facet_row, facet_col]))))["species"]
             .nunique()
             .reset_index(name="richness")
         )
