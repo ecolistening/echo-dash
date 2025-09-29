@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Tuple
 from api import dispatch, FETCH_LOCATIONS
 from utils import capitalise_each, send_download
 
+ROWS_PER_PAGE = 20
 PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name):
@@ -47,10 +48,16 @@ def plot(df):
 def Table(data: pd.DataFrame, caption: str = "") -> dmc.Table:
     return dmc.Table([
         dmc.TableThead(
-            dmc.TableTr([dmc.TableTh(capitalise_each(col.replace("_", " "))) for col in data.columns])
+            dmc.TableTr([
+                dmc.TableTh(capitalise_each(col.replace("_", " ")))
+                for col in data.columns
+            ])
         ),
         dmc.TableTbody([
-            dmc.TableTr([dmc.TableTd(record[col]) for col in data.columns])
+            dmc.TableTr([
+                dmc.TableTd(record[col])
+                for col in data.columns
+            ])
             for record in data.sort_values(by="location").to_dict(orient="records")
         ]),
         dmc.TableCaption(caption)
@@ -58,12 +65,27 @@ def Table(data: pd.DataFrame, caption: str = "") -> dmc.Table:
 
 def register_callbacks():
     @callback(
-        Output("locations-table", "children"),
+        Output("locations-table-container", "children"),
+        Output("locations-paginated", "total"),
         Input("dataset-select", "value"),
+        Input("locations-paginated", "value"),
+        Input("locations-search", "value"),
     )
-    def render_locations_table(dataset_name):
-        data = fetch_data(dataset_name)
-        return Table(data=data, caption="Location metadata")
+    def build_paginated_table(
+        dataset_name: str,
+        page: int,
+        search_term: str,
+    ) -> Table:
+        data = fetch_data(dataset_name).sort_values(by="location").drop("site", axis=1)
+        if search_term:
+            search_term = search_term.lower()
+            mask = data.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)
+            data = data[mask]
+        total = (len(data) + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE
+        start = (page - 1) * ROWS_PER_PAGE
+        end = start + ROWS_PER_PAGE
+        paged_data = data.iloc[start:end]
+        return Table(data=paged_data, caption="Location metadata"), total
 
     @callback(
         Output("map-graph", "figure"),

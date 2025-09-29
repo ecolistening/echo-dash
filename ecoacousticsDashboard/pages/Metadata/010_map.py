@@ -79,7 +79,31 @@ layout = html.Div([
         children=get_content("page/map")
     ),
     dmc.Space(h="sm"),
-    dmc.Box(id="locations-table"),
+    dmc.Box(
+        id="locations-paginated-table",
+        children=dmc.Stack([
+            dmc.Group([
+                dmc.TextInput(
+                    id="locations-search",
+                    placeholder="Search...",
+                    value="",
+                    leftSection=DashIconify(icon="cil:search"),
+                    w=300,
+                ),
+                dmc.Pagination(
+                    id="locations-paginated",
+                    total=1,
+                    value=1,
+                    siblings=1,
+                    boundaries=1,
+                ),
+            ]),
+            dmc.Box(
+                id="locations-table-container",
+                children=[]
+            ),
+        ])
+    ),
 ])
 
 def register_callbacks():
