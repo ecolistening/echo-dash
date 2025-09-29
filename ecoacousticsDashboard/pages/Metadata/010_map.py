@@ -35,19 +35,34 @@ layout = html.Div([
         dmc.Group(
             grow=True,
             children=[
-                html.Div(
-                    style={
-                        "padding": "1rem",
-                        "display": "flex",
-                        "align-content": "center",
-                        "justify-content": "right",
-                    },
+                dmc.Select(
+                    id="map-style-select",
+                    label="Map Style",
+                    value="satellite",
+                    persistence=True,
+                    data=[
+                        {"value": "satellite-streets", "label": "Satellite Streets"},
+                        {"value": "satellite", "label": "Satellite"},
+                        {"value": "open-street-map", "label": "Open Street Map"},
+                        {"value": "outdoors", "label": "Outdoors"},
+                    ]
+                ),
+                dmc.Flex(
+                    p="1rem",
+                    align="center",
+                    justify="right",
+                    direction="row",
                     children=[
-                        DataDownloadWidget(
-                            context="map",
-                        ),
-                        FigureDownloadWidget(
-                            plot_name="map-graph",
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                DataDownloadWidget(
+                                    context="map",
+                                ),
+                                FigureDownloadWidget(
+                                    plot_name="map-graph",
+                                ),
+                            ],
                         ),
                     ],
                 ),

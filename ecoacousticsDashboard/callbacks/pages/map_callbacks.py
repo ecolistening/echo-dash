@@ -33,7 +33,7 @@ def plot(df):
     max_bound = max(longitude_range, latitude_range) * 111
     # determine a zoom level
     zoom = 12 - np.log(max_bound)*1.1
-    fig = px.scatter_mapbox(
+    fig = px.scatter_map(
         df,
         lat="latitude",
         lon="longitude",
@@ -41,11 +41,6 @@ def plot(df):
         hover_data=['timezone'],
         color_discrete_sequence=["red"],
         zoom=zoom,
-    )
-    fig.update_layout(
-        height=PLOT_HEIGHT,
-        margin=dict(r=0, t=0, l=0, b=0),
-        mapbox_style="open-street-map",
     )
     return fig
 
@@ -82,10 +77,25 @@ def register_callbacks():
     @callback(
         Output("map-graph", "figure"),
         Input("dataset-select", "value"),
+        Input("map-style-select", "value"),
     )
-    def update_graph(dataset_name):
+    def update_graph(
+        dataset_name: str,
+        map_style: str
+    ) -> go.Figure:
         data = fetch_data(dataset_name).sort_values(by="location")
         fig = plot(data)
+        # fig.update_traces(cluster=dict(
+        #     enabled=True,
+        #     maxzoom=12,
+        # ))
+        fig.update_layout(
+            height=PLOT_HEIGHT,
+            margin=dict(r=0, t=0, l=0, b=0),
+            map_style=map_style,
+        )
+        # this prevents the zoom from resetting after the map style is changed
+        fig['layout']['uirevision'] = 'some-constant'
         return fig
 
     @callback(
