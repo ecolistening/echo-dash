@@ -64,7 +64,7 @@ def register_callbacks():
         clicks,
     ) -> Dict[str, Any]:
         action = FETCH_BIRDNET_SPECIES
-        payload = dict(dataset_name=dataset_name, threshold=threshold, filters=filters)
+        payload = dict(dataset_name=dataset_name, threshold=threshold, **filter_dict_to_tuples(filters))
         logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
         data = dispatch(action, **payload)
         return send_download(
