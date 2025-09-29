@@ -107,7 +107,7 @@ class DatasetDecorator:
     def time_columns(self) -> Dict[str, List[Any]]:
         return {
             "time": {
-                "label": "Absolute Time",
+                "label": "Hours After Midnight",
                 "min": self.dataset.files["time"].min(),
                 "max": self.dataset.files["time"].max(),
             },
