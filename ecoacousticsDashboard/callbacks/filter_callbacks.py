@@ -22,7 +22,7 @@ from api import filter_dict_to_tuples
 from components.environmental_filter import EnvironmentalFilterSliderAccordion
 from components.site_level_filter import SiteLevelHierarchyAccordion, TreeNodeChip
 from utils.webhost import AudioAPI
-from utils import ceil, floor, audio_bytes_to_enc
+from utils import ceil, floor, audio_bytes_to_enc, index_to_float, float_to_index
 
 Filters = Dict[str, Any]
 
@@ -39,7 +39,7 @@ def register_callbacks():
         filters = dispatch(action, **payload)
         filters["date_range"] = filters["date_range_bounds"]
         features = list(filters["acoustic_features"].keys())
-        current_feature = filters.get("current_feature", features[0])
+        current_feature = filters.get("current_feature", "bioacoustic index")
         filters["current_feature"] = current_feature
         filters["current_feature_range"] = list(filters["acoustic_features"][current_feature])
         for variable in filters["weather_variables"].keys():
@@ -82,7 +82,7 @@ def register_callbacks():
     def update_dates_filter_from_picker(
         selected_dates: List[str],
         filters,
-    ):
+    ) -> Filters:
         if selected_dates is None:
             return no_update
         if len(list(filter(None, selected_dates))) < 2:
@@ -101,7 +101,7 @@ def register_callbacks():
     def reset_dates_filter(
         n_clicks,
         filters,
-    ):
+    ) -> Filters:
         if n_clicks is None or n_clicks == 0:
             return no_update
         filters["date_range"] = filters["date_range_bounds"]
@@ -116,7 +116,7 @@ def register_callbacks():
     def update_dates_filter_from_chips(
         chip_values: List[str],
         filters,
-    ):
+    ) -> Filters:
         min_date, max_date = filters["date_range_bounds"]
         dates_dict = {prefix: date for prefix, date in map(lambda s: s.split("="), chip_values)}
         date_range = [dates_dict.get("start_date", min_date), dates_dict.get("end_date", max_date)]
@@ -199,9 +199,9 @@ def register_callbacks():
     def update_acoustic_feature_filter_from_select(
         selected_feature: str,
         filters,
-    ):
+    ) -> Filters:
         if selected_feature == filters.get("current_feature", None):
-            return no_update, no_update
+            return no_update
         selected_feature = filters["current_feature"] if not selected_feature else selected_feature
         feature_range = tuple(filters["acoustic_features"][selected_feature])
         features = list(filters["acoustic_features"].keys())
@@ -218,8 +218,10 @@ def register_callbacks():
     def update_acoustic_feature_filter_from_slider(
         selected_feature_range: List[float],
         filters,
-    ):
-        feature_range = filters.get("current_feature_range", None)
+    ) -> Filters:
+        feature_range = filters.get("current_feature_range", [])
+        feature_min, feature_max = filters["acoustic_features"][filters["current_feature"]]
+        selected_feature_range = [index_to_float(x, feature_min, feature_max) for x in selected_feature_range]
         if selected_feature_range == feature_range:
             return no_update
         if selected_feature_range[0] < feature_range[0] or selected_feature_range[1] > feature_range[1]:
@@ -304,22 +306,20 @@ def register_callbacks():
 
     @callback(
         Output("feature-select", "value"),
-        # Output("feature-select", "data"),
+        Output("feature-select", "data"),
         Input("filter-store", "data")
     )
     def update_acoustic_feature_select(
         filters: Filters
     ) -> Tuple[str, List[str]]:
-        return filters["current_feature"] #, list(filters["acoustic_features"].keys())
+        return filters["current_feature"], list(filters["acoustic_features"].keys())
 
     @callback(
-        Output("feature-range-slider", "min"),
-        Output("feature-range-slider", "max"),
         Output("feature-range-slider", "value"),
         Output("feature-range-slider", "marks"),
-        Output("feature-range-slider", "step"),
-        # Output("feature-range-bounds", "children"),
+        Output("feature-range-title", "children"),
         Input("filter-store", "data")
+
     )
     def update_acoustic_feature_slider(
         filters: Filters
@@ -329,10 +329,12 @@ def register_callbacks():
         feature_bounds = filters["acoustic_features"][current_feature]
         feature_min, feature_max = feature_bounds
         range_description = f"{feature_min} - {feature_max}"
-        marks = [dict(value=i, label=f"f{floor(i, precision=2)}") for i in np.linspace(feature_min, feature_max, 5)],
-        step = (feature_min - feature_max) / 1000
-        logger.info(f"{feature_min=} {feature_max=} {feature_range=} {step=} {marks=}")
-        return feature_min, feature_max, feature_range, marks, step #, range_description
+        marks = [
+            dict(value=0, label=str(floor(feature_min, precision=2))),
+            dict(value=999, label=str(ceil(feature_max, precision=2)))
+        ]
+        values = [float_to_index(val, feature_min, feature_max) for val in feature_range]
+        return values, marks, f"Acoustic Feature Range: {floor(feature_range[0], precision=2)} - {ceil(feature_range[1], precision=2)}"
 
     # ------ WEATHER FILTER ----- #
 

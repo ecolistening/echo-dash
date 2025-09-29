@@ -46,10 +46,8 @@ layout = dmc.Box([
         dmc.Group(
             grow=True,
             children=[
-                DatasetOptionsSelect(
+                dmc.Select(
                     id="feature-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Acoustic Features",),
                     label="Acoustic Feature",
                     value="bioacoustic index",
                     searchable=True,
@@ -113,14 +111,17 @@ layout = dmc.Box([
                 dmc.Stack([
                     dmc.Text(
                         "Acoustic Feature Range",
+                        id="feature-range-title",
                         size="sm",
                         ta="left",
                     ),
                     dmc.RangeSlider(
                         id="feature-range-slider",
-                        # persistence=True,
-                        precision=2,
-                        labelAlwaysOn=True,
+                        min=0,
+                        max=999,
+                        step=1,
+                        persistence=True,
+                        showLabelOnHover=False,
                     ),
                 ]),
                 dmc.Stack([
