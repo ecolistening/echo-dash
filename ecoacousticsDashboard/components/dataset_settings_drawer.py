@@ -15,41 +15,40 @@ def DatasetSettingsDrawer():
         position='right',
         zIndex=10000,
         children=[
-            dmc.Title(
-                "Settings",
-                id="dataset-settings-dataset-name",
-                order=2,
-            ),
             dmc.Stack([
-                dmc.Title('Stats', order=3),
-                dmc.Text('Recordings: ', ),
+                dmc.Space(h="sm"),
                 dmc.Title('Site Hierarchy', order=3),
                 dmc.Stack(
                     id="dataset-settings-sites-form",
                     children=[],
                 ),
             ]),
-            # FIXME
-            html.Div(
+            dmc.Space(h="sm"),
+            dmc.Box(
                 children=[
-                    dmc.ButtonGroup([
-                        dmc.Button(
-                            "Save",
-                            id="dataset-settings-save-button",
-                            variant="filled",
-                            leftSection=DashIconify(icon="fluent:save-28-filled"),
-                            n_clicks=0,
-                            mb=10,
-                        ),
-                        dmc.Button(
-                            "Cancel",
-                            id="dataset-settings-cancel-button",
-                            variant="filled",
-                            leftSection=DashIconify(icon="material-symbols:cancel"),
-                            n_clicks=0,
-                            mb=10,
-                        ),
-                    ])
+                    dmc.Group(
+                        grow=True,
+                        children=[
+                            dmc.Button(
+                                "Save",
+                                id="dataset-settings-save-button",
+                                variant="filled",
+                                color="blue",
+                                leftSection=DashIconify(icon="fluent:save-28-filled"),
+                                n_clicks=0,
+                                mb=10,
+                            ),
+                            dmc.Button(
+                                "Cancel",
+                                id="dataset-settings-cancel-button",
+                                color="red",
+                                variant="filled",
+                                leftSection=DashIconify(icon="material-symbols:cancel"),
+                                n_clicks=0,
+                                mb=10,
+                            ),
+                        ]
+                    )
                 ],
             ),
         ]
