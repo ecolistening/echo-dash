@@ -6,6 +6,7 @@ import pandas as pd
 import pyarrow as pa
 import pickle
 import os
+import yaml
 
 from configparser import ConfigParser
 from pathlib import Path
@@ -25,10 +26,12 @@ class Dataset:
     dataset_name: str = attrs.field(init=False)
     audio_path: str = attrs.field(init=False)
     config: ConfigParser = attrs.field(init=False)
+    soundade_config: Dict[str, Any] = attrs.field(init=False)
     filters: Dict[str, Any] = attrs.field(init=False)
 
     def __attrs_post_init__(self) -> None:
         self.config = self._read_or_build_config(self.path / "config.ini")
+        self.soundade_config = self._read_soundade_config(self.path / "config.yaml")
         self.dataset_name = self.config.get("Dataset", "name")
         self.dataset_id = self.config.get("Dataset", "id")
         self.audio_path = Path(self.config.get("Dataset", "audio_path"))
@@ -128,6 +131,15 @@ class Dataset:
             if not config.has_section('Site Hierarchy'):
                 config.add_section('Site Hierarchy')
         return config
+
+    @staticmethod
+    def _read_soundade_config(config_path) -> ConfigParser:
+        try:
+            with open(config_path, "r") as f:
+                return yaml.safe_load(f.read())
+        except (IOError, TypeError) as e:
+            logger.error(e)
+            return {}
 
     def _build_base_filters(self):
         filters = {}

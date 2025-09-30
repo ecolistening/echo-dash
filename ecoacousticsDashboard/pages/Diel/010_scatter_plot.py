@@ -175,6 +175,10 @@ layout = dmc.Box([
         id="page-content",
         children=get_content("page/acoustic-feature-scatter")
     ),
+    dmc.Box(
+        id="soundade-features-description",
+        children=[]
+    ),
     dmc.Space(h="sm"),
     dmc.Box(
         id="feature-descriptor-content",

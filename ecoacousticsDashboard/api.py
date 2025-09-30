@@ -64,7 +64,7 @@ def fetch_dataset_config(
     dataset_name: str
 ) -> Dict[str, Any]:
     dataset = fetch_dataset(dataset_name)
-    return {
+    return { "SoundADE": dataset.soundade_config } | {
         section: dict(dataset.config.items(section))
         for section in dataset.config.sections()
     }
@@ -86,7 +86,7 @@ def set_dataset_config(
     dataset.save_config()
     fetch_dataset_config.cache_clear()
     fetch_sites_tree.cache_clear()
-    return {
+    return { "SoundADE": dataset.soundade_config } | {
         section: dict(dataset.config.items(section))
         for section in dataset.config.sections()
     }
