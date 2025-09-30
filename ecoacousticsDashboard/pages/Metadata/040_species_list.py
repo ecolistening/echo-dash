@@ -28,66 +28,62 @@ dash.register_page(
 # TODO: add a button to show selected only
 
 layout = html.Div([
-    dcc.Store(id="species-store", data=[]),
     ControlsPanel([
         dmc.Group(
             grow=True,
             children=[
                 dmc.Stack([
+                    dmc.Group([
+                        dmc.TextInput(
+                            id="species-search",
+                            label="Search...",
+                            value="",
+                            leftSection=DashIconify(icon="cil:search"),
+                            w=300,
+                        ),
+                        dmc.Select(
+                            id="species-name-select",
+                            label="Sort by",
+                            value="scientific_name",
+                            data=[
+                                dict(value="scientific_name", label="Scientific Name"),
+                                dict(value="common_name", label="Common Name"),
+                            ],
+                            clearable=False,
+                            allowDeselect=False,
+                            persistence=True,
+                            w=300,
+                        ),
+                        dmc.Chip(
+                            "Group Alphabetically",
+                            id="alphabetic-tickbox",
+                            persistence=True,
+                            checked=True,
+                        ),
+                        dmc.Chip(
+                            "Show Species List",
+                            id="species-list-tickbox",
+                            style={"display": "none"},
+                            persistence=True,
+                            checked=False,
+                        ),
+                    ]),
                     dmc.Group(
-                        justify="space-between",
+                        justify="flex-end",
                         children=[
-                            dmc.Group([
-                                dmc.Stack([
-                                    dmc.Text(
-                                        "Search...",
-                                        size="sm",
-                                        ta="left",
-                                    ),
-                                    dmc.TextInput(
-                                        id="species-search",
-                                        value="",
-                                        leftSection=DashIconify(icon="cil:search"),
-                                        w=300,
-                                    ),
-                                ]),
-                                dmc.Stack([
-                                    dmc.Text(
-                                        "Sort by...",
-                                        size="sm",
-                                        ta="left",
-                                    ),
-                                    dmc.Select(
-                                        id="species-name-select",
-                                        value="scientific_name",
-                                        data=[
-                                            dict(value="scientific_name", label="Scientific Name"),
-                                            dict(value="common_name", label="Common Name"),
-                                        ],
-                                        clearable=False,
-                                        allowDeselect=False,
-                                        persistence=True,
-                                        w=300,
-                                    ),
-                                ]),
-                            ]),
-                            dmc.Group([
-                                dmc.Stack([
-                                    dmc.Button(
-                                        "Save",
-                                        id="species-list-save-button",
-                                        color="green",
-                                        size="sm",
-                                    ),
-                                    dmc.Button(
-                                        "Clear All",
-                                        id="species-list-clear-button",
-                                        color="red",
-                                        size="sm",
-                                    ),
-                                ]),
-                            ]),
-                        ],
+                            dmc.Button(
+                                "Save",
+                                id="species-list-save-button",
+                                color="green",
+                                size="sm",
+                            ),
+                            dmc.Button(
+                                "Clear All",
+                                id="species-list-clear-button",
+                                color="red",
+                                size="sm",
+                            ),
+                        ]
                     ),
                 ]),
             ]
@@ -104,10 +100,52 @@ layout = html.Div([
             ],
             fullWidth=True,
         ),
-        dmc.Grid(
-            id="species-checklist",
-            gutter="md",
+        dmc.Stack(
+            id="species-table",
+            style={"display": "block"},
+            children=[
+                dmc.Group(
+                    justify="center",
+                    children=[
+                        dmc.Pagination(
+                            id="species-table-pagination",
+                            total=1,
+                            value=1,
+                            siblings=1,
+                            boundaries=1
+                        ),
+                    ]
+                ),
+                dmc.Space(h="sm"),
+                dmc.Grid(
+                    id="species-table-checklist",
+                    gutter="md",
+                ),
+            ]
         ),
+        dmc.Stack(
+            id="species-list-table",
+            style={"display": "none"},
+            children=[
+                dmc.Group(
+                    justify="center",
+                    children=[
+                        dmc.Pagination(
+                            id="species-list-pagination",
+                            total=1,
+                            value=1,
+                            siblings=1,
+                            boundaries=1
+                        ),
+                    ]
+                ),
+                dmc.Space(h="sm"),
+                dmc.Grid(
+                    id="species-list-checklist",
+                    gutter="md",
+                ),
+            ],
+        )
     ]),
     dmc.Space(h="sm"),
     dmc.Box(

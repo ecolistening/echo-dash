@@ -111,6 +111,20 @@ def fetch_dataset_category_orders(
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).category_orders
 
+def get_species_list(
+    dataset_name: str,
+) -> None:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.species_list
+
+def set_species_list(
+    dataset_name: str,
+    species_list: Tuple[str, ...]
+) -> None:
+    dataset = DATASETS.get_dataset(dataset_name)
+    dataset.save_species_list(species_list)
+    return True
+
 @functools.lru_cache(maxsize=3)
 def fetch_files(
     dataset_name: str,
@@ -152,7 +166,7 @@ def fetch_species(
     dataset_name: str,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
-    return dataset.species, set(dataset.species[["scientific_name", "common_name"]].itertuples(index=False, name=None))
+    return dataset.species
 
 @functools.lru_cache(maxsize=3)
 def fetch_weather(
@@ -325,6 +339,8 @@ FETCH_DATASET_CONFIG = "fetch_dataset_config"
 SET_DATASET_CONFIG = "set_dataset_config"
 FETCH_DATASET_SITES_TREE = "fetch_dataset_sites_tree"
 FETCH_BASE_FILTERS = "fetch_base_filters"
+FETCH_SPECIES_LIST = "get_species_list"
+SET_SPECIES_LIST = "set_species_list"
 
 FETCH_DATASET_OPTIONS = "fetch_dataset_options"
 FETCH_DATASET_CATEGORY_ORDERS = "fetch_dataset_category_orders"
@@ -347,6 +363,8 @@ API = {
     SET_DATASET_CONFIG: set_dataset_config,
     FETCH_DATASET_SITES_TREE: fetch_sites_tree,
     FETCH_BASE_FILTERS: fetch_base_filters,
+    FETCH_SPECIES_LIST: get_species_list,
+    SET_SPECIES_LIST: set_species_list,
 
     FETCH_DATASET_OPTIONS: fetch_dataset_options,
     FETCH_DATASET_CATEGORY_ORDERS: fetch_dataset_category_orders,

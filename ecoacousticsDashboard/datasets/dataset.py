@@ -88,6 +88,20 @@ class Dataset:
         with open(self.path / "config.ini", "w") as f:
             self.config.write(f)
 
+    def save_species_list(self, species_list: List[str]):
+        with open(self.path / "selected_species.yaml", "w") as f:
+            f.write(yaml.safe_dump(list(sorted(species_list))))
+
+    @functools.cached_property
+    def species_list(self):
+        try:
+            with open(self.path / "selected_species.yaml", "r") as f:
+                return yaml.safe_load(f.read())
+        except (IOError, TypeError) as e:
+            logger.warning("No species list saved")
+            logger.error(e)
+            return []
+
     @functools.cached_property
     def umap(self) -> Callable:
         with open(self.path / "umap" / "config.yaml", "rb") as f:
