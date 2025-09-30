@@ -78,7 +78,7 @@ layout = html.Div([
                                 size="sm",
                             ),
                             dmc.Button(
-                                "Clear All",
+                                "Reset",
                                 id="species-list-clear-button",
                                 color="red",
                                 size="sm",

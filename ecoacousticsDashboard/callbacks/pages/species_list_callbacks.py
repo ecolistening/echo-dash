@@ -206,15 +206,20 @@ def register_callbacks():
 
     @callback(
         Output("species-store", "data", allow_duplicate=True),
+        Output("species-list-tickbox", "checked"),
+        State("dataset-select", "value"),
         Input("species-list-clear-button", "n_clicks"),
         prevent_initial_call=True,
     )
     def reset_species_store(
+        dataset_name: str,
         n_clicks: int,
     ) -> List[str]:
         if n_clicks == 0:
-            return no_update
-        return []
+            return no_update, no_update
+        dispatch(SET_SPECIES_LIST, dataset_name=dataset_name, species_list=[])
+        time.sleep(0.5)
+        return [], False
 
     clientside_callback(
         """
