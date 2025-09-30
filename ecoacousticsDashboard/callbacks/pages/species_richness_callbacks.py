@@ -145,17 +145,19 @@ def register_callbacks():
     @callback(
         Output("species-richness-data-download", "data"),
         State("dataset-select", "value"),
+        Input("species-threshold-slider", "value"),
         State("filter-store", "data"),
         Input({"type": "species-richness-data-download-button", "index": ALL}, "n_clicks"),
         prevent_initial_call=True,
     )
     def download_data(
         dataset_name: str,
+        threshold: str,
         filters,
         clicks,
     ) -> Dict[str, Any]:
         return send_download(
-            fetch_data(dataset_name, filters),
+            fetch_data(dataset_name, threshold, filters),
             f"{dataset_name}_birdnet_detections",
             ctx.triggered_id["index"],
         )
