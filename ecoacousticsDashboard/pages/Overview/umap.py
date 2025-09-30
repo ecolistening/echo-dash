@@ -157,14 +157,14 @@ layout = dmc.Box([
             span=5,
         ),
     ]),
-    dmc.Box(
-        id="soundade-features-description",
-        children=[]
-    ),
     dmc.Space(h="sm"),
     dmc.Box(
         id="page-content",
         children=get_content("page/umap")
+    ),
+    dmc.Box(
+        id="soundade-features-description",
+        children=[]
     ),
 ])
 
