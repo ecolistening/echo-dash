@@ -207,14 +207,15 @@ class DatasetDecorator:
         column_names = ["rain", "snowfall"]
         columns = {}
         for variable, label in zip(column_names, labels):
-            # don't show enviroment variables that have no range
             min_val, max_val = 0.0, ceil(self.dataset.weather[variable].max())
-            if not (min_val == 0.0 and max_val == 0.0):
-                columns[variable] = {
-                    "label": label,
-                    "min": min_val,
-                    "max": max_val,
-                }
+            # add a max val so pattern matchers don't break
+            if (min_val == 0.0 and max_val == 0.0):
+                max_val = 1.0
+            columns[variable] = {
+                "label": label,
+                "min": min_val,
+                "max": max_val,
+            }
         return columns
 
     @functools.cached_property
@@ -236,13 +237,14 @@ class DatasetDecorator:
         ]
         for variable, label in zip(column_names, labels):
             min_val, max_val = 0.0, ceil(self.dataset.weather[variable].max())
-            # don't show enviroment variables that have no range
-            if not (min_val == 0.0 and max_val == 0.0):
-                columns[variable] = {
-                    "label": label,
-                    "min": min_val,
-                    "max": max_val,
-                }
+            # add a max val so pattern matchers don't break
+            if (min_val == 0.0 and max_val == 0.0):
+                max_val = 1.0
+            columns[variable] = {
+                "label": label,
+                "min": min_val,
+                "max": max_val,
+            }
         return columns
 
     @functools.cached_property

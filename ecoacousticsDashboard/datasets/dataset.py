@@ -155,10 +155,12 @@ class Dataset:
             df = data.loc[:, variable]
             variable_ranges = {}
             min_val, max_val = floor(df.min()), ceil(df.max())
-            if not (min_val == 0.0 and max_val == 0.0):
-                variable_range = [min_val, max_val]
-                variable_ranges["variable_range_bounds"] = variable_range
-                weather_variables[variable] = variable_ranges
+            # add a max val so pattern matchers don't break
+            if (min_val == 0.0 and max_val == 0.0):
+                max_val = 1.0
+            variable_range = [min_val, max_val]
+            variable_ranges["variable_range_bounds"] = variable_range
+            weather_variables[variable] = variable_ranges
         filters["weather_variables"] = weather_variables
         # site filters
         data = pd.read_parquet(self.path / "locations_table.parquet")

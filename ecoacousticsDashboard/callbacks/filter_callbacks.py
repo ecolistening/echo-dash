@@ -184,29 +184,8 @@ def register_callbacks():
         selected_feature_range = [index_to_float(x, feature_min, feature_max) for x in selected_feature_range]
         if selected_feature_range == feature_range:
             return no_update
-        if selected_feature_range[0] < feature_range[0] or selected_feature_range[1] > feature_range[1]:
-            return no_update
         filters["current_feature_range"] = selected_feature_range
         feature_min, feature_max = selected_feature_range
-        return filters
-
-    @callback(
-        Output("filter-store", "data", allow_duplicate=True),
-        Input({"type": "active-filter-chip-group", "index": "acoustic-feature"}, "value"),
-        State("filter-store", "data"),
-        prevent_initial_call=True,
-    )
-    def update_acoustic_feature_filter_from_chips(
-        chip_values: List[str],
-        filters,
-    ):
-        current_feature = filters["current_feature"]
-        feature_min, feature_max = filters["acoustic_features"][current_feature]
-        selected_values = {prefix: float(value) for prefix, value in map(lambda s: s.split("="), chip_values)}
-        feature_range = [selected_values.get("start_value", feature_min), selected_values.get("end_value", feature_max)]
-        if feature_range == filters.get("current_feature_range"):
-            return no_update
-        filters["current_feature_range"] = feature_range
         return filters
 
     @callback(
@@ -227,10 +206,12 @@ def register_callbacks():
         Output("feature-range-slider", "marks"),
         Output("feature-range-title", "children"),
         Input("filter-store", "data"),
+        Input("feature-select", "value"),
         prevent_initial_call=True,
     )
     def update_acoustic_feature_slider(
-        filters: Filters
+        filters: Filters,
+        feature: str, # to trigger re-draw of values
     ) -> Tuple[str, List[str]]:
         feature_range = filters["current_feature_range"]
         current_feature = filters["current_feature"]
@@ -812,3 +793,21 @@ def register_callbacks():
     #     filters["date_range"] = date_range
     #     return filters
 
+#     @callback(
+#         Output("filter-store", "data", allow_duplicate=True),
+#         Input({"type": "active-filter-chip-group", "index": "acoustic-feature"}, "value"),
+#         State("filter-store", "data"),
+#         prevent_initial_call=True,
+#     )
+#     def update_acoustic_feature_filter_from_chips(
+#         chip_values: List[str],
+#         filters,
+#     ):
+#         current_feature = filters["current_feature"]
+#         feature_min, feature_max = filters["acoustic_features"][current_feature]
+#         selected_values = {prefix: float(value) for prefix, value in map(lambda s: s.split("="), chip_values)}
+#         feature_range = [selected_values.get("start_value", feature_min), selected_values.get("end_value", feature_max)]
+#         if feature_range == filters.get("current_feature_range"):
+#             return no_update
+#         filters["current_feature_range"] = feature_range
+#         return filters
