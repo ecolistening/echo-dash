@@ -203,53 +203,47 @@ class DatasetDecorator:
 
     @functools.cached_property
     def precipitation_columns(self) -> Dict[str, List[Any]]:
-        return {
-            # "precipitation": {
-            #     "label": "Total Precipitation (cm)",
-            #     "min": 0, # floor(self.dataset.weather["precipitation"].min()),
-            #     "max": ceil(self.dataset.weather["precipitation"].max()),
-            # },
-            "rain": {
-                "label": "Rain (cm)",
-                "min": 0, # floor(self.dataset.weather["rain"].min()),
-                "max": ceil(self.dataset.weather["rain"].max()),
-            },
-            "snowfall": {
-                "label": "Snowfall (cm)",
-                "min": 0, # floor(self.dataset.weather["snowfall"].min()),
-                "max": ceil(self.dataset.weather["snowfall"].max()),
-            },
-        }
+        labels = ["Rain (cm)", "Snowfall (cm)"]
+        column_names = ["rain", "snowfall"]
+        columns = {}
+        for variable, label in zip(column_names, labels):
+            # don't show enviroment variables that have no range
+            min_val, max_val = 0.0, ceil(self.dataset.weather[variable].max())
+            if not (min_val == 0.0 and max_val == 0.0):
+                columns[variable] = {
+                    "label": label,
+                    "min": min_val,
+                    "max": max_val,
+                }
+        return columns
 
     @functools.cached_property
     def wind_columns(self) -> Dict[str, List[Any]]:
-        return {
-            "wind_speed_10m": {
-                "label": "Wind Speed at 10m elevation (kph)",
-                "min": 0, # floor(self.dataset.weather["wind_speed_10m"].min()),
-                "max": ceil(self.dataset.weather["wind_speed_10m"].max()),
-            },
-            "wind_speed_100m": {
-                "label": "Wind Speed at 100m elevation (kph)",
-                "min": 0, # floor(self.dataset.weather["wind_speed_100m"].min()),
-                "max": ceil(self.dataset.weather["wind_speed_100m"].max()),
-            },
-            "wind_direction_10m": {
-                "label": "Wind Direction at 10m elevation (°)",
-                "min": 0, # floor(self.dataset.weather["wind_direction_10m"].min()),
-                "max": ceil(self.dataset.weather["wind_direction_10m"].max()),
-            },
-            "wind_direction_100m": {
-                "label": "Wind Direction at 100m elevation (°)",
-                "min": 0, # floor(self.dataset.weather["wind_direction_100m"].min()),
-                "max": ceil(self.dataset.weather["wind_direction_100m"].max()),
-            },
-            "wind_gusts_10m": {
-                "label": "Wind Gusts at 10m elevation (kph)",
-                "min": 0, # floor(self.dataset.weather["wind_gusts_10m"].min()),
-                "max": ceil(self.dataset.weather["wind_gusts_10m"].max()),
-            },
-        }
+        columns = {}
+        labels = [
+            "Wind Speed at 10m elevation (kph)",
+            "Wind Speed at 100m elevation (kph)",
+            "Wind Direction at 10m elevation (°)",
+            "Wind Direction at 100m elevation (°)",
+            "Wind Gusts at 10m elevation (kph)",
+        ]
+        column_names = [
+            "wind_speed_10m",
+            "wind_speed_100m",
+            "wind_direction_10m",
+            "wind_direction_100m",
+            "wind_gusts_10m",
+        ]
+        for variable, label in zip(column_names, labels):
+            min_val, max_val = 0.0, ceil(self.dataset.weather[variable].max())
+            # don't show enviroment variables that have no range
+            if not (min_val == 0.0 and max_val == 0.0):
+                columns[variable] = {
+                    "label": label,
+                    "min": min_val,
+                    "max": max_val,
+                }
+        return columns
 
     @functools.cached_property
     def species_habitat_columns(self) -> Dict[str, List[Any]]:

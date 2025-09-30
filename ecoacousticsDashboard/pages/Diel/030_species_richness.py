@@ -31,27 +31,6 @@ PLOT_HEIGHT = 800
 plot_types = ["Scatter", "Scatter Polar"]
 
 layout = dmc.Box([
-    FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                SiteLevelFilter(),
-                DateRangeFilter(),
-                EnvironmentalFilter(),
-            ]
-        ),
-        # TODO:
-        # dmc.Space(h=10),
-        # dmc.Group(
-        #     align="start",
-        #     grow=True,
-        #     children=[
-        #         SpeciesFilter(),
-        #     ]
-        # ),
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,

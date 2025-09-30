@@ -26,6 +26,21 @@ from utils import ceil, floor, audio_bytes_to_enc, index_to_float, float_to_inde
 
 Filters = Dict[str, Any]
 
+def set_filters(dataset_name):
+    action = FETCH_BASE_FILTERS
+    payload = dict(dataset_name=dataset_name)
+    filters = dispatch(action, **payload)
+    filters["date_range"] = filters["date_range_bounds"]
+    features = list(filters["acoustic_features"].keys())
+    current_feature = filters.get("current_feature", "bioacoustic index")
+    filters["current_feature"] = current_feature
+    filters["current_feature_range"] = list(filters["acoustic_features"][current_feature])
+    for variable in filters["weather_variables"].keys():
+        filters["weather_variables"][variable]["variable_range"] = filters["weather_variables"][variable]["variable_range_bounds"]
+    filters["current_sites"] = filters["tree"]
+    filters["files"] = {}
+    return filters
+
 def register_callbacks():
     @callback(
         Output("filter-store", "data"),
@@ -34,42 +49,43 @@ def register_callbacks():
     def init_dataset_filters(
         dataset_name: str,
     ) -> Filters:
-        action = FETCH_BASE_FILTERS
-        payload = dict(dataset_name=dataset_name)
-        filters = dispatch(action, **payload)
-        filters["date_range"] = filters["date_range_bounds"]
-        features = list(filters["acoustic_features"].keys())
-        current_feature = filters.get("current_feature", "bioacoustic index")
-        filters["current_feature"] = current_feature
-        filters["current_feature_range"] = list(filters["acoustic_features"][current_feature])
-        for variable in filters["weather_variables"].keys():
-            filters["weather_variables"][variable]["variable_range"] = filters["weather_variables"][variable]["variable_range_bounds"]
-        filters["current_sites"] = filters["tree"]
-        filters["files"] = {}
-        logger.debug(f"{ctx.triggered_id=} {action} {payload} {filters=}")
-        return filters
+        return set_filters(dataset_name)
 
     @callback(
-        Output("precache", "data"),
-        State("precache", "data"),
+        Output("filter-store", "data", allow_duplicate=True),
+        Input("filter-reset-button", "n_clicks"),
         State("dataset-select", "value"),
-        Input("filter-store", "data"),
+        prevent_initial_call=True
     )
-    def precache_api_requests(cached_dataset: bool | None, dataset_name: str, filters: Dict[str, Any]) -> None:
-        if not dataset_name or cached_dataset == dataset_name:
+    def reset_dataset_filters(
+        n_clicks: str,
+        dataset_name: str,
+    ) -> Filters:
+        if n_clicks == 0:
             return no_update
+        return set_filters(dataset_name)
 
-        logger.debug(f"{ctx.triggered_id=} caching {dataset_name} on load")
-        payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters))
-        dispatch(FETCH_FILES, **payload)
-        dispatch(FETCH_FILE_WEATHER, **payload)
-        dispatch(FETCH_ACOUSTIC_FEATURES_UMAP, **payload)
-        dispatch(FETCH_ACOUSTIC_FEATURES, **payload)
-        dispatch(FETCH_BIRDNET_SPECIES, threshold=0.5, **payload)
-        logger.debug(f"Filter caching {dataset_name} complete")
+    # @callback(
+    #     Output("precache", "data"),
+    #     State("precache", "data"),
+    #     State("dataset-select", "value"),
+    #     Input("filter-store", "data"),
+    # )
+    # def precache_api_requests(cached_dataset: bool | None, dataset_name: str, filters: Dict[str, Any]) -> None:
+    #     if not dataset_name or cached_dataset == dataset_name:
+    #         return no_update
 
-        return dataset_name
+    #     logger.debug(f"{ctx.triggered_id=} caching {dataset_name} on load")
+    #     payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters))
 
+    #     dispatch(FETCH_FILES, **payload)
+    #     dispatch(FETCH_FILE_WEATHER, **payload)
+    #     dispatch(FETCH_ACOUSTIC_FEATURES_UMAP, **payload)
+    #     dispatch(FETCH_ACOUSTIC_FEATURES, **payload)
+    #     dispatch(FETCH_BIRDNET_SPECIES, threshold=0.5, **payload)
+    #     logger.debug(f"Filter caching {dataset_name} complete")
+
+    #     return dataset_name
 
     # ------ DATES FILTER ----- #
 
@@ -108,24 +124,6 @@ def register_callbacks():
         return filters
 
     @callback(
-        Output("filter-store", "data", allow_duplicate=True),
-        Input({"type": "active-filter-chip-group", "index": "date-range"}, "value"),
-        State("filter-store", "data"),
-        prevent_initial_call=True,
-    )
-    def update_dates_filter_from_chips(
-        chip_values: List[str],
-        filters,
-    ) -> Filters:
-        min_date, max_date = filters["date_range_bounds"]
-        dates_dict = {prefix: date for prefix, date in map(lambda s: s.split("="), chip_values)}
-        date_range = [dates_dict.get("start_date", min_date), dates_dict.get("end_date", max_date)]
-        if date_range == filters.get("date_range", None):
-            return no_update
-        filters["date_range"] = date_range
-        return filters
-
-    @callback(
         Output("date-picker", "minDate"),
         Output("date-picker", "maxDate"),
         Output("date-picker", "value"),
@@ -138,6 +136,17 @@ def register_callbacks():
         date_range = filters["date_range"]
         min_date, max_date = filters["date_range_bounds"]
         return min_date, max_date, date_range
+
+    @callback(
+        Output("date-picker-text", "children"),
+        Input("filter-store", "data"),
+        prevent_initial_call=True,
+    )
+    def update_date_picker_text_from_filter(
+        filters: Filters,
+    ) -> Tuple[str, str, str]:
+        min_date, max_date = filters["date_range"]
+        return f"Current Range: {min_date} - {max_date}"
 
     # ------ ACOUSTIC FEATURE FILTER ----- #
 
@@ -217,8 +226,8 @@ def register_callbacks():
         Output("feature-range-slider", "value"),
         Output("feature-range-slider", "marks"),
         Output("feature-range-title", "children"),
-        Input("filter-store", "data")
-
+        Input("filter-store", "data"),
+        prevent_initial_call=True,
     )
     def update_acoustic_feature_slider(
         filters: Filters
@@ -278,24 +287,86 @@ def register_callbacks():
         if not len(context):
             return no_update
         _, current_range = context[0]
-        if current_range == variable_params['variable_range']:
+        if current_range == None or not len(list(filter(None, current_range))):
+            return no_update
+        min_val, max_val = variable_params["variable_range_bounds"]
+        current_range = [index_to_float(x, min_val, max_val) for x in current_range]
+        if current_range == variable_params["variable_range"]:
             return no_update
         filters["weather_variables"][variable_name]["variable_range"] = current_range
         return filters
 
     @callback(
+        Output("filter-store", "data", allow_duplicate=True),
+        Input({"type": "weather-variable-reset", "index": ALL}, "n_clicks"),
+        State("filter-store", "data"),
+        prevent_initial_call=True,
+    )
+    def reset_weather_filter(
+        reset_clicks: List[str],
+        filters: Filters,
+    ) -> Filters:
+        if not len(list(filter(None, reset_clicks))):
+            return no_update
+        variable_name = ctx.triggered_id["index"]
+        variable_params = filters["weather_variables"][variable_name]
+        filters["weather_variables"][variable_name]["variable_range"] = variable_params["variable_range_bounds"]
+        return filters
+
+    @callback(
+        Output("filter-store", "data", allow_duplicate=True),
+        Input("weather-filter-reset-all", "n_clicks"),
+        State("filter-store", "data"),
+        prevent_initial_call=True,
+    )
+    def reset_weather_filter(
+        reset_clicks: List[str],
+        filters: Filters,
+    ) -> Filters:
+        if not reset_clicks:
+            return no_update
+        for variable_name, params in filters["weather_variables"].items():
+            filters["weather_variables"][variable_name]["variable_range"] = params["variable_range_bounds"]
+        return filters
+
+    @callback(
         Output({"type": "weather-variable-range-slider", "index": ALL}, "value"),
-        State({"type": "weather-variable-range-slider", "index": ALL}, "value"),
-        Input("filter-store", "data")
+        Input("filter-store", "data"),
+        prevent_initial_call=True,
     )
     def update_weather_variable_slider(
-        values,
         filters: Filters
     ) -> Tuple[str, List[str]]:
-        filter_values = list(map(lambda params: params["variable_range"], filters["weather_variables"].values()))
-        if filter_values == values:
-            return [no_update] * len(values), [no_update] * len(values)
-        return filter_values
+        current_filter_values = list(map(
+            lambda params: params["variable_range"],
+            filters["weather_variables"].values()
+        ))
+        variable_bounds = list(map(
+            lambda params: params["variable_range_bounds"],
+            filters["weather_variables"].values()
+        ))
+        idx = []
+        for vals, bounds in zip(current_filter_values, variable_bounds):
+            min_val, max_val = bounds
+            idx.append([float_to_index(x, min_val, max_val) for x in vals])
+        return idx
+
+    @callback(
+        Output({"type": "weather-variable-range-text", "index": ALL}, "children"),
+        Input("filter-store", "data"),
+        prevent_initial_call=True,
+    )
+    def update_weather_variable_slider(
+        filters: Filters
+    ) -> Tuple[str, List[str]]:
+        current_filter_values = list(map(
+            lambda params: params["variable_range"],
+            filters["weather_variables"].values()
+        ))
+        values = []
+        for minimum, maximum in current_filter_values:
+            values.append(f"Current Range: {minimum} - {maximum}")
+        return values
 
     # ------ SITE LEVEL FILTER ----- #
 
@@ -367,7 +438,7 @@ def register_callbacks():
         current_sites,
         dataset_name: str,
     ) -> Tuple[List[TreeNodeChip], List[str]]:
-        # TODO: to prevent exception when changing dataaset, we should return the node chip rather than its values
+        # FIXME: to prevent exception when changing dataaset, we should return the node chip rather than its values
         # as the number of site chips may have changed
         sites = filters["current_sites"]
 
@@ -389,6 +460,19 @@ def register_callbacks():
                 nodes = sorted(bt.levelorder_iter(tree, filter_condition=condition), key=lambda node: node.path_name)
                 values.append([node.path_name for node in nodes if bool(bt.find_full_path(current_tree, node.path_name))])
         return values
+
+    @callback(
+        Output("filter-store", "data", allow_duplicate=True),
+        State("filter-store", "data"),
+        Input("site-filter-reset", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def update_site_level_filters(
+        filters: str,
+        current_sites,
+    ) -> Tuple[List[TreeNodeChip], List[str]]:
+        filters["current_sites"] = filters["tree"]
+        return filters
 
     # ------- FILE ID FILTER ------ #
 
@@ -709,4 +793,22 @@ def register_callbacks():
     #             )
     #         ]
     #     )
+
+    # @callback(
+    #     Output("filter-store", "data", allow_duplicate=True),
+    #     Input({"type": "active-filter-chip-group", "index": "date-range"}, "value"),
+    #     State("filter-store", "data"),
+    #     prevent_initial_call=True,
+    # )
+    # def update_dates_filter_from_chips(
+    #     chip_values: List[str],
+    #     filters,
+    # ) -> Filters:
+    #     min_date, max_date = filters["date_range_bounds"]
+    #     dates_dict = {prefix: date for prefix, date in map(lambda s: s.split("="), chip_values)}
+    #     date_range = [dates_dict.get("start_date", min_date), dates_dict.get("end_date", max_date)]
+    #     if date_range == filters.get("date_range", None):
+    #         return no_update
+    #     filters["date_range"] = date_range
+    #     return filters
 

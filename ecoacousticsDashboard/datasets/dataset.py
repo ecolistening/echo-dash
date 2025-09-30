@@ -154,10 +154,12 @@ class Dataset:
         for variable in variables:
             df = data.loc[:, variable]
             variable_ranges = {}
-            variable_range = [floor(df.min()), ceil(df.max())]
-            variable_ranges["variable_range_bounds"] = variable_range
-            weather_variables[variable] = variable_ranges
-            filters["weather_variables"] = weather_variables
+            min_val, max_val = floor(df.min()), ceil(df.max())
+            if not (min_val == 0.0 and max_val == 0.0):
+                variable_range = [min_val, max_val]
+                variable_ranges["variable_range_bounds"] = variable_range
+                weather_variables[variable] = variable_ranges
+        filters["weather_variables"] = weather_variables
         # site filters
         data = pd.read_parquet(self.path / "locations_table.parquet")
         data["site"] = self.dataset_name + "/" + data["site_name"]

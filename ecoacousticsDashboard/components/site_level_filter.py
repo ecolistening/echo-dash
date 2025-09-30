@@ -23,7 +23,12 @@ def SiteLevelChipGroup(
 ) -> dmc.Box:
     return dmc.Stack(
         children=[
-            dmc.Text(level_name, size="sm", ta="left"),
+            dmc.Text(
+                level_name,
+                size="sm",
+                ta="left",
+                fw=500,
+            ),
             dmc.Group(
                 justify="flex-start",
                 children=dmc.ChipGroup(
@@ -62,14 +67,14 @@ def SiteLevelHierarchyAccordion(
 def SiteLevelFilter():
     return dmc.Box(
         children=[
+            dmc.Stack(
+                id="site-level-filter-group",
+                children=[],
+                style={"flexGrow": 1},
+            ),
             dmc.Group(
-                justify="space-between",
+                justify="flex-end",
                 children=[
-                    dmc.Text(
-                        "By Site Level",
-                        size="md",
-                        ta="left"
-                    ),
                     dmc.Button(
                         id="site-filter-reset",
                         children="Reset",
@@ -78,10 +83,5 @@ def SiteLevelFilter():
                     )
                 ]
             ),
-            dmc.Space(h="sm"),
-            dmc.Stack(
-                id="site-level-filter-group",
-                children=[]
-            )
         ]
     )

@@ -27,18 +27,6 @@ dash.register_page(
 )
 
 layout = dmc.Box([
-    FilterPanel([
-        dmc.Stack(
-            children=[
-                SiteLevelFilter(),
-                dmc.Divider(variant="solid"),
-                DateRangeFilter(),
-                dmc.Divider(variant="solid"),
-                EnvironmentalFilter(),
-            ]
-        )
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,

@@ -18,10 +18,6 @@ from api import dispatch, FETCH_FILES
 from components.figure_download_widget import FigureDownloadWidget
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
-from components.filter_panel import FilterPanel
-from components.date_range_filter import DateRangeFilter
-from components.site_level_filter import SiteLevelFilter
-from components.environmental_filter import EnvironmentalFilter
 from utils import list2tuple
 from utils.content import get_content
 
@@ -31,18 +27,6 @@ PLOT_HEIGHT = 800
 dash.register_page(__name__, title=PAGE_TITLE, name='Dates')
 
 layout = dmc.Box([
-    FilterPanel([
-        dmc.Stack(
-            children=[
-                SiteLevelFilter(),
-                dmc.Divider(variant="solid"),
-                DateRangeFilter(),
-                dmc.Divider(variant="solid"),
-                EnvironmentalFilter(),
-            ]
-        )
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
