@@ -1,0 +1,121 @@
+import dash
+import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
+import numpy as np
+import pandas as pd
+import string
+
+from dash import html, ctx, dcc, callback, no_update
+from dash import Output, Input, State, ALL
+from dash_iconify import DashIconify
+from loguru import logger
+from typing import Any, Dict, List, Tuple
+
+from components.controls_panel import ControlsPanel
+from components.data_download_widget import DataDownloadWidget
+from utils import capitalise_each
+from utils.content import get_content
+
+PAGE_NAME = 'species-list'
+PAGE_TITLE = 'Species List'
+
+dash.register_page(
+    __name__,
+    title=PAGE_TITLE,
+    name='Species List'
+)
+
+# TODO: add a button to show selected only
+
+layout = html.Div([
+    dcc.Store(id="species-store", data=[]),
+    ControlsPanel([
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack([
+                    dmc.Group(
+                        justify="space-between",
+                        children=[
+                            dmc.Group([
+                                dmc.Stack([
+                                    dmc.Text(
+                                        "Search...",
+                                        size="sm",
+                                        ta="left",
+                                    ),
+                                    dmc.TextInput(
+                                        id="species-search",
+                                        value="",
+                                        leftSection=DashIconify(icon="cil:search"),
+                                        w=300,
+                                    ),
+                                ]),
+                                dmc.Stack([
+                                    dmc.Text(
+                                        "Sort by...",
+                                        size="sm",
+                                        ta="left",
+                                    ),
+                                    dmc.Select(
+                                        id="species-name-select",
+                                        value="scientific_name",
+                                        data=[
+                                            dict(value="scientific_name", label="Scientific Name"),
+                                            dict(value="common_name", label="Common Name"),
+                                        ],
+                                        clearable=False,
+                                        allowDeselect=False,
+                                        persistence=True,
+                                        w=300,
+                                    ),
+                                ]),
+                            ]),
+                            dmc.Group([
+                                dmc.Stack([
+                                    dmc.Button(
+                                        "Save",
+                                        id="species-list-save-button",
+                                        color="green",
+                                        size="sm",
+                                    ),
+                                    dmc.Button(
+                                        "Clear All",
+                                        id="species-list-clear-button",
+                                        color="red",
+                                        size="sm",
+                                    ),
+                                ]),
+                            ]),
+                        ],
+                    ),
+                ]),
+            ]
+        ),
+    ]),
+    dmc.Space(h="sm"),
+    dmc.Stack([
+        dmc.SegmentedControl(
+            id="species-pagination",
+            value="A",
+            data=[
+                dict(label=l, value=l)
+                for l in list(string.ascii_uppercase)
+            ],
+            fullWidth=True,
+        ),
+        dmc.Grid(
+            id="species-checklist",
+            gutter="md",
+        ),
+    ]),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/species-list")
+    ),
+])
+
+def register_callbacks():
+    from callbacks.pages import species_list_callbacks
+    species_list_callbacks.register_callbacks()

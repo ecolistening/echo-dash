@@ -148,6 +148,13 @@ def fetch_locations(
     return dataset.locations
 
 @functools.lru_cache(maxsize=3)
+def fetch_species(
+    dataset_name: str,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.species, set(dataset.species[["scientific_name", "common_name"]].itertuples(index=False, name=None))
+
+@functools.lru_cache(maxsize=3)
 def fetch_weather(
     dataset_name: str,
 ) -> pd.DataFrame:
@@ -330,6 +337,7 @@ FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
 FETCH_BIRDNET_SPECIES = "fetch_birdnet_species"
 FETCH_WEATHER = "fetch_weather"
 FETCH_FILE_WEATHER = "fetch_file_weather"
+FETCH_SPECIES = "fetch_species"
 
 API = {
     FETCH_DATASETS: fetch_datasets,
@@ -351,4 +359,5 @@ API = {
     FETCH_BIRDNET_SPECIES: fetch_birdnet_species,
     FETCH_WEATHER: fetch_weather,
     FETCH_FILE_WEATHER: fetch_file_weather,
+    FETCH_SPECIES: fetch_species,
 }
