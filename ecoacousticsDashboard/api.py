@@ -135,7 +135,7 @@ def fetch_files(
     file_site_weather = (
         files.merge(weather, on=["site_id", "nearest_hour"], how="left")
         .query(filter_weather_query(current_weather))
-        .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
+        # .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
     return dataset.append_columns(file_site_weather)
@@ -204,7 +204,7 @@ def fetch_acoustic_features(
     file_site_weather = (
         files.merge(weather, on=["site_id", "nearest_hour"], how="left")
         .query(filter_weather_query(current_weather))
-        .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
+        # .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
     file_ids = ", ".join([f"'{file_id}'" for file_id in file_site_weather.file_id])
@@ -242,7 +242,7 @@ def fetch_birdnet_species(
     file_site_weather = (
         files.merge(weather, on=["site_id", "nearest_hour"], how="left")
         .query(filter_weather_query(current_weather))
-        .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
+        # .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
     species = (
@@ -288,7 +288,7 @@ def fetch_acoustic_features_umap(
     file_site_weather = (
         files.merge(weather, on=["site_id", "nearest_hour"], how="left")
         .query(filter_weather_query(current_weather))
-        .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
+        # .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
     file_ids = ", ".join([f"'{file_id}'" for file_id in file_site_weather.file_id])
