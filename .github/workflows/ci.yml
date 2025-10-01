@@ -3,7 +3,7 @@ run-name: Deploy to echodash.co.uk by @${{ github.actor }}
 on:
   push:
     branches:
-      - develop
+      - main
       - staging
 
 jobs:
@@ -14,10 +14,10 @@ jobs:
         if: endsWith(github.ref, '/staging')
         run: |
           echo "BRANCH=staging" >> $GITHUB_ENV
-      - name: Set environment variables for development
-        if: endsWith(github.ref, '/develop')
+      - name: Set environment variables for production
+        if: endsWith(github.ref, '/main')
         run: |
-          echo "BRANCH=develop" >> $GITHUB_ENV
+          echo "BRANCH=main" >> $GITHUB_ENV
       - name: Deploy Dash app
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -26,7 +26,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }} # User of the server
           port: ${{ secrets.SSH_PORT }}
           script: |
-            echo 'Deploying from ${{ env.BRANCH }} on echodash.co.uk...'
+            echo "Deploying $USER to echodash.co.uk..."
             if ! [ -d "$HOME/ecoacoustics-dashboard/" ]; then
               echo 'repo does not exist!'
               exit 1
