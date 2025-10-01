@@ -34,6 +34,7 @@ def filter_dict_to_tuples(filters):
         "current_feature": (filters["current_feature"], list2tuple(filters["current_feature_range"])),
         "current_file_ids": list2tuple(list(itertools.chain(*filters["files"].values()))),
         "current_weather": list2tuple([(variable_name, list2tuple(params["variable_range"])) for variable_name, params in filters["weather_variables"].items()]),
+        "current_species": list2tuple(filters["species"]),
     }
     return filters_args
 
@@ -111,6 +112,22 @@ def fetch_dataset_category_orders(
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).category_orders
 
+def fetch_species_list(
+    dataset_name: str,
+) -> None:
+    dataset = DATASETS.get_dataset(dataset_name)
+    species_list = dataset.species_list()
+    logger.info(f"{species_list=}")
+    return species_list
+
+def set_species_list(
+    dataset_name: str,
+    species_list: Tuple[str, ...]
+) -> None:
+    dataset = DATASETS.get_dataset(dataset_name)
+    dataset.save_species_list(species_list)
+    return True
+
 @functools.lru_cache(maxsize=3)
 def fetch_files(
     dataset_name: str,
@@ -146,6 +163,13 @@ def fetch_locations(
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     return dataset.locations
+
+@functools.lru_cache(maxsize=3)
+def fetch_species(
+    dataset_name: str,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.species
 
 @functools.lru_cache(maxsize=3)
 def fetch_weather(
@@ -225,6 +249,7 @@ def fetch_birdnet_species(
     current_feature: Tuple[str, Tuple[float, ...]],
     current_file_ids: Tuple[str, ...],
     current_weather: Tuple[str, Tuple[float, ...]],
+    current_species: Tuple[str, ...],
     **kwargs: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
@@ -252,6 +277,8 @@ def fetch_birdnet_species(
         )
         .assign(species=lambda df: df[["scientific_name", "common_name"]].agg("\n".join, axis=1))
     )
+    if len(current_species):
+        species = species[species["scientific_name"].isin(current_species)]
     file_ids = ", ".join([f"'{file_id}'" for file_id in file_site_weather.file_id])
     species_probs = (
         pd.read_parquet(dataset.path / "birdnet_species_probs_table.parquet", columns=["file_id", "scientific_name", "confidence"])
@@ -318,6 +345,8 @@ FETCH_DATASET_CONFIG = "fetch_dataset_config"
 SET_DATASET_CONFIG = "set_dataset_config"
 FETCH_DATASET_SITES_TREE = "fetch_dataset_sites_tree"
 FETCH_BASE_FILTERS = "fetch_base_filters"
+FETCH_SPECIES_LIST = "fetch_species_list"
+SET_SPECIES_LIST = "set_species_list"
 
 FETCH_DATASET_OPTIONS = "fetch_dataset_options"
 FETCH_DATASET_CATEGORY_ORDERS = "fetch_dataset_category_orders"
@@ -330,6 +359,7 @@ FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
 FETCH_BIRDNET_SPECIES = "fetch_birdnet_species"
 FETCH_WEATHER = "fetch_weather"
 FETCH_FILE_WEATHER = "fetch_file_weather"
+FETCH_SPECIES = "fetch_species"
 
 API = {
     FETCH_DATASETS: fetch_datasets,
@@ -339,6 +369,8 @@ API = {
     SET_DATASET_CONFIG: set_dataset_config,
     FETCH_DATASET_SITES_TREE: fetch_sites_tree,
     FETCH_BASE_FILTERS: fetch_base_filters,
+    FETCH_SPECIES_LIST: fetch_species_list,
+    SET_SPECIES_LIST: set_species_list,
 
     FETCH_DATASET_OPTIONS: fetch_dataset_options,
     FETCH_DATASET_CATEGORY_ORDERS: fetch_dataset_category_orders,
@@ -351,4 +383,5 @@ API = {
     FETCH_BIRDNET_SPECIES: fetch_birdnet_species,
     FETCH_WEATHER: fetch_weather,
     FETCH_FILE_WEATHER: fetch_file_weather,
+    FETCH_SPECIES: fetch_species,
 }

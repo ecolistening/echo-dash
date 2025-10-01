@@ -65,6 +65,11 @@ layout = dmc.Box([
                     label="Facet columns by",
                     value="year",
                 ),
+                dmc.Chip(
+                    "Only Species List",
+                    id="species-list-tickbox",
+                    checked=False,
+                ),
                 dmc.Flex(
                     p="1rem",
                     align="center",

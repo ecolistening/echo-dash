@@ -30,6 +30,7 @@ def register_callbacks():
         Input("species-community-axis-select", "value"),
         Input("species-community-facet-column-select", "value"),
         Input("species-community-facet-row-select", "value"),
+        Input("species-list-tickbox", "checked"),
     )
     def draw_figure(
         dataset_name: str,
@@ -38,10 +39,13 @@ def register_callbacks():
         axis_group: str,
         facet_col: str,
         facet_row: str,
+        species_checkbox: bool,
     ) -> go.Figure:
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         action = FETCH_BIRDNET_SPECIES
+        if not species_checkbox:
+            filters["species"] = []
         payload = dict(dataset_name=dataset_name, threshold=threshold, **filter_dict_to_tuples(filters))
         logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
         data = dispatch(action, **payload)
