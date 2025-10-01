@@ -66,7 +66,7 @@ layout = dmc.Box([
                     value="year",
                 ),
                 dmc.Chip(
-                    "Show Species List",
+                    "Only Species List",
                     id="species-list-tickbox",
                     checked=False,
                 ),
