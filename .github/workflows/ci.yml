@@ -35,9 +35,9 @@ jobs:
             git checkout ${{ env.BRANCH }}
             git pull
             git reset --hard origin/${{ env.BRANCH }}
-            $HOME/ecoacoustics-dashboard/deploy-${{ env.BRANCH }}.sh
+            $HOME/ecoacoustics-dashboard/deploy.sh
             if [ $? != 0 ]; then
-              echo "deploy-${{ env.BRANCH }}.sh failed, check the server logs!"
+              echo "deploy.sh failed, check the server logs!"
               exit 1
             fi
             echo 'Deployment to echodash.co.uk succesful!'
