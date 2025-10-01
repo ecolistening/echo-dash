@@ -91,6 +91,7 @@ def register_callbacks():
         Input("species-richness-color-select", "value"),
         Input("species-richness-facet-row-select", "value"),
         Input("species-richness-facet-column-select", "value"),
+        Input("species-list-tickbox", "checked"),
     )
     def draw_figure(
         dataset_name: str,
@@ -100,9 +101,12 @@ def register_callbacks():
         color: str,
         facet_row: str,
         facet_col: str,
+        species_checkbox: bool,
     ) -> go.Figure:
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
+        if not species_checkbox:
+            filters["species"] = []
         data = fetch_data(dataset_name, threshold, filters)
         data = (
             data

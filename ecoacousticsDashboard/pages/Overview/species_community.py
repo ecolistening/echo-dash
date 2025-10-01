@@ -51,6 +51,11 @@ layout = dmc.Box([
                     options=("Species Habitat", "Functional Groups"),
                     label="Row facet by...",
                 ),
+                dmc.Chip(
+                    "Only Species List",
+                    id="species-list-tickbox",
+                    checked=False,
+                ),
                 dmc.Flex(
                     p="1rem",
                     align="center",

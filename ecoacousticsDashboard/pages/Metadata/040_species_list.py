@@ -27,68 +27,69 @@ dash.register_page(
 
 # TODO: add a button to show selected only
 
-layout = html.Div([
-    ControlsPanel([
-        dmc.Group(
-            grow=True,
-            children=[
-                dmc.Stack([
-                    dmc.Group([
-                        dmc.TextInput(
-                            id="species-search",
-                            label="Search...",
-                            value="",
-                            leftSection=DashIconify(icon="cil:search"),
-                            w=300,
-                        ),
-                        dmc.Select(
-                            id="species-name-select",
-                            label="Sort by",
-                            value="scientific_name",
-                            data=[
-                                dict(value="scientific_name", label="Scientific Name"),
-                                dict(value="common_name", label="Common Name"),
-                            ],
-                            clearable=False,
-                            allowDeselect=False,
-                            persistence=True,
-                            w=300,
-                        ),
-                        dmc.Chip(
-                            "Group Alphabetically",
-                            id="alphabetic-tickbox",
-                            persistence=True,
-                            checked=True,
-                        ),
-                        dmc.Chip(
-                            "Show Species List",
-                            id="species-list-tickbox",
-                            style={"display": "none"},
-                            persistence=True,
-                            checked=False,
+layout = dmc.Box([
+    ControlsPanel(
+        is_open=True,
+        children=[
+            dmc.Group(
+                grow=True,
+                children=[
+                    dmc.Stack([
+                        dmc.Group([
+                            dmc.TextInput(
+                                id="species-search",
+                                label="Search...",
+                                value="",
+                                leftSection=DashIconify(icon="cil:search"),
+                                w=300,
+                            ),
+                            dmc.Select(
+                                id="species-name-select",
+                                label="Sort by",
+                                value="scientific_name",
+                                data=[
+                                    dict(value="scientific_name", label="Scientific Name"),
+                                    dict(value="common_name", label="Common Name"),
+                                ],
+                                clearable=False,
+                                allowDeselect=False,
+                                persistence=True,
+                                w=300,
+                            ),
+                            dmc.Chip(
+                                "Group Alphabetically",
+                                id="alphabetic-tickbox",
+                                persistence=True,
+                                checked=True,
+                            ),
+                            dmc.Chip(
+                                "Only Species List",
+                                id="species-list-tickbox",
+                                checked=False,
+                            ),
+                        ]),
+                        dmc.Group(
+                            justify="flex-end",
+                            children=[
+                                dmc.Button(
+                                    "Save",
+                                    id="species-list-save-button",
+                                    color="green",
+                                    size="sm",
+                                ),
+                                dmc.Button(
+                                    "Reset",
+                                    id="species-list-clear-button",
+                                    color="red",
+                                    size="sm",
+                                ),
+                            ]
                         ),
                     ]),
-                    dmc.Group(
-                        justify="flex-end",
-                        children=[
-                            dmc.Button(
-                                "Save",
-                                id="species-list-save-button",
-                                color="green",
-                                size="sm",
-                            ),
-                            dmc.Button(
-                                "Reset",
-                                id="species-list-clear-button",
-                                color="red",
-                                size="sm",
-                            ),
-                        ]
-                    ),
-                ]),
-            ]
-        ),
-    ]),
+                ]
+            ),
+        ]
+    ),
     dmc.Space(h="sm"),
     dmc.Stack([
         dmc.SegmentedControl(
