@@ -64,7 +64,6 @@ def register_callbacks():
         data = dispatch(FETCH_SPECIES, dataset_name=dataset_name)
         species_list = filters["species"]
         data = data[data["scientific_name"].isin(species_list)]
-        logger.info(f"Rendering list {species_list=}")
 
         if search_term:
             data = data[(
@@ -130,7 +129,6 @@ def register_callbacks():
         max_str_len = 30
         data = dispatch(FETCH_SPECIES, dataset_name=dataset_name)
         species_list = filters["species"]
-        logger.info(f"Rendering table {species_list=}")
 
         if search_term:
             data = data[(
@@ -186,11 +184,9 @@ def register_callbacks():
         current_species = filters["species"]
         species_list = list(set(current_species) | set(page_checked_species))
         species_list = list(sorted(species_list))
-        logger.info(f"Checking {species_list=} {current_species=} {current_species == species_list}")
         if species_list == current_species:
             return no_update
         filters["species"] = species_list
-        logger.info(f"Added to filters {species_list=}")
         return filters
 
     @callback(
@@ -211,7 +207,6 @@ def register_callbacks():
         species_list = []
         dispatch(SET_SPECIES_LIST, dataset_name=dataset_name, species_list=species_list)
         filters["species"] = species_list
-        logger.info(f"Species reset")
         time.sleep(0.5)
         return filters, False
 
@@ -241,7 +236,6 @@ def register_callbacks():
         if n_clicks is None or n_clicks == 0:
             return no_update, False
         species_list = filters["species"]
-        logger.info(f"Saving {species_list=}")
         dispatch(SET_SPECIES_LIST, dataset_name=dataset_name, species_list=species_list)
         time.sleep(0.5)
         return False

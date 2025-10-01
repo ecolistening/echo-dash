@@ -25,8 +25,6 @@ dash.register_page(
     name='Species List'
 )
 
-# TODO: add a button to show selected only
-
 layout = dmc.Box([
     ControlsPanel(
         is_open=True,
