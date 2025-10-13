@@ -23,13 +23,43 @@ from utils import list2tuple, send_download
 
 def register_callbacks():
     @callback(
+        Output("species-matrix-pagination-controls", "children"),
+        State("dataset-select", "value"),
+        Input("species-matrix-filter", "value"),
+        Input("species-matrix-filter", "data"),
+        prevent_initial_call=True,
+    )
+    def set_matrix_pagination(dataset_name: str, opt_group: str, select_data: List[str]):
+        options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
+        opts = options.get(opt_group)
+        if not opts:
+            return []
+        return [
+            dmc.Text(
+                children=opts["label"],
+                size="sm",
+                ta="right",
+            ),
+            dmc.SegmentedControl(
+                id={"type": "species-matrix-group-control", "index": opt_group},
+                persistence=True,
+                value=opts["order"][0],
+                data=[
+                    {"label": name, "value": name}
+                    for name in opts["order"]
+                ],
+            ),
+        ]
+
+    @callback(
         Output("species-community-graph", "figure"),
         State("dataset-select", "value"),
         Input("filter-store", "data"),
         Input("species-threshold-slider", "value"),
         Input("species-community-axis-select", "value"),
         Input("species-community-facet-column-select", "value"),
-        Input("species-community-facet-row-select", "value"),
+        Input("species-matrix-filter", "value"),
+        Input({"type": "species-matrix-group-control", "index": ALL}, "value"),
         Input("species-list-tickbox", "checked"),
     )
     def draw_figure(
@@ -38,7 +68,8 @@ def register_callbacks():
         threshold: float,
         axis_group: str,
         facet_col: str,
-        facet_row: str,
+        opt_group: str,
+        opts: str,
         species_checkbox: bool,
     ) -> go.Figure:
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
@@ -49,8 +80,10 @@ def register_callbacks():
         payload = dict(dataset_name=dataset_name, threshold=threshold, **filter_dict_to_tuples(filters))
         logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
         data = dispatch(action, **payload)
-        fig = plot(data, axis_group, facet_col, facet_row, category_orders)
-        fig.update_layout(title_text=f"Species Matrix | p > {threshold}")
+        if len(opts):
+            data = data[data[opt_group] == opts[0]]
+        fig = plot(data, axis_group, facet_col, None, category_orders)
+        fig.update_layout(title_text=f"Species Matrix |{f' {opts[0]} |' if len(opts) else ''} p > {threshold}")
         return fig
 
     @callback(

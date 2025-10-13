@@ -6,7 +6,6 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from typing import Any, Dict, List, Tuple
 
-MAX_HEIGHT = 2400
 CELL_HEIGHT = 40
 
 def species_matrix(
@@ -37,6 +36,8 @@ def species_matrix(
         counts["_col_facet"] = "All"
         facet_col = "_col_facet"
 
+    # TODO: fix page height, ensure each cell is a constant height to accomodate for the text size
+    # and ensure cell height is invariant to number of species
     # ensure the union of the set of species across facet_col, facet_row, and pad axis_group to account
     species_subset = (
         counts.groupby([facet_col, facet_row])['species']

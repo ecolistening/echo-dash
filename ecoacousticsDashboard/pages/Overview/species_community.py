@@ -46,10 +46,10 @@ layout = dmc.Box([
                     value="dddn",
                 ),
                 DatasetOptionsSelect(
-                    id="species-community-facet-row-select",
+                    id="species-matrix-filter",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Species Habitat", "Functional Groups"),
-                    label="Row facet by...",
+                    options=("Functional Groups", "Species Habitat"),
+                    label="Filter by...",
                 ),
                 dmc.Chip(
                     "Only Species List",
@@ -99,11 +99,21 @@ layout = dmc.Box([
                 ]),
             ],
         ),
+        dmc.Space(h="sm"),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack(
+                    id="species-matrix-pagination-controls",
+                ),
+            ],
+        ),
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(
         dcc.Graph(
             id="species-community-graph",
+            # responsive=True,
         ),
     ),
     dmc.Box(
