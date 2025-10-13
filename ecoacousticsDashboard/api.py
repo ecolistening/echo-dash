@@ -280,9 +280,10 @@ def fetch_birdnet_species(
     if len(current_species):
         species = species[species["scientific_name"].isin(current_species)]
     file_ids = ", ".join([f"'{file_id}'" for file_id in file_site_weather.file_id])
+    species_names = ", ".join([f"'{species_name}'" for species_name in species.scientific_name])
     species_probs = (
         pd.read_parquet(dataset.path / "birdnet_species_probs_table.parquet", columns=["file_id", "scientific_name", "confidence"])
-        .query(f"confidence >= {threshold} and file_id in ({file_ids})")
+        .query(f"confidence >= {threshold} and file_id in ({file_ids}) and scientific_name in ({species_names})")
         .assign(detected=lambda df: [1] * len(df))
     )
     return dataset.append_columns(

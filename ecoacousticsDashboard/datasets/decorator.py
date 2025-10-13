@@ -196,8 +196,8 @@ class DatasetDecorator:
         return {
             "temperature_2m": {
                 "label": "Temperature at 2m elevation (°C)",
-                "min": floor(self.dataset.weather["temperature_2m"].min()),
-                "max": ceil(self.dataset.weather["temperature_2m"].max()),
+                "min": floor(self.dataset.weather["temperature_2m"].min() / 10) * 10,
+                "max": ceil(self.dataset.weather["temperature_2m"].max() / 10) * 10,
             },
         }
 
@@ -207,7 +207,7 @@ class DatasetDecorator:
         column_names = ["rain", "snowfall"]
         columns = {}
         for variable, label in zip(column_names, labels):
-            min_val, max_val = 0.0, ceil(self.dataset.weather[variable].max())
+            min_val, max_val = 0.0, ceil(max(self.dataset.weather[variable].max(), 1.0) / 10) * 10
             # add a max val so pattern matchers don't break
             if (min_val == 0.0 and max_val == 0.0):
                 max_val = 1.0
@@ -236,7 +236,7 @@ class DatasetDecorator:
             "wind_gusts_10m",
         ]
         for variable, label in zip(column_names, labels):
-            min_val, max_val = 0.0, ceil(self.dataset.weather[variable].max())
+            min_val, max_val = 0.0, ceil(max(self.dataset.weather[variable].max(), 1.0) / 10) * 10
             # add a max val so pattern matchers don't break
             if (min_val == 0.0 and max_val == 0.0):
                 max_val = 1.0

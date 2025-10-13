@@ -6,6 +6,7 @@ import numpy as np
 
 from dash import dcc, callback, no_update
 from dash import Input, Output, State
+from loguru import logger
 from typing import Any, Dict, List, Tuple
 from utils import floor, ceil
 
@@ -38,10 +39,10 @@ def EnvironmentalFilterSliderAccordion(
                             value=[0, 999],
                             marks=[
                                 dict(
-                                    value=i,
+                                    value=i - 1,
                                     label=str(option["min"] + i/1000 * (option["max"] - option["min"]))
                                 )
-                                for i in np.linspace(0, 999, 5, dtype=int)
+                                for i in np.linspace(1, 1000, 5, dtype=int)
                             ],
                             persistence=True,
                             style={"flexGrow": 1},
