@@ -49,7 +49,7 @@ layout = dmc.Box([
                     id="species-matrix-filter",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     options=("Functional Groups", "Species Habitat"),
-                    label="Filter by...",
+                    label="Paginate by...",
                 ),
                 dmc.Chip(
                     "Only Species List",

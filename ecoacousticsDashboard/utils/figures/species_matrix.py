@@ -16,6 +16,9 @@ def species_matrix(
     category_orders: Dict[str, Any] | None = None,
     color: str = "#1f77b4",
 ) -> go.Figure:
+    #FIXME : this code is now more complicated than it needs to be, species matrix used to support multiple row
+    # subplots for each row_facet category, but I couldn't get the height set correctly across subplots
+    # rather than re-write, it works as is, but could do with a refactor
     if df.empty:
         return go.Figure()
 
@@ -36,22 +39,22 @@ def species_matrix(
         counts["_col_facet"] = "All"
         facet_col = "_col_facet"
 
-    # TODO: fix page height, ensure each cell is a constant height to accomodate for the text size
-    # and ensure cell height is invariant to number of species
-    # ensure the union of the set of species across facet_col, facet_row, and pad axis_group to account
     species_subset = (
         counts.groupby([facet_col, facet_row])['species']
         .unique()
         .reset_index()
         .rename(columns={'species': 'species_subset'})
     )
-    axis_levels = counts[axis_group].unique()
+    axis_levels = category_orders[axis_group]
     facet_levels = species_subset[[facet_col, facet_row]].drop_duplicates()
     all_combos = pd.MultiIndex.from_product(
         [axis_levels, facet_levels[facet_col].unique(), facet_levels[facet_row].unique()],
         names=[axis_group, facet_col, facet_row]
-    ).to_frame(index=False)
-    all_combos = all_combos.merge(species_subset, on=[facet_col, facet_row], how="left")
+    ).to_frame(index=False).merge(
+        species_subset,
+        on=[facet_col, facet_row],
+        how="left"
+    )
     rows = []
     for _, combo in all_combos.iterrows():
         axis, col, row, universe = combo
@@ -87,16 +90,11 @@ def species_matrix(
             row_categories.append(row_cat)
             species_per_row.append(species_count_by_row)
     species_per_row = np.array(species_per_row)
-    height = CELL_HEIGHT * species_per_row.sum()
-    row_heights = list(species_per_row / species_per_row.sum())
-
-    # col categories remain consistent width
     col_categories = category_orders.get(facet_col, counts[facet_col].unique())
 
     fig = make_subplots(
         rows=len(row_categories),
         cols=len(col_categories),
-        row_heights=None if len(row_heights) == 1 else row_heights,
         subplot_titles=[
             "<br>".join(list(filter(None, [
                 str(r) if r != 'All' else None,
@@ -161,14 +159,17 @@ def species_matrix(
             axis_num = i * len(col_categories) + j
             updates[f"yaxis{axis_num}"] = dict(showticklabels=False)
 
+    margin = dict(l=40, r=20, t=80, b=40)
+    height = CELL_HEIGHT * species_per_row.sum() + margin["t"] + margin["b"]
     fig.update_layout(
-        barmode='stack',
+        margin=margin,
         height=height,
+        barmode='stack',
         **updates,
         title=dict(
-            automargin=True,
+            automargin=False,
             x=0.5,
-            y=1.00,
+            y=0.999,
             xanchor="center",
             yanchor="top",
             font=dict(size=24),

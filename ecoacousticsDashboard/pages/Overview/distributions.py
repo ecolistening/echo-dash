@@ -111,7 +111,8 @@ layout = dmc.Box([
     dmc.Space(h="sm"),
     dcc.Loading(
         dcc.Graph(
-            id="distributions-graph"
+            id="distributions-graph",
+            # responsive=True,
         ),
     ),
     dmc.Space(h="sm"),

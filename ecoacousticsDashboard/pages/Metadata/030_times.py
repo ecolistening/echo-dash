@@ -141,7 +141,10 @@ layout = dmc.Box([
             span=12,
             children=[
                 dcc.Loading([
-                    dcc.Graph(id="times-graph"),
+                    dcc.Graph(
+                        id="times-graph"
+                        # responsive=True,
+                    ),
                 ]),
             ],
         ),

@@ -55,7 +55,10 @@ layout = dmc.Box([
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(
-        dcc.Graph(id="dates-graph"),
+        dcc.Graph(
+            id="dates-graph",
+            responsive=True,
+        ),
     ),
     dmc.Space(h="sm"),
     dmc.Box(

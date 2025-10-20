@@ -41,8 +41,8 @@ def plot(
         **kwargs,
     )
     fig.update_layout(
-        height=PLOT_HEIGHT,
         title=dict(
+            automargin=True,
             x=0.5,
             y=0.99,
             xanchor="center",

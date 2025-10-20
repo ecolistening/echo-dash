@@ -71,7 +71,10 @@ layout = html.Div([
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(
-        dcc.Graph(id="map-graph"),
+        dcc.Graph(
+            id="map-graph",
+            responsive=True,
+        ),
     ),
     dmc.Space(h="sm"),
     dmc.Box(

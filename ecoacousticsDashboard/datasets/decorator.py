@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import attrs
 import functools
+import numpy as np
 
 from loguru import logger
 from typing import Any, Dict, Tuple, List
@@ -252,11 +253,11 @@ class DatasetDecorator:
         return {
             "habitat_type": {
                 "label": "Habitat Type",
-                "order": list(self.dataset.species["habitat_type"].unique()),
+                "order": list(filter(None, self.dataset.species["habitat_type"].unique())),
             },
             "habitat_density": {
                 "label": "Habitat Density",
-                "order": list(self.dataset.species["habitat_density"].unique()),
+                "order": list(filter(lambda x: not np.isnan(x), self.dataset.species["habitat_density"].unique())),
             },
         }
 
@@ -265,15 +266,15 @@ class DatasetDecorator:
         return {
             "trophic_niche": {
                 "label": "Trophic Niche",
-                "order": list(self.dataset.species["trophic_niche"].unique()),
+                "order": list(filter(None, self.dataset.species["trophic_niche"].unique())),
             },
             "trophic_level": {
                 "label": "Trophic Level",
-                "order": list(self.dataset.species["trophic_level"].unique()),
+                "order": list(filter(None, self.dataset.species["trophic_level"].unique())),
             },
             "primary_lifestyle": {
                 "label": "Primary Lifestyle",
-                "order": list(self.dataset.species["primary_lifestyle"].unique()),
+                "order": list(filter(None, self.dataset.species["primary_lifestyle"].unique())),
             },
         }
 
