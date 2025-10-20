@@ -1,10 +1,13 @@
 import argparse
+import tensorflow as tf
 import datetime as dt
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import itertools
+import functools
 import pickle
+import time
 
 from pathlib import Path
 from loguru import logger
@@ -32,15 +35,25 @@ def train_umap(
     # scale features using outlier-robust scaler
     scaler = RobustScaler()
     # a parametric model we can save and use to encode later
-    # FIXME: there appears to be a bug where if you don't specify a decoder, you cannot
-    # reload the pickled model. This fixes it, but a decoder is trained concurrently and separately
-    model = ParametricUMAP(parametric_reconstruction=True, **kwargs)
+    dims = (len(FEATURES),)
+    encoder = tf.keras.Sequential([
+        tf.keras.layers.Dense(units=100, input_shape=dims),
+        tf.keras.layers.LeakyReLU(alpha=0.01),
+        tf.keras.layers.Dense(units=100),
+        tf.keras.layers.LeakyReLU(alpha=0.01),
+        tf.keras.layers.Dense(units=100),
+        tf.keras.layers.LeakyReLU(alpha=0.01),
+        tf.keras.layers.Dense(units=kwargs["n_components"]),
+    ])
+    logger.info(encoder.summary())
+    model = ParametricUMAP(encoder=encoder, dims=dims, **kwargs)
     # fit the graph and embedding function
     pipe = make_pipeline(scaler, model)
     logger.debug(f"Fitting...")
     pipe.fit(data)
     # persist scaling parameters and feature list
     save_dir.mkdir(exist_ok=True, parents=True)
+    import code; code.interact(local=locals())
     with open(save_dir / "config.yaml", "wb") as f:
         config = dict(
             center_=scaler.center_,
@@ -73,8 +86,8 @@ def main(
         metric=metric,
     )
 
-    log.info(f"UMAP complete")
-    log.info(f"Time taken: {str(dt.timedelta(seconds=time.time() - start_time))}")
+    logger.info(f"UMAP complete")
+    logger.info(f"Time taken: {str(dt.timedelta(seconds=time.time() - start_time))}")
 
 def get_base_parser():
     parser = argparse.ArgumentParser(
@@ -84,13 +97,13 @@ def get_base_parser():
     parser.add_argument(
         "--acoustic-features-path",
         required=True,
-        type=lambda p: Path(p),
+        type=lambda p: Path(p).expanduser(),
         help="Parquet file containing site information."
     )
     parser.add_argument(
         "--save-dir",
         default=None,
-        type=lambda p: Path(p),
+        type=lambda p: Path(p).expanduser(),
         help="Parquet file containing site information."
     )
     parser.add_argument(
