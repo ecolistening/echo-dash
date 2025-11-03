@@ -34,14 +34,14 @@ layout = dmc.Box([
                 DatasetOptionsSelect(
                     id="species-community-axis-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Site Level",), # "Spatial"),
+                    options=("Site Level", "Time of Day", "Temporal"), # "Spatial"),
                     label="Column facet 1 by...",
                     value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
                     id="species-community-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Time of Day", "Temporal"),
+                    options=("Site Level", "Time of Day", "Temporal"), # "Spatial"),
                     label="Column facet 2 by...",
                     value="dddn",
                 ),

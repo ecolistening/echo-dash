@@ -22,7 +22,7 @@ from utils.content import get_content
 
 PAGE_NAME = 'map'
 PAGE_TITLE = 'Location Map'
-PLOT_HEIGHT = 800
+PLOT_HEIGHT = 400
 
 dash.register_page(
     __name__,
@@ -73,7 +73,7 @@ layout = html.Div([
     dcc.Loading(
         dcc.Graph(
             id="map-graph",
-            responsive=True,
+            # responsive=True,
         ),
     ),
     dmc.Space(h="sm"),

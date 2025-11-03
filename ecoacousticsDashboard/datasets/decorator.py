@@ -11,8 +11,8 @@ from datasets.dataset import Dataset
 from utils import floor, ceil, capitalise_each
 
 DEFAULT_OPTION_GROUPS = ("Site Level", "Time of Day", "Temporal")# "Spatial")
-WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+WEEKDAYS = list(map(lambda s: s[:3], ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']))
+MONTHS = list(map(lambda s: s[:3], ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']))
 DDDN = ["dawn", "day", "dusk", "night"]
 
 @attrs.define
@@ -98,11 +98,7 @@ class DatasetDecorator:
         for column in self.dataset.locations.columns:
             if column.startswith("sitelevel_"):
                 label = self.dataset.config.get('Site Hierarchy', column, fallback=column)
-                values = self.dataset.files[column].unique()
-                try:
-                    order = list(map(str, sorted(map(int, values))))
-                except ValueError:
-                    order = list(sorted(values))
+                order = list(sorted(self.dataset.files[column].unique()))
                 columns[column] = {"label": label, "order": order}
         return columns
 
@@ -154,11 +150,11 @@ class DatasetDecorator:
                 "label": "Week of Year (Categorical)",
             },
             "weekday": {
-                "order": sorted(self.dataset.files["weekday"].unique(), key=lambda x: WEEKDAYS.index(x)),
+                "order": list(map(lambda s: s[:3], sorted(self.dataset.files["weekday"].unique(), key=lambda x: WEEKDAYS.index(x)))),
                 "label": "Week Day",
             },
             "month": {
-                "order": sorted(self.dataset.files["month"].unique(), key=lambda x: MONTHS.index(x)),
+                "order": list(map(lambda s: s[:3], sorted(self.dataset.files["month"].unique(), key=lambda x: MONTHS.index(x)))),
                 "label": "Month",
             },
             "year": {

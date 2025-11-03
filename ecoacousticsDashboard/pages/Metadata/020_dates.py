@@ -23,8 +23,12 @@ from utils.content import get_content
 
 PAGE_NAME = 'dates'
 PAGE_TITLE = 'Recording Dates'
-PLOT_HEIGHT = 800
-dash.register_page(__name__, title=PAGE_TITLE, name='Dates')
+
+dash.register_page(
+    __name__,
+    title=PAGE_TITLE,
+    name='Dates',
+)
 
 layout = dmc.Box([
     ControlsPanel([
@@ -57,7 +61,7 @@ layout = dmc.Box([
     dcc.Loading(
         dcc.Graph(
             id="dates-graph",
-            responsive=True,
+            # responsive=True,
         ),
     ),
     dmc.Space(h="sm"),

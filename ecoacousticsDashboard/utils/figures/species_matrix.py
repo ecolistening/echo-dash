@@ -5,6 +5,7 @@ import plotly.graph_objs as go
 
 from plotly.subplots import make_subplots
 from typing import Any, Dict, List, Tuple
+from utils.sketch import default_layout
 
 CELL_HEIGHT = 40
 
@@ -22,30 +23,30 @@ def species_matrix(
     if df.empty:
         return go.Figure()
 
+    # ensure faceting works regardless of whether specified
+    if axis_group is None:
+        df["_axis_group"] = "All"
+        axis_group = "_axis_group"
+    if facet_row is None:
+        df["_row_facet"] = "All"
+        facet_row = "_row_facet"
+    if facet_col is None:
+        df["_col_facet"] = "All"
+        facet_col = "_col_facet"
+
     counts = (
         df.groupby([*list(filter(None, [axis_group, facet_col, facet_row])), "species"])["detected"]
         .sum()
         .reset_index()
         .sort_values(by="detected", ascending=True)
     )
-    # ensure faceting works regardless of whether specified
-    if axis_group is None:
-        counts["_axis_group"] = "All"
-        axis_group = "_axis_group"
-    if facet_row is None:
-        counts["_row_facet"] = "All"
-        facet_row = "_row_facet"
-    if facet_col is None:
-        counts["_col_facet"] = "All"
-        facet_col = "_col_facet"
-
     species_subset = (
         counts.groupby([facet_col, facet_row])['species']
         .unique()
         .reset_index()
         .rename(columns={'species': 'species_subset'})
     )
-    axis_levels = category_orders[axis_group]
+    axis_levels = df[axis_group].unique()
     facet_levels = species_subset[[facet_col, facet_row]].drop_duplicates()
     all_combos = pd.MultiIndex.from_product(
         [axis_levels, facet_levels[facet_col].unique(), facet_levels[facet_row].unique()],
@@ -161,18 +162,11 @@ def species_matrix(
 
     margin = dict(l=40, r=20, t=80, b=40)
     height = CELL_HEIGHT * species_per_row.sum() + margin["t"] + margin["b"]
+    fig.update_layout(default_layout(fig))
     fig.update_layout(
         margin=margin,
         height=height,
         barmode='stack',
         **updates,
-        title=dict(
-            automargin=False,
-            x=0.5,
-            y=0.999,
-            xanchor="center",
-            yanchor="top",
-            font=dict(size=24),
-        ),
     )
     return fig

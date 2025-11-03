@@ -14,7 +14,10 @@ from typing import Any, Dict, List, Tuple
 from api import dispatch, FETCH_FILES
 from api import filter_dict_to_tuples
 from utils import list2tuple, send_download
+from utils.sketch import default_layout
 from utils.figures.calendar import plot
+
+PLOT_HEIGHT = 400
 
 def fetch_data(dataset_name, filters):
     action = FETCH_FILES
@@ -34,8 +37,9 @@ def register_callbacks():
     ) -> Dict[str, Any]:
         data = fetch_data(dataset_name, filters)
         fig = plot(data)
-        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-        fig.update_layout(title_text="Recording Dates")
+        title_text = "Recording Dates"
+        fig.update_layout(default_layout(fig))
+        fig.update_layout(title_text=title_text)
         return fig
 
     @callback(

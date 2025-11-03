@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_LOCATIONS
 from utils import capitalise_each, send_download
+from utils.sketch import default_layout
 
 ROWS_PER_PAGE = 20
 PLOT_HEIGHT = 800
@@ -102,11 +103,8 @@ def register_callbacks():
         #     enabled=True,
         #     maxzoom=12,
         # ))
-        fig.update_layout(
-            height=PLOT_HEIGHT,
-            margin=dict(r=0, t=0, l=0, b=0),
-            map_style=map_style,
-        )
+        fig.update_layout(default_layout(fig))
+        fig.update_layout(map_style=map_style, margin=dict(r=0, t=0, l=0, b=0),)
         # this prevents the zoom from resetting after the map style is changed
         fig['layout']['uirevision'] = 'some-constant'
         return fig

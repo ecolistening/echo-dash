@@ -17,6 +17,7 @@ from api import dispatch, FETCH_ACOUSTIC_FEATURES_UMAP
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from api import filter_dict_to_tuples
 from utils import list2tuple, send_download
+from utils.sketch import default_layout
 
 PLOT_HEIGHT = 800
 
@@ -104,6 +105,7 @@ def register_callbacks():
             category_orders=category_orders,
         )
         fig.update_traces(marker=dict(size=dot_size))
+        fig.update_layout(default_layout(fig, row_height=800))
         fig.update_layout(title_text="UMAP of Soundscape Descriptors")
         return fig
 

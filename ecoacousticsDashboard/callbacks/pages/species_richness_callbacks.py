@@ -17,8 +17,9 @@ from typing import Any, Dict, List, Tuple
 from api import dispatch, FETCH_BIRDNET_SPECIES
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from api import filter_dict_to_tuples
-from utils import list2tuple, send_download
+from utils import list2tuple, send_download, safe_category_orders
 from utils import sketch
+from utils.sketch import scatter_polar, default_layout
 
 PLOT_HEIGHT = 800
 
@@ -37,7 +38,7 @@ plot_types = {
         # markers=True,
     ),
     "Scatter Polar": functools.partial(
-        sketch.scatter_polar,
+        scatter_polar,
         r="richness",
         theta="hour_continuous",
         mode="markers+lines",
@@ -127,23 +128,12 @@ def register_callbacks():
                 facet_row: options.get(facet_row, {}).get("label", facet_row),
                 facet_col: options.get(facet_col, {}).get("label", facet_col),
             },
-            category_orders=category_orders,
+            category_orders=safe_category_orders(data, category_orders),
         )
-        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
         fig.update_yaxes(rangemode="tozero")
-        fig.update_layout(
-            barmode='stack',
-            height=PLOT_HEIGHT,
-            margin=dict(t=80),
-            title=dict(
-                x=0.5,
-                y=0.99,
-                font=dict(size=24),
-            )
-        )
-        fig.update_layout(
-            title_text=f"Species Richness by Time of Day | p > {threshold}"
-        )
+        title_text = f"Species Richness by Time of Day | p > {threshold}"
+        fig.update_layout(default_layout(fig, row_height=600))
+        fig.update_layout(title_text=title_text, margin=dict(t=100))
         return fig
 
     @callback(

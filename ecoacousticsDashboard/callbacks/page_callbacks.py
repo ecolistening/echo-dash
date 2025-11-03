@@ -33,7 +33,7 @@ def register_callbacks():
         config = dispatch(FETCH_DATASET_CONFIG, dataset_name=dataset_name)
         soundade_config = config["SoundADE"]
         text = (
-            f"To compute acoustic features, the audio was resampled at {soundade_config['sr']}Hz and "
+            f"To compute acoustic features, the audio was resampled at {soundade_config['sample_rate']}Hz and "
             f"segmented into clips of duration {soundade_config['segment_duration']}s. "
             f"Each audio segment is windowed. For features derived from the raw waveform, this window is {soundade_config['frame_length']} samples. "
             f"For spectral features, a spectrogram is computed using an FFT size of {soundade_config['n_fft']} and a hop length of {soundade_config['hop_length']}. "

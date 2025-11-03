@@ -251,17 +251,28 @@ def scatter_polar(
             fig.add_trace(trace, row=row, col=col)
 
             if subset.empty:
-                _r = [None]
-                _theta = [None]
+                subset["r"] = [None]
+                subset["theta"] = [None]
             else:
-                _r = subset[r].tolist()
-                _theta = (subset[theta] * 360 / 24).tolist()
+                subset["r"] = subset[r].tolist()
+                subset["theta"] = (subset[theta] * 360 / 24).tolist()
+
+            # hacky hover template
+            hovertemplate = ""
+            hovertemplate += f"<b>{labels['r']}</b>: %{{customdata[0]}}<br>"
+            hovertemplate += f"<b>{labels['theta']}</b>: %{{customdata[1]}}<br>"
+            if facet_row != "_row_facet":
+                hovertemplate += f"<b>{labels[facet_row]}</b>: %{{customdata[2]}}<br>"
+            if facet_col != "_col_facet":
+                hovertemplate += f"<b>{labels[facet_col]}</b>: %{{customdata[3]}}<br>"
+            hovertemplate += "<extra></extra>"
 
             # plot individual points
             trace = go.Scatterpolar(
-                r=_r,
-                theta=_theta,
-                hovertemplate="".join([f"<b>{name}</b>: %{{{col}}}<br>" for col, name in labels.items()]),
+                r=subset["r"],
+                theta=subset["theta"],
+                customdata=subset[[r, theta, facet_row, facet_col]].values,
+                hovertemplate=hovertemplate,
                 name=color_category,
                 mode="markers",
                 marker=dict(color=color_map[color_category]),
@@ -277,3 +288,21 @@ def scatter_polar(
         })
 
     return fig
+
+def default_layout(fig, max_height: int = 1600, row_height: int = 400):
+    fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+    try:
+        num_rows = len(fig._grid_ref)
+    except AttributeError:
+        num_rows = 1
+    return dict(
+        height=min(max_height, row_height * num_rows),
+        title=dict(
+            automargin=True,
+            x=0.5,
+            y=1.00,
+            xanchor="center",
+            yanchor="top",
+            font=dict(size=24, color="black"),
+        ),
+    )

@@ -16,10 +16,11 @@ from typing import Any, Dict, List, Tuple
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from api import filter_dict_to_tuples
+from utils import list2tuple, capitalise_each, send_download, safe_category_orders
 from utils.figures.index_averages_scatter import plot
-from utils import list2tuple, capitalise_each, send_download
+from utils.sketch import default_layout
 
-PLOT_HEIGHT = 800
+PLOT_HEIGHT = 400
 
 def fetch_data(dataset_name, filters):
     action = FETCH_ACOUSTIC_FEATURES
@@ -59,9 +60,10 @@ def register_callbacks():
                 "value_mean": "Value",
                 color: options.get(color, {}).get("label", color),
             },
-            category_orders=category_orders,
+            category_orders=safe_category_orders(data, category_orders),
         )
-        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+        fig.update_traces(marker=dict(size=4))
+        fig.update_layout(default_layout(fig))
         fig.update_layout(title_text=f"{capitalise_each(filters['current_feature'])} Seasonal Averages")
         return fig
 

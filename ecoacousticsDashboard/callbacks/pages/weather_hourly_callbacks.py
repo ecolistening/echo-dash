@@ -17,6 +17,7 @@ from api import dispatch, FETCH_DATASET_OPTIONS, FETCH_FILE_WEATHER
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from api import filter_dict_to_tuples
 from utils import list2tuple, send_download
+from utils.sketch import default_layout
 
 PLOT_HEIGHT = 800
 
@@ -100,9 +101,8 @@ def register_callbacks():
             },
             category_orders=category_orders,
         )
-        fig.update_layout(
-            title_text=options.get(variable, {}).get("label", variable)
-        )
+        fig.update_layout(default_layout(fig))
+        fig.update_layout(title_text=options.get(variable, {}).get("label", variable))
         return fig
 
     @callback(

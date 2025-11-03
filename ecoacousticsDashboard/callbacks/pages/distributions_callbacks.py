@@ -14,10 +14,11 @@ from typing import Any, Dict, List, Tuple
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from api import filter_dict_to_tuples
-from utils import list2tuple, capitalise_each, send_download
+from utils import list2tuple, capitalise_each, send_download, safe_category_orders
+from utils.sketch import default_layout
 from utils.figures.histogram import plot
 
-PLOT_HEIGHT = 800
+PLOT_HEIGHT = 400
 
 def fetch_data(dataset_name, filters):
     action = FETCH_ACOUSTIC_FEATURES
@@ -47,13 +48,14 @@ def register_callbacks():
             return no_update
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
+        data = fetch_data(dataset_name, filters)
         fig = plot(
-            fetch_data(dataset_name, filters),
+            data,
             facet_row=facet_row,
             facet_col=facet_col,
             color=color,
             histnorm="percent" if normalised else None,
-            category_orders=category_orders,
+            category_orders=safe_category_orders(data, category_orders),
             labels={
                 "count": "Count",
                 "value": capitalise_each(filters["current_feature"]),
@@ -62,11 +64,8 @@ def register_callbacks():
                 facet_col: options.get(facet_col, {}).get("label", facet_col),
             },
         )
-        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-        fig.update_layout(title_text=(
-            f"{capitalise_each(filters['current_feature'])} | "
-            f"{filters['date_range'][0]} - {filters['date_range'][1]}"
-        ))
+        fig.update_layout(default_layout(fig))
+        fig.update_layout(title_text=f"{capitalise_each(filters['current_feature'])} | {filters['date_range'][0]} - {filters['date_range'][1]}")
         return fig
 
     @callback(

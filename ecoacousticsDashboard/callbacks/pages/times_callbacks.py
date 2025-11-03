@@ -16,9 +16,10 @@ from typing import Any, Dict, List, Tuple
 from api import dispatch, FETCH_FILES, DATASETS
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from api import filter_dict_to_tuples
-from utils import list2tuple, send_download
+from utils import list2tuple, send_download, safe_category_orders
+from utils.sketch import default_layout
 
-PLOT_HEIGHT = 800
+PLOT_HEIGHT = 400
 
 def fetch_data(dataset_name, filters, **kwargs):
     action = FETCH_FILES
@@ -94,11 +95,12 @@ def register_callbacks():
                 facet_col: options.get(facet_col, {}).get("label", facet_col),
                 symbol: options.get(symbol, {}).get("label", symbol),
             },
-            category_orders=category_orders,
+            category_orders=safe_category_orders(data, category_orders),
         )
-        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-        fig.update_layout(title_text="Recording Times")
+        title_text = "Recording Times"
         fig.update_traces(marker=dict(size=dot_size))
+        fig.update_layout(default_layout(fig))
+        fig.update_layout(title_text=title_text)
         return fig
 
     @callback(

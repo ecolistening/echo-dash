@@ -19,7 +19,7 @@ from api import dispatch, FETCH_BIRDNET_SPECIES
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from api import filter_dict_to_tuples
 from utils.figures.species_matrix import species_matrix as plot
-from utils import list2tuple, send_download
+from utils import list2tuple, send_download, safe_category_orders
 
 def register_callbacks():
     @callback(
@@ -82,7 +82,7 @@ def register_callbacks():
         data = dispatch(action, **payload)
         if len(opts):
             data = data[data[opt_group] == opts[0]]
-        fig = plot(data, axis_group, facet_col, None, category_orders)
+        fig = plot(data, axis_group, facet_col, None, safe_category_orders(data, category_orders))
         fig.update_layout(title_text=f"Species Matrix |{f' {opts[0]} |' if len(opts) else ''} p > {threshold}")
         return fig
 

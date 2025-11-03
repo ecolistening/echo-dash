@@ -94,3 +94,10 @@ def send_download(df: pd.DataFrame, file_name: str, dl_type: str) -> Dict[str, A
     file_name = file_name + f".{extension}"
     response = dcc.send_data_frame(render(df), file_name, **params)
     return response
+
+def safe_category_orders(df, category_orders):
+    safe_orders = {}
+    for key, cats in category_orders.items():
+        if key in df.columns:
+            safe_orders[key] = [c for c in cats if c in df[key].unique()]
+    return safe_orders

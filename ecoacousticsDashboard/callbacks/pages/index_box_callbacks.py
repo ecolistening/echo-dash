@@ -16,7 +16,8 @@ from typing import Any, Dict, List, Tuple
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from api import filter_dict_to_tuples
-from utils import list2tuple, capitalise_each, send_download
+from utils import list2tuple, capitalise_each, send_download, safe_category_orders
+from utils.sketch import default_layout
 
 PLOT_HEIGHT = 800
 
@@ -66,22 +67,11 @@ def register_callbacks():
                 facet_col: options.get(facet_col, {}).get("label", facet_col),
             },
             points="outliers" if outliers else False,
-            category_orders=category_orders,
+            category_orders=safe_category_orders(data, category_orders),
         )
-        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-        fig.update_layout(
-            height=PLOT_HEIGHT,
-            margin=dict(t=80),
-            title=dict(
-                x=0.5,
-                y=0.98,
-                font=dict(size=24),
-            )
-        )
-        fig.update_layout(title_text=(
-            f"{capitalise_each(filters['current_feature'])} by Time of Day | "
-            f"{filters['date_range'][0]} - {filters['date_range'][1]}"
-        ))
+        title_text = f"{capitalise_each(filters['current_feature'])} by Time of Day | {filters['date_range'][0]} - {filters['date_range'][1]}"
+        fig.update_layout(default_layout(fig, row_height=600))
+        fig.update_layout(title_text=title_text)
         return fig
 
     @callback(

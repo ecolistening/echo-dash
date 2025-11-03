@@ -180,10 +180,13 @@ def register_callbacks():
         selected_species: List[str],
         check_boxes: List[bool],
     ) -> List[str]:
-        page_checked_species = [scientific_name for checked, scientific_name in zip(check_boxes, selected_species) if checked]
-        current_species = filters["species"]
-        species_list = list(set(current_species) | set(page_checked_species))
-        species_list = list(sorted(species_list))
+        current_species = set(filters["species"])
+        for checked, scientific_name in zip(check_boxes, selected_species):
+            if checked:
+                current_species.add(scientific_name)
+            if not checked and scientific_name in current_species:
+                current_species.remove(scientific_name)
+        species_list = sorted(list(current_species))
         if species_list == current_species:
             return no_update
         filters["species"] = species_list
