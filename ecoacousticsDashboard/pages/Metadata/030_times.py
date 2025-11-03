@@ -23,9 +23,9 @@ from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.figure_download_widget import FigureDownloadWidget
-from components.footer import Footer
+from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from utils import list2tuple
-from utils.content import get_tabs
+from utils.content import get_content
 
 PAGE_NAME = 'times'
 PAGE_TITLE = 'Recording Times'
@@ -38,19 +38,6 @@ dash.register_page(
 )
 
 layout = dmc.Box([
-    dcc.Store(id="times-graph-data"),
-    FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                SiteLevelFilter(),
-                DateRangeFilter(),
-                EnvironmentalFilter(),
-            ]
-        ),
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
@@ -58,22 +45,28 @@ layout = dmc.Box([
                 DatasetOptionsSelect(
                     id="times-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Colour by"
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
+                    label="Colour by",
+                    value="valid",
                 ),
                 DatasetOptionsSelect(
                     id="times-symbol-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Symbol by"
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
+                    label="Symbol by",
                 ),
                 DatasetOptionsSelect(
                     id="times-facet-row-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Facet rows by"
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
+                    label="Facet rows by",
+                    value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
                     id="times-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Facet columns by"
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
+                    label="Facet columns by",
                 ),
                 dmc.Flex(
                     p="1rem",
@@ -84,6 +77,7 @@ layout = dmc.Box([
                         dmc.Group(
                             grow=True,
                             children=[
+                                FileSelectionSidebarIcon(context="times"),
                                 DataDownloadWidget(
                                     context="times",
                                 ),
@@ -141,17 +135,28 @@ layout = dmc.Box([
         ),
     ]),
     dmc.Space(h="sm"),
-    dcc.Loading(
-        dcc.Graph(id="times-graph"),
+    dmc.Grid([
+        dmc.GridCol(
+            id="times-graph-container",
+            span=12,
+            children=[
+                dcc.Loading([
+                    dcc.Graph(id="times-graph"),
+                ]),
+            ],
+        ),
+        FileSelectionSidebar(
+            context="times",
+            graph="times-graph",
+            sibling="times-graph-container",
+            span=5,
+        ),
+    ]),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/times")
     ),
-    dbc.Offcanvas(
-        id="times-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("times"),
-    ),
-    # TODO: fixme
-    # get_modal_sound_sample(PAGE_NAME),
 ])
 
 def register_callbacks():

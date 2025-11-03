@@ -17,6 +17,9 @@ def species_matrix(
     category_orders: Dict[str, Any] | None = None,
     color: str = "#1f77b4",
 ) -> go.Figure:
+    if df.empty:
+        return go.Figure()
+
     counts = (
         df.groupby([*list(filter(None, [axis_group, facet_col, facet_row])), "species"])["detected"]
         .sum()
@@ -77,7 +80,8 @@ def species_matrix(
     row_categories = []
     species_per_row = []
     for row_cat in category_orders.get(facet_row, counts[facet_row].unique()):
-        species_count_by_row = counts.loc[counts[facet_row] == row_cat, "species"].nunique()
+        species_sum = counts[counts[facet_row] == row_cat].groupby(["species"])[["detected"]].sum()
+        species_count_by_row = len(species_sum[species_sum != 0].dropna().index.tolist())
         if species_count_by_row > 0:
             row_categories.append(row_cat)
             species_per_row.append(species_count_by_row)
@@ -106,13 +110,13 @@ def species_matrix(
     for i, row_cat in enumerate(row_categories):
         row = i + 1
         # species order by sum of detections across all columns
-        species_subset = (
+        species_sum = (
             counts[counts[facet_row] == row_cat]
             .groupby(["species"])[["detected"]]
             .sum()
             .sort_values(by="detected", ascending=True)
-            .index.tolist()
         )
+        species_subset = species_sum[species_sum != 0].dropna().index.tolist()
         for j, col_cat in enumerate(col_categories):
             col = j + 1
             subset = counts[
@@ -142,7 +146,7 @@ def species_matrix(
                     text=data.values,
                     texttemplate="%{text}",
                     textfont={"size": 10, "color": "black"},
-                    showscale=(row == 1 and col == len(col_categories)),
+                    showscale=False,
                     zmin=z_min,
                     zmax=z_max,
                 ),

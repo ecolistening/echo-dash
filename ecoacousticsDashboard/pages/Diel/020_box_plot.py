@@ -14,9 +14,9 @@ from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from components.acoustic_feature_filter import AcousticFeatureFilter
+from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from components.figure_download_widget import FigureDownloadWidget
-from components.footer import Footer
+from utils.content import get_content
 
 PAGE_NAME = "index-box-plot"
 PAGE_TITLE = "Box Plot of Acoustic Descriptor by Time of Day"
@@ -30,44 +30,34 @@ dash.register_page(
 PLOT_HEIGHT = 800
 
 layout = dmc.Box([
-    FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                SiteLevelFilter(),
-                DateRangeFilter(),
-                EnvironmentalFilter(),
-            ]
-        ),
-        dmc.Space(h=10),
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                AcousticFeatureFilter(),
-            ]
-        ),
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
             children=[
+                dmc.Select(
+                    id="feature-select",
+                    label="Acoustic Feature",
+                    value="bioacoustic index",
+                    searchable=True,
+                    clearable=False,
+                    allowDeselect=False,
+                ),
                 DatasetOptionsSelect(
                     id="index-box-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Colour by"
+                    label="Colour by",
+                    value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
                     id="index-box-facet-row-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Facet rows by"
+                    label="Facet rows by",
                 ),
                 DatasetOptionsSelect(
                     id="index-box-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Facet columns by"
+                    label="Facet columns by",
+                    value="year",
                 ),
                 dmc.Flex(
                     p="1rem",
@@ -78,6 +68,7 @@ layout = dmc.Box([
                         dmc.Group(
                             grow=True,
                             children=[
+                                FileSelectionSidebarIcon(context="index-box"),
                                 DataDownloadWidget(
                                     context="index-box",
                                 ),
@@ -91,10 +82,27 @@ layout = dmc.Box([
             ],
         ),
         dmc.Group(
+            grow=True,
             children=[
                 dmc.Stack([
                     dmc.Text(
-                        "Group by Time",
+                        "Acoustic Feature Range",
+                        id="feature-range-title",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.RangeSlider(
+                        id="feature-range-slider",
+                        min=0,
+                        max=999,
+                        step=1,
+                        persistence=True,
+                        showLabelOnHover=False,
+                    ),
+                ]),
+                dmc.Stack([
+                    dmc.Text(
+                        "Time Aggregation",
                         size="sm",
                         ta="left",
                     ),
@@ -122,14 +130,36 @@ layout = dmc.Box([
         ),
     ]),
     dmc.Space(h="sm"),
-    dcc.Loading(
-        dcc.Graph(id="index-box-graph"),
+    dmc.Grid([
+        dmc.GridCol(
+            id="index-box-graph-container",
+            span=12,
+            children=[
+                dcc.Loading([
+                    dcc.Graph(id="index-box-graph"),
+                ]),
+            ],
+        ),
+        FileSelectionSidebar(
+            context="index-box",
+            graph="index-box-graph",
+            sibling="index-box-graph-container",
+            span=5,
+        ),
+    ]),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/acoustic-feature-box")
     ),
-    dbc.Offcanvas(
-        id="index-box-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("index-box"),
+    dmc.Box(
+        id="soundade-features-description",
+        children=[]
+    ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="feature-descriptor-content",
+        children=[],
     ),
 ])
 

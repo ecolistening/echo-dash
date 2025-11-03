@@ -32,8 +32,9 @@ def register_callbacks():
         Input("load-datasets", "n_intervals"),
     )
     def fetch_datasets(current_dataset, _) -> List[Dict[str, str]]:
-        # FIXME switch to dataset_id and dataset_name
-        datasets = dispatch(FETCH_DATASETS, default=[])
+        action = FETCH_DATASETS
+        logger.debug(f"{ctx.triggered_id=} {action=}")
+        datasets = dispatch(action, default=[])
         dataset_options = [
             dict(label=dataset, value=dataset)
             for dataset in datasets

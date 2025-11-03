@@ -10,84 +10,86 @@ import plotly.graph_objs as go
 from dash import html, dcc, callback, ctx, no_update
 from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
+from loguru import logger
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
+from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
+from api import filter_dict_to_tuples
 from utils import list2tuple, capitalise_each, send_download
 
 PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name, filters):
-    return dispatch(
-        FETCH_ACOUSTIC_FEATURES,
-        dataset_name=dataset_name,
-        dates=list2tuple(filters["date_range"]),
-        feature=filters["current_feature"],
-        feature_range=list2tuple(filters["current_feature_range"]),
-        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-        locations=list2tuple(filters["current_sites"]),
-        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
-    )
+    action = FETCH_ACOUSTIC_FEATURES
+    payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters))
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 def register_callbacks():
-    @callback(
-        Output("index-scatter-page-info", "is_open"),
-        Input("info-icon", "n_clicks"),
-        State("index-scatter-page-info", "is_open"),
-        prevent_initial_call=True,
-    )
-    def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-        return not is_open
-
     @callback(
         Output("index-scatter-graph", "figure"),
         State("dataset-select", "value"),
         Input("filter-store", "data"),
         Input("index-scatter-size-slider", "value"),
+        Input("index-scatter-opacity-slider", "value"),
+        Input("index-scatter-x-axis-select", "value"),
         Input("index-scatter-colour-select", "value"),
         Input("index-scatter-symbol-select", "value"),
         Input("index-scatter-facet-row-select", "value"),
         Input("index-scatter-facet-column-select", "value"),
-        State("dataset-category-orders", "data"),
     )
     def draw_figure(
         dataset_name: str,
         filters: Dict[str, Any],
         dot_size: int,
+        opacity: int,
+        x_axis: str,
         color: str,
         symbol: str,
         facet_row: str,
         facet_col: str,
-        category_orders: Dict[str, List[str]],
     ) -> go.Figure:
+        options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
+        category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         data = fetch_data(dataset_name, filters)
         fig = px.scatter(
             data_frame=data,
-            x='hour',
-            y='value',
+            x=x_axis,
+            y="value",
             hover_name="file_id",
             hover_data=["file_name", "timestamp"],
-            opacity=0.5,
+            opacity=opacity / 100.0,
             color=color,
             symbol=symbol,
             facet_row=facet_row,
             facet_col=facet_col,
-            labels=dict(
-                hour="Hour",
-                value=capitalise_each(filters["current_feature"]),
-            ),
+            color_discrete_sequence=px.colors.qualitative.Plotly,
+            labels={
+                "value": capitalise_each(filters["current_feature"]),
+                x_axis: options.get(x_axis, {}).get("label", x_axis),
+                color: options.get(color, {}).get("label", color),
+                symbol: options.get(symbol, {}).get("label", symbol),
+                facet_row: options.get(facet_row, {}).get("label", facet_row),
+                facet_col: options.get(facet_col, {}).get("label", facet_col),
+            },
             category_orders=category_orders,
         )
+        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
         fig.update_traces(marker=dict(size=dot_size))
         fig.update_layout(
             height=PLOT_HEIGHT,
+            margin=dict(t=80),
             title=dict(
-                text=f"Acoustic Descriptor by Time of Day",
                 x=0.5,
-                y=0.97,
+                y=0.98,
                 font=dict(size=24),
             )
         )
+        fig.update_layout(title_text=(
+            f"{capitalise_each(filters['current_feature'])} by Time of Day | "
+            f"{filters['date_range'][0]} - {filters['date_range'][1]}"
+        ))
         return fig
 
     @callback(

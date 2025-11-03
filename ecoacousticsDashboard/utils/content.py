@@ -53,7 +53,14 @@ def get_content_md(file_path):
     font-size: 16px;
     '''
 
-    content = [dcc.Markdown(line,dangerously_allow_html=True) for line in lines]
+    content = [
+        dcc.Markdown(
+            line,
+            dangerously_allow_html=True,
+            className="content-markdown",
+        )
+        for line in lines
+    ]
     
     # div =  html.Div(content, 
     #     style={'marginLeft': 10, 'marginRight': 10, 'marginTop': 10, 'marginBottom': 10, 
@@ -112,32 +119,3 @@ def get_content_text(file_path):
 
     logger.debug(f"Return txt content for {file_path}: {len(content)} elements.")
     return html.Div(content)
-
-def get_tabs(pagename,about=True,feature=True,dataset=True):
-    tabs = []
-    if about:
-        tabs.append(dcc.Tab(label='About', value='about'))
-    if feature:
-        tabs.append(dcc.Tab(label='Descriptor', value='feature'))
-    if dataset:
-        tabs.append(dcc.Tab(label='Dataset', value='dataset'))
-
-    tab_div = html.Div([
-        dcc.Tabs(id=f'tabs-{pagename}', value='about', children=tabs),
-        html.Div(id=f'tabs-{pagename}-content')
-    ])
-
-    @callback(
-        Output(f'tabs-{pagename}-content', 'children'),
-        Input(f'tabs-{pagename}', 'value'),
-        Input('dataset-select', component_property='value'),
-        Input('feature-dropdown', component_property='value')
-    )
-    def render_content(tab,dataset,feature):
-        if tab == 'about':
-            return get_content(f"page/{pagename}")
-        elif tab == 'feature':
-            return get_content(f"feature/{feature}")
-        elif tab == 'dataset':
-            return get_content(f"dataset/{dataset}")
-    return tab_div

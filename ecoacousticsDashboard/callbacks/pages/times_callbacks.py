@@ -13,29 +13,22 @@ from loguru import logger
 from io import StringIO
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_FILES
+from api import dispatch, FETCH_FILES, DATASETS
+from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
+from api import filter_dict_to_tuples
 from utils import list2tuple, send_download
 
 PLOT_HEIGHT = 800
 
-def fetch_data(dataset_name, filters):
-    return dispatch(
-        FETCH_FILES,
-        dataset_name=dataset_name,
-        dates=list2tuple(filters["date_range"]),
-        locations=list2tuple(filters["current_sites"]),
-        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
-    )
+def fetch_data(dataset_name, filters, **kwargs):
+    action = FETCH_FILES
+    payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters), **kwargs)
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 def plot(
     df: pd.DataFrame,
     opacity: int = 100,
-    color: str | None = None,
-    symbol: str | None = None,
-    facet_row: str | None = None,
-    facet_col: str | None = None,
-    labels: Dict[str, str] | None = None,
     **kwargs: Any,
 ) -> go.Figure:
     fig = px.scatter(
@@ -43,21 +36,15 @@ def plot(
         x="date",
         y="time",
         opacity=opacity / 100,
-        hover_name="file_name",
-        hover_data=["file_id", "timestamp"],
-        color=color,
-        symbol=symbol,
-        facet_row=facet_row,
-        facet_col=facet_col,
-        labels=labels,
+        hover_name="file_id",
+        hover_data=["file_name", "timestamp"],
         **kwargs,
     )
     fig.update_layout(
         height=PLOT_HEIGHT,
         title=dict(
-            automargin=True,
             x=0.5,
-            y=1.00,
+            y=0.99,
             xanchor="center",
             yanchor="top",
             font=dict(size=24),
@@ -69,15 +56,6 @@ def plot(
 
 def register_callbacks():
     @callback(
-        Output("times-page-info", "is_open"),
-        Input("info-icon", "n_clicks"),
-        State("times-page-info", "is_open"),
-        prevent_initial_call=True,
-    )
-    def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-        return not is_open
-
-    @callback(
         Output("times-graph", "figure"),
         State("dataset-select", "value"),
         Input("filter-store", "data"),
@@ -87,7 +65,6 @@ def register_callbacks():
         Input("times-symbol-select", "value"),
         Input("times-facet-row-select", "value"),
         Input("times-facet-column-select", "value"),
-        State("dataset-category-orders", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -98,9 +75,10 @@ def register_callbacks():
         symbol: str,
         facet_row: str,
         facet_col: str,
-        category_orders: Dict[str, List[str]],
     ) -> go.Figure:
-        data = fetch_data(dataset_name, filters)
+        options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
+        category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
+        data = fetch_data(dataset_name, filters, valid_only=False)
         fig = plot(
             data,
             opacity=opacity,
@@ -108,9 +86,17 @@ def register_callbacks():
             symbol=symbol,
             facet_row=facet_row,
             facet_col=facet_col,
-            labels=dict(date="Date", time="Hour"),
+            labels={
+                "date": "Date",
+                "time": "Hour",
+                color: options.get(color, {}).get("label", color),
+                facet_row: options.get(facet_row, {}).get("label", facet_row),
+                facet_col: options.get(facet_col, {}).get("label", facet_col),
+                symbol: options.get(symbol, {}).get("label", symbol),
+            },
             category_orders=category_orders,
         )
+        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
         fig.update_layout(title_text="Recording Times")
         fig.update_traces(marker=dict(size=dot_size))
         return fig

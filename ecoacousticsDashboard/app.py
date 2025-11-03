@@ -40,6 +40,10 @@ def create_dash_app() -> dash.Dash:
     from components.header import Header, HEADER_CONFIG
     from components.nav_bar import NavBar, NAVBAR_CONFIG
     from components.hover_icons import HoverIcons
+    from components.filter_panel import FilterPanel
+    from components.date_range_filter import DateRangeFilter
+    from components.site_level_filter import SiteLevelFilter
+    from components.environmental_filter import EnvironmentalFilter
     from components.dataset_settings_drawer import DatasetSettingsDrawer
     from store import global_store
 
@@ -57,6 +61,48 @@ def create_dash_app() -> dash.Dash:
                 NavBar(),
                 DatasetSettingsDrawer(),
                 dmc.AppShellMain([
+                    FilterPanel([
+                        dmc.Accordion(
+                            multiple=True,
+                            persistence=True,
+                            children=[
+                                dmc.AccordionItem(
+                                    value="site",
+                                    children=[
+                                        dmc.AccordionControl("By Site"),
+                                        dmc.AccordionPanel(SiteLevelFilter())
+                                    ]
+                                ),
+                                dmc.AccordionItem(
+                                    value="date",
+                                    children=[
+                                        dmc.AccordionControl("By Date"),
+                                        dmc.AccordionPanel(DateRangeFilter())
+                                    ]
+                                ),
+                                dmc.AccordionItem(
+                                    value="weather",
+                                    children=[
+                                        dmc.AccordionControl("By Weather"),
+                                        dmc.AccordionPanel(EnvironmentalFilter())
+                                    ]
+                                ),
+                            ]
+                        ),
+                        dmc.Space(h="sm"),
+                        dmc.Group(
+                            justify="flex-end",
+                            children=[
+                                dmc.Button(
+                                    id="filter-reset-button",
+                                    children="Reset All",
+                                    color="blue",
+                                    w=100,
+                                ),
+                            ]
+                        ),
+                    ]),
+                    dmc.Space(h="sm"),
                     dash.page_container,
                 ]),
                 dcc.Interval(
@@ -76,6 +122,9 @@ def create_dash_app() -> dash.Dash:
 
     from callbacks import filter_callbacks
     filter_callbacks.register_callbacks()
+
+    from callbacks import page_callbacks
+    page_callbacks.register_callbacks()
 
     for page in dash.page_registry.values():
         mod = __import__(page["module"], fromlist=["register_callbacks"])

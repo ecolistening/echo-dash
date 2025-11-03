@@ -14,6 +14,12 @@ def ceil(a, precision=0):
 def floor(a, precision=0):
     return np.round(a - 0.5 * 10**(-precision), precision)
 
+def float_to_index(x: float, min_val: float, max_val: float, n_steps: int = 1000):
+    return int(round((x - min_val) / (max_val - min_val) * (n_steps - 1)))
+
+def index_to_float(i: int, min_val: float, max_val: float, n_steps: int = 1000) -> float:
+    return min_val + (i / (n_steps - 1)) * (max_val - min_val)
+
 def hashify(s: str):
     h = hashlib.new("sha256")
     h.update(s.encode("utf-8"))

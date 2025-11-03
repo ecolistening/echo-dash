@@ -17,8 +17,8 @@ from api import dispatch, FETCH_LOCATIONS
 from components.controls_panel import ControlsPanel
 from components.data_download_widget import DataDownloadWidget
 from components.figure_download_widget import FigureDownloadWidget
-from components.footer import Footer
 from utils import capitalise_each
+from utils.content import get_content
 
 PAGE_NAME = 'map'
 PAGE_TITLE = 'Location Map'
@@ -35,19 +35,34 @@ layout = html.Div([
         dmc.Group(
             grow=True,
             children=[
-                html.Div(
-                    style={
-                        "padding": "1rem",
-                        "display": "flex",
-                        "align-content": "center",
-                        "justify-content": "right",
-                    },
+                dmc.Select(
+                    id="map-style-select",
+                    label="Map Style",
+                    value="satellite",
+                    persistence=True,
+                    data=[
+                        {"value": "satellite-streets", "label": "Satellite Streets"},
+                        {"value": "satellite", "label": "Satellite"},
+                        {"value": "open-street-map", "label": "Open Street Map"},
+                        {"value": "outdoors", "label": "Outdoors"},
+                    ]
+                ),
+                dmc.Flex(
+                    p="1rem",
+                    align="center",
+                    justify="right",
+                    direction="row",
                     children=[
-                        DataDownloadWidget(
-                            context="map",
-                        ),
-                        FigureDownloadWidget(
-                            plot_name="map-graph",
+                        dmc.Group(
+                            grow=True,
+                            children=[
+                                DataDownloadWidget(
+                                    context="map",
+                                ),
+                                FigureDownloadWidget(
+                                    plot_name="map-graph",
+                                ),
+                            ],
                         ),
                     ],
                 ),
@@ -59,12 +74,35 @@ layout = html.Div([
         dcc.Graph(id="map-graph"),
     ),
     dmc.Space(h="sm"),
-    dmc.Box(id="locations-table"),
-    dbc.Offcanvas(
-        id="map-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("map"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/map")
+    ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="locations-paginated-table",
+        children=dmc.Stack([
+            dmc.Group([
+                dmc.TextInput(
+                    id="locations-search",
+                    placeholder="Search...",
+                    value="",
+                    leftSection=DashIconify(icon="cil:search"),
+                    w=300,
+                ),
+                dmc.Pagination(
+                    id="locations-paginated",
+                    total=1,
+                    value=1,
+                    siblings=1,
+                    boundaries=1,
+                ),
+            ]),
+            dmc.Box(
+                id="locations-table-container",
+                children=[]
+            ),
+        ])
     ),
 ])
 

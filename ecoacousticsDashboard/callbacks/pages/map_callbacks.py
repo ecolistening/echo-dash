@@ -16,10 +16,14 @@ from typing import Any, Dict, List, Tuple
 from api import dispatch, FETCH_LOCATIONS
 from utils import capitalise_each, send_download
 
+ROWS_PER_PAGE = 20
 PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name):
-    return dispatch(FETCH_LOCATIONS, dataset_name=dataset_name).sort_values(by="location")
+    action = FETCH_LOCATIONS
+    payload = dict(dataset_name=dataset_name)
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 def plot(df):
     # calculate Zoom Level for World Map, https://docs.mapbox.com/help/glossary/zoom-level/#zoom-levels-and-geographical-distance
@@ -30,7 +34,7 @@ def plot(df):
     max_bound = max(longitude_range, latitude_range) * 111
     # determine a zoom level
     zoom = 12 - np.log(max_bound)*1.1
-    fig = px.scatter_mapbox(
+    fig = px.scatter_map(
         df,
         lat="latitude",
         lon="longitude",
@@ -39,51 +43,72 @@ def plot(df):
         color_discrete_sequence=["red"],
         zoom=zoom,
     )
-    fig.update_layout(
-        height=PLOT_HEIGHT,
-        margin=dict(r=0, t=0, l=0, b=0),
-        mapbox_style="open-street-map",
-    )
     return fig
 
 def Table(data: pd.DataFrame, caption: str = "") -> dmc.Table:
     return dmc.Table([
         dmc.TableThead(
-            dmc.TableTr([dmc.TableTh(capitalise_each(col.replace("_", " "))) for col in data.columns])
+            dmc.TableTr([
+                dmc.TableTh(capitalise_each(col.replace("_", " ")))
+                for col in data.columns
+            ])
         ),
         dmc.TableTbody([
-            dmc.TableTr([dmc.TableTd(record[col]) for col in data.columns])
-            for record in data.to_dict(orient="records")
+            dmc.TableTr([
+                dmc.TableTd(record[col])
+                for col in data.columns
+            ])
+            for record in data.sort_values(by="location").to_dict(orient="records")
         ]),
         dmc.TableCaption(caption)
     ])
 
 def register_callbacks():
     @callback(
-        Output("map-page-info", "is_open"),
-        Input("info-icon", "n_clicks"),
-        State("map-page-info", "is_open"),
-        prevent_initial_call=True,
-    )
-    def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-        return not is_open
-
-    @callback(
-        Output("locations-table", "children"),
+        Output("locations-table-container", "children"),
+        Output("locations-paginated", "total"),
         Input("dataset-select", "value"),
+        Input("locations-paginated", "value"),
+        Input("locations-search", "value"),
     )
-    def render_locations_table(dataset_name):
-        data = fetch_data(dataset_name)
-        return Table(data=data, caption="Location metadata")
+    def build_paginated_table(
+        dataset_name: str,
+        page: int,
+        search_term: str,
+    ) -> Table:
+        data = fetch_data(dataset_name).sort_values(by="location").drop("site", axis=1)
+        if search_term:
+            search_term = search_term.lower()
+            mask = data.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)
+            data = data[mask]
+        total = (len(data) + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE
+        start = (page - 1) * ROWS_PER_PAGE
+        end = start + ROWS_PER_PAGE
+        paged_data = data.iloc[start:end]
+        return Table(data=paged_data, caption="Location metadata"), total
 
     @callback(
         Output("map-graph", "figure"),
         Input("dataset-select", "value"),
+        Input("map-style-select", "value"),
     )
-    def update_graph(dataset_name):
-        logger.debug(f"Trigger ID={ctx.triggered_id}: {dataset_name=}")
-        data = fetch_data(dataset_name)
+    def update_graph(
+        dataset_name: str,
+        map_style: str
+    ) -> go.Figure:
+        data = fetch_data(dataset_name).sort_values(by="location")
         fig = plot(data)
+        # fig.update_traces(cluster=dict(
+        #     enabled=True,
+        #     maxzoom=12,
+        # ))
+        fig.update_layout(
+            height=PLOT_HEIGHT,
+            margin=dict(r=0, t=0, l=0, b=0),
+            map_style=map_style,
+        )
+        # this prevents the zoom from resetting after the map style is changed
+        fig['layout']['uirevision'] = 'some-constant'
         return fig
 
     @callback(
@@ -99,7 +124,7 @@ def register_callbacks():
         clicks,
     ) -> Dict[str, Any]:
         return send_download(
-            fetch_data(dataset_name),
+            fetch_data(dataset_name).sort_values(by="location"),
             f"{dataset_name}_map_locations",
             ctx.triggered_id["index"],
         )

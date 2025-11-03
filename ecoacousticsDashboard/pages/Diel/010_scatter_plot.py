@@ -13,9 +13,9 @@ from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
-from components.footer import Footer
+from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
+from utils.content import get_content
 
 PAGE_NAME = 'index-scatter'
 PAGE_TITLE = 'Acoustic Descriptor by Time of Day'
@@ -29,34 +29,30 @@ dash.register_page(
 PLOT_HEIGHT = 800
 
 layout = dmc.Box([
-    FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                SiteLevelFilter(),
-                DateRangeFilter(),
-                EnvironmentalFilter(),
-            ]
-        ),
-        dmc.Space(h=10),
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                AcousticFeatureFilter(),
-            ]
-        ),
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
             children=[
+                dmc.Select(
+                    id="feature-select",
+                    label="Acoustic Feature",
+                    value="bioacoustic index",
+                    searchable=True,
+                    clearable=False,
+                    allowDeselect=False,
+                ),
+                DatasetOptionsSelect(
+                    id="index-scatter-x-axis-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("Time",),
+                    label="X-axis",
+                    value="time",
+                ),
                 DatasetOptionsSelect(
                     id="index-scatter-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Colour by",
+                    value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
                     id="index-scatter-symbol-select",
@@ -72,6 +68,7 @@ layout = dmc.Box([
                     id="index-scatter-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet columns by",
+                    value="month",
                 ),
                 dmc.Flex(
                     p="1rem",
@@ -82,6 +79,7 @@ layout = dmc.Box([
                         dmc.Group(
                             grow=True,
                             children=[
+                                FileSelectionSidebarIcon(context="index-scatter"),
                                 DataDownloadWidget(
                                     context="index-scatter",
                                 ),
@@ -96,36 +94,95 @@ layout = dmc.Box([
         ),
         dmc.Group(
             grow=True,
-            children=dmc.Stack([
-                dmc.Text(
-                    "Dot Size",
-                    size="sm",
-                    ta="left",
-                ),
-                dmc.Slider(
-                    id="index-scatter-size-slider",
-                    min=1,
-                    max=20,
-                    step=1,
-                    value=6,
-                    marks=[
-                        {"value": i, "label": f"{i}"}
-                        for i in (1, 10, 20)
-                    ],
-                    persistence=True
-                )
-            ]),
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Acoustic Feature Range",
+                        id="feature-range-title",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.RangeSlider(
+                        id="feature-range-slider",
+                        min=0,
+                        max=999,
+                        step=1,
+                        persistence=True,
+                        showLabelOnHover=False,
+                    ),
+                ]),
+                dmc.Stack([
+                    dmc.Text(
+                        "Dot Size",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="index-scatter-size-slider",
+                        min=1,
+                        max=20,
+                        step=1,
+                        value=6,
+                        marks=[
+                            {"value": i, "label": f"{i}"}
+                            for i in (1, 10, 20)
+                        ],
+                        persistence=True
+                    )
+                ]),
+                dmc.Stack([
+                    dmc.Text(
+                        "Opacity",
+                        size='sm',
+                        ta="left",
+                    ),
+                    dmc.Slider(
+                        id="index-scatter-opacity-slider",
+                        persistence=True,
+                        min=0,
+                        max=100,
+                        step=5,
+                        value=33,
+                        marks=[
+                            dict(value=i, label=f"{i}%")
+                            for i in range(0, 101, 20)
+                        ],
+                    )
+                ]),
+            ],
         ),
     ]),
     dmc.Space(h="sm"),
-    dcc.Loading(
-        dcc.Graph(id=f"index-scatter-graph"),
+    dmc.Grid([
+        dmc.GridCol(
+            id="index-scatter-graph-container",
+            span=12,
+            children=[
+                dcc.Loading([
+                    dcc.Graph(id="index-scatter-graph"),
+                ]),
+            ],
+        ),
+        FileSelectionSidebar(
+            context="index-scatter",
+            graph="index-scatter-graph",
+            sibling="index-scatter-graph-container",
+            span=5,
+        ),
+    ]),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/acoustic-feature-scatter")
     ),
-    dbc.Offcanvas(
-        id="index-scatter-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("index-scatter"),
+    dmc.Box(
+        id="soundade-features-description",
+        children=[]
+    ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="feature-descriptor-content",
+        children=[],
     ),
 ])
 

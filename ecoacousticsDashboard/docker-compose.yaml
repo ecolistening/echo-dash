@@ -9,4 +9,5 @@ services:
     volumes:
       - ../data:/data
       - ../log:/log
+      - ${AUDIO_DIR}:/srv/data
     command: uv run --with gunicorn gunicorn --bind 0.0.0.0:${PORT} --timeout=800 app:server

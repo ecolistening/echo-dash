@@ -3,7 +3,10 @@ import bigtree as bt
 import functools
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pickle
+import os
+import yaml
 
 from configparser import ConfigParser
 from pathlib import Path
@@ -13,139 +16,124 @@ from sklearn.preprocessing import RobustScaler
 from typing import Any, Callable, Dict, List, Tuple, Iterable
 from umap.parametric_umap import load_ParametricUMAP
 
+from utils import floor, ceil
+
 @attrs.define
 class Dataset:
-    dataset_path: str
+    path: str
 
     dataset_id: str = attrs.field(init=False)
     dataset_name: str = attrs.field(init=False)
     audio_path: str = attrs.field(init=False)
-
     config: ConfigParser = attrs.field(init=False)
-    sites_tree: bt.Node = attrs.field(init=False)
-
-    files: pd.DataFrame = attrs.field(init=False)
-    locations: pd.DataFrame = attrs.field(init=False)
-    solar: pd.DataFrame = attrs.field(init=False)
-    weather: pd.DataFrame = attrs.field(init=False)
-    acoustic_features: pd.DataFrame = attrs.field(init=False)
-    species: pd.DataFrame = attrs.field(init=False)
-    species_predictions: pd.DataFrame = attrs.field(init=False)
-
-    @property
-    def path(self):
-        return Path.cwd().parent / "data" / self.dataset_path
+    soundade_config: Dict[str, Any] = attrs.field(init=False)
 
     def __attrs_post_init__(self) -> None:
         self.config = self._read_or_build_config(self.path / "config.ini")
+        self.soundade_config = self._read_soundade_config(self.path / "config.yaml")
         self.dataset_name = self.config.get("Dataset", "name")
         self.dataset_id = self.config.get("Dataset", "id")
         self.audio_path = Path(self.config.get("Dataset", "audio_path"))
-        logger.info({ "dataset_name": self.dataset_name, "message": "loaded config" })
-        # cache species table
-        self.species = pd.read_parquet(self.path.parent / "species_table.parquet")
-        self._add_fields_to_species_table()
-        logger.info({ "dataset_name": self.dataset_name, "message": "loaded species" })
-        # cache locations table and site hierarchy
-        self.locations = pd.read_parquet(self.path / "locations_table.parquet")
-        self._add_fields_to_locations_table()
-        self.sites_tree = bt.dataframe_to_tree(self.locations, path_col="site")
-        logger.info({ "dataset_name": self.dataset_name, "message": "loaded locations" })
-        # cache solar and weather data
-        self.solar = pd.read_parquet(self.path / "solar_table.parquet").set_index(["site_id", "date"])
-        self.weather = pd.read_parquet(self.path / "weather_table.parquet").set_index(["site_id", "timestamp"])
-        logger.info({ "dataset_name": self.dataset_name, "message": "loaded solar / weather" })
-        # cache file index, merge solar and weather data
-        self.files = pd.read_parquet(self.path / "files_table.parquet")
-        self._add_fields_to_files_table()
-        self.files = (
-            self.files
+
+    @property
+    def acoustic_feature_list(self):
+        ignore_columns = ['sr', 'segment_id', 'segment_idx', 'file_id', 'duration', 'offset', 'frame_length', 'hop_length', 'n_fft', 'feature_length']
+        file_path = list((self.path / "recording_acoustic_features_table.parquet").glob("*.parquet"))[0]
+        if not file_path:
+            raise Exception("Failed to read acoustic features table")
+        columns = [s.name for s in pa.parquet.ParquetFile(file_path).schema]
+        return [col for col in columns if col not in ignore_columns]
+
+    @functools.cached_property
+    def species(self):
+        species = pd.read_parquet(self.path.parent / "species_table.parquet")
+        species["common_name"] = species["common_name"].fillna("")
+        species["species"] = species[["scientific_name", "common_name"]].agg("\n".join, axis=1)
+        return species
+
+    @functools.cached_property
+    def locations(self):
+        locations = pd.read_parquet(self.path / "locations_table.parquet")
+        locations["site"] = self.dataset_name + "/" + locations["site_name"]
+        for level, values in locations.site.str.split('/', expand=True).iloc[:, 1:].to_dict(orient='list').items():
+            locations[f"sitelevel_{level}"] = values
+        return locations
+
+    @functools.cached_property
+    def sites_tree(self):
+        locations = self.locations
+        return bt.dataframe_to_tree(locations, path_col="site")
+
+    @functools.cached_property
+    def solar(self):
+        return pd.read_parquet(self.path / "solar_table.parquet")
+
+    @functools.cached_property
+    def weather(self):
+        return pd.read_parquet(self.path / "weather_table.parquet")
+
+    @functools.cached_property
+    def files(self):
+        files = pd.read_parquet(self.path / "files_table.parquet")
+        return (
+            self.append_columns(files)
             .merge(self.weather, left_on=["site_id", "nearest_hour"], right_on=["site_id", "timestamp"], suffixes=("", "_weather"))
-            .join(self.solar, on=["site_id", "date"])
-            .join(self.locations, on="site_id")
+            .merge(self.solar, on=["site_id", "date"], how="left")
+            .merge(self.locations, on="site_id", how="left")
         )
-        logger.info({ "dataset_name": self.dataset_name, "message": "loaded files" })
-        # cache acoustic features, merge file, solar, weather and location data
-        self.acoustic_features = (
-            pd.read_parquet(self.path / "recording_acoustic_features_table.parquet")
-            .join(self.files.set_index("file_id"), on="file_id", rsuffix="_files")
-        )
-        logger.info({ "dataset_name": self.dataset_name, "message": "loaded acoustic features" })
-        # cache birdnet predictions, merge file, solar, weather and location data
-        # for every unique detection, pad with zeros for all other species
-        # birdnet_probs = (
-        #     pd.read_parquet(self.path / "birdnet_species_probs_table.parquet")
-        #     .drop(["common_name", "label"], axis=1) # superfluous, exists on species table
-        # )
-        # indices = birdnet_probs.columns[~birdnet_probs.columns.isin(["scientific_name", "confidence"])]
-        # self.species_predictions = (
-        #     birdnet_probs[indices].drop_duplicates()
-        #     .merge(self.species.reset_index(), how="cross")
-        #     .merge(birdnet_probs, on=[*indices, "scientific_name"], how="left")
-        #     .fillna(0.0)
-        #     .join(self.files.set_index("file_id"), on="file_id", rsuffix="_files")
-        # )
-        self.species_predictions = (
-            pd.read_parquet(self.path / "birdnet_species_probs_table.parquet")
-            .drop(["common_name", "label"], axis=1) # superfluous, exists on species table
-            .join(self.species.set_index("scientific_name"), on="scientific_name")
-            .join(self.files.set_index("file_id"), on="file_id", rsuffix="_files")
-        )
-        logger.info({ "dataset_name": self.dataset_name, "message": "loaded species probs" })
 
     def save_config(self):
         with open(self.path / "config.ini", "w") as f:
             self.config.write(f)
 
+    def save_species_list(self, species_list: List[str]):
+        with open(self.path / "species_list.yaml", "w") as f:
+            f.write(yaml.safe_dump(list(sorted(species_list))))
+            logger.debug(f"saved species_list.yaml with {species_list=}")
+
+    def species_list(self):
+        try:
+            with open(self.path / "species_list.yaml", "r") as f:
+                species_list = list(sorted(yaml.safe_load(f.read())))
+                logger.debug(f"loaded species_list.yaml containing {species_list=}")
+                return species_list
+        except IOError as e:
+            return []
+        except TypeError as e:
+            logger.warning(f"Parsing {self.path / species_list.yaml} failed")
+            return []
+
     @functools.cached_property
-    def acoustic_features_umap(self) -> pd.DataFrame:
+    def umap(self) -> Callable:
         with open(self.path / "umap" / "config.yaml", "rb") as f:
             config = pickle.load(f)
         scaler = RobustScaler()
         for attr_name, attr_value in config.items():
             setattr(scaler, attr_name, attr_value)
-        model = load_ParametricUMAP(self.path / "umap")
-        feature_idx = self.acoustic_features.feature.isin(config["feature_names_in_"])
-        index = self.acoustic_features.columns[~self.acoustic_features.columns.isin(["feature", "value"])]
-        data = (
-            self.acoustic_features[feature_idx]
-            .pivot(index=index, columns="feature", values="value")
-        )
-        data["x"], data["y"] = np.split(
-            make_pipeline(scaler, model).transform(data),
-            indices_or_sections=2,
-            axis=1,
-        )
-        return data.reset_index()
+        feature_column_names = config["feature_names_in_"]
+        model = make_pipeline(scaler, load_ParametricUMAP(self.path / "umap"))
 
-    def _add_fields_to_species_table(self) -> None:
-        self.species["common_name"] = self.species["common_name"].fillna("")
-        self.species["species"] = self.species[["scientific_name", "common_name"]].agg("\n".join, axis=1)
-        # HACK: FIXME prevent nulls in the front-end by populating missing values
-        self.species["habitat_type"] = self.species["habitat_type"].astype(str)
-        self.species["trophic_level"] = self.species["trophic_level"].astype(str)
-        self.species["trophic_niche"] = self.species["trophic_niche"].astype(str)
-        self.species["primary_lifestyle"] = self.species["primary_lifestyle"].astype(str)
-        self.species[self.species["habitat_type"].isna()] = "Unspecified"
-        self.species[self.species["trophic_level"].isna()] = "Unspecified"
-        self.species[self.species["trophic_niche"].isna()] = "Unspecified"
-        self.species[self.species["primary_lifestyle"].isna()] = "Unspecified"
+        def encode(data: pd.DataFrame) -> pd.DataFrame:
+            xy = model.transform(data.loc[:, feature_column_names])
+            data["x"], data["y"] = np.split(xy, indices_or_sections=2, axis=1)
+            return data
 
-    def _add_fields_to_files_table(self):
-        self.files["local_file_path"] = (self.audio_path / self.files["file_path"]).astype(str)
-        self.files["minute"] = self.files["timestamp"].dt.minute
-        self.files["hour"] = self.files["timestamp"].dt.hour
-        self.files["weekday"] = self.files["timestamp"].dt.day_name()
-        self.files["date"] = pd.to_datetime(self.files["timestamp"].dt.strftime('%Y-%m-%d'))
-        self.files["month"] = self.files["timestamp"].dt.month_name()
-        self.files["year"] = self.files["timestamp"].dt.year
-        self.files["time"] = self.files["timestamp"].dt.hour + self.files.timestamp.dt.minute / 60.0
-        self.files["nearest_hour"] = self.files["timestamp"].dt.round("h")
+        return encode
 
-    def _add_fields_to_locations_table(self) -> None:
-        self.locations["site"] = self.dataset_name + "/" + self.locations["site_name"]
-        for level, values in self.locations.site.str.split('/', expand=True).iloc[:, 1:].to_dict(orient='list').items():
-            self.locations[f"sitelevel_{level}"] = values
+    def append_columns(self, data: pd.DataFrame) -> pd.DataFrame:
+        if "timestamp" in data.columns:
+            data["minute"] = data["timestamp"].dt.minute
+            data["hour_categorical"] = data["timestamp"].dt.hour.astype(str)
+            data["hour_continuous"] = data["timestamp"].dt.hour.astype(int)
+            data["week_of_year_continuous"] = data["timestamp"].dt.isocalendar()["week"].astype(int)
+            data["week_of_year_categorical"] = data["timestamp"].dt.isocalendar()["week"].astype(str)
+            data["weekday"] = data["timestamp"].dt.day_name()
+            data["date"] = pd.to_datetime(data["timestamp"].dt.strftime('%Y-%m-%d'))
+            data["month"] = data["timestamp"].dt.month_name()
+            data["year"] = data["timestamp"].dt.year.astype(str)
+            data["time"] = data["timestamp"].dt.hour + data.timestamp.dt.minute / 60.0
+            data["nearest_hour"] = data["timestamp"].dt.round("h")
+        return data
 
     @staticmethod
     def _read_or_build_config(config_path) -> ConfigParser:
@@ -158,3 +146,76 @@ class Dataset:
             if not config.has_section('Site Hierarchy'):
                 config.add_section('Site Hierarchy')
         return config
+
+    @staticmethod
+    def _read_soundade_config(config_path) -> ConfigParser:
+        try:
+            with open(config_path, "r") as f:
+                return yaml.safe_load(f.read())
+        except (IOError, TypeError) as e:
+            logger.error(e)
+            return {}
+
+    @property
+    def filters(self):
+        filters = {}
+        filters = filters | self.date_filters
+        filters = filters | self.feature_filters
+        filters = filters | self.weather_filters
+        filters = filters | self.site_level_filters
+        filters["files"] = {}
+        filters["species"] = self.species_list()
+        return filters
+
+    @functools.cached_property
+    def feature_filters(self):
+        filters = {}
+        data = pd.read_parquet(self.path / "recording_acoustic_features_table.parquet")
+        acoustic_features = {}
+        for feature in self.acoustic_feature_list:
+            df = data.loc[:, feature]
+            acoustic_features[feature] = [floor(df.min(), precision=2), ceil(df.max(), precision=2)]
+        filters["acoustic_features"] = acoustic_features
+        return filters
+
+    @functools.cached_property
+    def date_filters(self):
+        filters = {}
+        data = pd.read_parquet(self.path / "files_table.parquet")
+        min_date = data["timestamp"].dt.date.min().strftime("%Y-%m-%d")
+        max_date = data["timestamp"].dt.date.max().strftime("%Y-%m-%d")
+        filters["date_range_bounds"] = [min_date, max_date]
+        return filters
+
+    @functools.cached_property
+    def weather_filters(self):
+        filters = {}
+        variables = [
+            'temperature_2m', 'rain', 'snowfall',
+            'wind_speed_10m', 'wind_speed_100m', 'wind_direction_10m',
+            'wind_direction_100m', 'wind_gusts_10m'
+        ]
+        data = pd.read_parquet(self.path / "weather_table.parquet")
+        weather_variables = {}
+        for variable in variables:
+            df = data.loc[:, variable]
+            variable_ranges = {}
+            min_val, max_val = floor(df.min()), ceil(df.max())
+            # add a max val so pattern matchers don't break
+            if (min_val == 0.0 and max_val == 0.0):
+                max_val = 1.0
+            variable_range = [min_val, max_val]
+            variable_ranges["variable_range_bounds"] = variable_range
+            weather_variables[variable] = variable_ranges
+        filters["weather_variables"] = weather_variables
+        return filters
+
+    @functools.cached_property
+    def site_level_filters(self):
+        filters = {}
+        data = pd.read_parquet(self.path / "locations_table.parquet")
+        data["site"] = self.dataset_name + "/" + data["site_name"]
+        tree = bt.dataframe_to_tree(data, path_col="site")
+        sites = list(bt.tree_to_dict(tree).keys())[1:]
+        filters["tree"] = sites
+        return filters

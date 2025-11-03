@@ -1,4 +1,5 @@
 import argparse
+import datetime as dt
 import numpy as np
 import pandas as pd
 import pyarrow as pa
@@ -12,38 +13,22 @@ from sklearn.preprocessing import RobustScaler
 from typing import Any, Dict, Tuple, List
 from umap.parametric_umap import ParametricUMAP
 
-def dedup_acoustic_features(data):
-    num_samples = data.shape[0]
-    index = data.columns[~data.columns.isin(["feature", "value"])]
-
-    logger.debug(f"Check for duplicates..")
-    data = data.drop_duplicates(subset=[*index, "feature"], keep='first')
-    if num_samples > (remaining := data.shape[0]):
-        logger.debug(f"Removed {num_samples - remaining} duplicate samples.")
-
-    data = data.pivot(columns='feature', index=index, values='value')
-
-    num_samples = data.shape[0]
-    data = data.loc[np.isfinite(data).all(axis=1), :]
-    if num_samples > (remaining := data.shape[0]):
-        logger.debug(f"Removed {num_samples - remaining} NaN samples.")
-
-    return data.reset_index().melt(
-        id_vars=index,
-        value_vars=data.columns,
-        var_name="feature"
-    )
+FEATURES = [
+    'zero crossing rate', 'spectral centroid', 'root mean square',
+    'spectral flux', 'acoustic evenness index', 'bioacoustic index',
+    'acoustic complexity index', 'spectral entropy', 'temporal entropy',
+]
 
 def train_umap(
     data: pd.DataFrame,
     save_dir: str | Path | None = None,
     **kwargs: Any,
 ) -> None:
-    data = data.pivot(
-        index=data.columns[~data.columns.isin(["feature", "value"])],
-        columns='feature',
-        values='value',
-    )
+    data = data[["file_id", *FEATURES]].set_index("file_id")
+    num_samples = data.shape[0]
+    data = data.loc[np.isfinite(data).all(axis=1), :]
+    if num_samples > (remaining := data.shape[0]):
+        logger.debug(f"Removed {num_samples - remaining} NaN samples.")
     # scale features using outlier-robust scaler
     scaler = RobustScaler()
     # a parametric model we can save and use to encode later
@@ -77,6 +62,8 @@ def main(
     n_components: int,
     metric: str,
 ) -> None:
+    start_time = time.time()
+
     train_umap(
         data=pd.read_parquet(acoustic_features_path),
         save_dir=save_dir,
@@ -85,6 +72,9 @@ def main(
         n_components=n_components,
         metric=metric,
     )
+
+    log.info(f"UMAP complete")
+    log.info(f"Time taken: {str(dt.timedelta(seconds=time.time() - start_time))}")
 
 def get_base_parser():
     parser = argparse.ArgumentParser(

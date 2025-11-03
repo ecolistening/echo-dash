@@ -1,4 +1,4 @@
-# Acoustic Complexity Index
+## Acoustic Complexity Index
 
 The ACI is based on the “observation that many biotic sounds, such as bird songs, are characterized by an intrinsic variability of intensities, while some types of human generated noise (such as car passing or airplane transit) present very constant intensity values” (Pieretti, et al. 2011).
 

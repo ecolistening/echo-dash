@@ -14,9 +14,8 @@ from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
-from components.footer import Footer
+from utils.content import get_content
 
 PAGE_NAME = "species-by-site"
 PAGE_TITLE = "Species by Site"
@@ -24,23 +23,10 @@ PAGE_TITLE = "Species by Site"
 dash.register_page(
     __name__,
     title=PAGE_TITLE,
-    name='Species Community',
+    name='Species Matrix',
 )
 
 layout = dmc.Box([
-    dcc.Store(id="species-community-graph-data"),
-    FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                SiteLevelFilter(),
-                DateRangeFilter(),
-                EnvironmentalFilter(),
-            ]
-        ),
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
@@ -48,38 +34,28 @@ layout = dmc.Box([
                 DatasetOptionsSelect(
                     id="species-community-axis-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Site Level", "Spatial"),
-                    label="Group columns by...",
+                    options=("Site Level",), # "Spatial"),
+                    label="Column facet 1 by...",
+                    value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
                     id="species-community-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     options=("Time of Day", "Temporal"),
-                    label="Facet columns by...",
+                    label="Column facet 2 by...",
+                    value="dddn",
                 ),
                 DatasetOptionsSelect(
                     id="species-community-facet-row-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     options=("Species Habitat", "Functional Groups"),
-                    label="Facet rows by...",
+                    label="Row facet by...",
                 ),
-                dmc.Stack([
-                    dmc.Text(
-                        children="Detection Threshold",
-                        size="sm",
-                        ta="right",
-                    ),
-                    dmc.Slider(
-                        id="species-community-threshold-slider",
-                        min=0.0, max=0.99,
-                        step=0.1, value=0.5,
-                        persistence=True,
-                        marks=[
-                            dict(value=i, label=np.format_float_positional(i, precision=1))
-                            for i in np.arange(0.0, 0.99, 0.1)
-                        ],
-                    ),
-                ]),
+                dmc.Chip(
+                    "Only Species List",
+                    id="species-list-tickbox",
+                    checked=False,
+                ),
                 dmc.Flex(
                     p="1rem",
                     align="center",
@@ -101,25 +77,28 @@ layout = dmc.Box([
                 ),
             ],
         ),
-        # dmc.Group(
-        #     grow=True,
-        #     children=[
-        #         dmc.RadioGroup(
-        #             id="view-mode-radio-select",
-        #             value="expand",
-        #             label="Select view mode",
-        #             size="sm",
-        #             mb=10,
-        #             children=dmc.Group(
-        #                 my=10,
-        #                 children=[
-        #                     dmc.Radio(key, value=value)
-        #                     for key, value in [("Pagination (alphabetical)", "alphabetical"), ("Pagination (by 10)", "paginate"), ("Full View", "expand")]
-        #                 ],
-        #             ),
-        #         ),
-        #     ],
-        # ),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        children="Detection Threshold",
+                        size="sm",
+                        ta="right",
+                    ),
+                    dmc.Slider(
+                        id="species-threshold-slider",
+                        min=0.0, max=0.99,
+                        step=0.1, value=0.5,
+                        persistence=True,
+                        marks=[
+                            dict(value=i, label=np.format_float_positional(i, precision=1))
+                            for i in np.arange(0.0, 0.99, 0.1)
+                        ],
+                    ),
+                ]),
+            ],
+        ),
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(
@@ -127,11 +106,9 @@ layout = dmc.Box([
             id="species-community-graph",
         ),
     ),
-    dbc.Offcanvas(
-        id="species-community-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("species-community"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/species-community")
     ),
 ])
 

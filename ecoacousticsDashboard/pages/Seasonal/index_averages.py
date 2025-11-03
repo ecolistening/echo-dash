@@ -18,9 +18,8 @@ from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from components.acoustic_feature_filter import AcousticFeatureFilter
-from components.footer import Footer
 from utils import list2tuple, send_download
+from utils.content import get_content
 
 PAGE_NAME = "idx-averages"
 PAGE_TITLE = "Seasonal Descriptor Averages"
@@ -41,46 +40,24 @@ windows_options = [
 ]
 
 layout = dmc.Box([
-    dcc.Store(id="index-averages-graph-data"),
-    FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                SiteLevelFilter(),
-                DateRangeFilter(),
-                EnvironmentalFilter(),
-            ]
-        ),
-        dmc.Space(h=10),
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                AcousticFeatureFilter(),
-            ]
-        ),
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
             children=[
+                dmc.Select(
+                    id="feature-select",
+                    label="Acoustic Feature",
+                    value="bioacoustic index",
+                    searchable=True,
+                    clearable=False,
+                    allowDeselect=False,
+                ),
                 DatasetOptionsSelect(
                     id="index-averages-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Spatial",),
+                    options=("Site Level",),
                     label="Colour by",
-                    value="location",
-                ),
-                dmc.SegmentedControl(
-                    id="index-averages-time-aggregation",
-                    data=[
-                        {"value": opt["frequency"], "label": opt["description"]}
-                        for opt in windows_options
-                    ],
-                    value=windows_options[3]["frequency"],
-                    persistence=True,
+                    value="sitelevel_1",
                 ),
                 # dmc.Chip(
                 #     'Colour by Recorder',
@@ -124,16 +101,61 @@ layout = dmc.Box([
                 ),
             ],
         ),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Acoustic Feature Range",
+                        id="feature-range-title",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.RangeSlider(
+                        id="feature-range-slider",
+                        min=0,
+                        max=999,
+                        step=1,
+                        persistence=True,
+                        showLabelOnHover=False,
+                    ),
+                ]),
+                dmc.Stack([
+                    dmc.Text(
+                        "Time Aggregation",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.SegmentedControl(
+                        id="index-averages-time-aggregation",
+                        data=[
+                            {"value": opt["frequency"], "label": opt["description"]}
+                            for opt in windows_options
+                        ],
+                        value="1D",
+                        persistence=True,
+                    ),
+                ]),
+            ],
+        ),
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(
         dcc.Graph(id="index-averages-graph"),
     ),
-    dbc.Offcanvas(
-        id="index-averages-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("index-averages"),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/acoustic-feature-seasonal-averages")
+    ),
+    dmc.Box(
+        id="soundade-features-description",
+        children=[]
+    ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="feature-descriptor-content",
+        children=[],
     ),
 ])
 

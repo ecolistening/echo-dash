@@ -13,8 +13,9 @@ from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from components.file_selection_sidebar import FileSelectionSidebar
+from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from components.figure_download_widget import FigureDownloadWidget
+from utils.content import get_content
 
 PAGE_NAME = "UMAP"
 PAGE_TITLE = "UMAP of Soundscape Descriptors"
@@ -25,43 +26,7 @@ dash.register_page(
     name=PAGE_NAME,
 )
 
-def FileSelectionSidebarIcon():
-    return dmc.HoverCard(
-        children=[
-            dmc.HoverCardTarget(
-                children=dmc.ActionIcon(
-                    DashIconify(
-                        icon="fluent:multiselect-16-filled",
-                        width=24,
-                    ),
-                    id="toggle-file-sidebar",
-                    variant="light",
-                    color="blue",
-                    size="lg",
-                    n_clicks=0,
-                ),
-            ),
-            dmc.HoverCardDropdown(
-                children=[
-                    dmc.Text("Toggle file selection sidebar"),
-                ]
-            )
-        ],
-    )
-
 layout = dmc.Box([
-    FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                SiteLevelFilter(),
-                DateRangeFilter(),
-                EnvironmentalFilter(),
-            ]
-        ),
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
@@ -70,6 +35,7 @@ layout = dmc.Box([
                     id="umap-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Colour by",
+                    value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
                     id="umap-symbol-select",
@@ -95,7 +61,7 @@ layout = dmc.Box([
                         dmc.Group(
                             grow=True,
                             children=[
-                                FileSelectionSidebarIcon(),
+                                FileSelectionSidebarIcon(context="umap"),
                                 DataDownloadWidget(
                                     context="umap",
                                 ),
@@ -142,7 +108,7 @@ layout = dmc.Box([
                         min=0,
                         max=100,
                         step=5,
-                        value=50,
+                        value=33,
                         marks=[
                             dict(value=i, label=f"{i}%")
                             for i in range(0, 101, 20)
@@ -185,45 +151,20 @@ layout = dmc.Box([
             ],
         ),
         FileSelectionSidebar(
+            context="umap",
             graph="umap-graph",
             sibling="umap-graph-container",
             span=5,
         ),
     ]),
-    dbc.Offcanvas(
-        id="umap-page-info",
-        is_open=False,
-        placement="bottom",
-        children=dmc.Grid(
-            children=[
-                dmc.GridCol(
-                    span=4,
-                    children=[
-                        dmc.Title(PAGE_TITLE, order=2),
-                    ],
-                ),
-                dmc.Divider(
-                    variant="dotted",
-                    orientation="vertical"
-                ),
-                dmc.GridCol(
-                    span="auto",
-                    children=[
-                        dmc.Text(
-                            "UMAP is a method of projecting high-dimensional data onto fewer dimensions. "
-                            "The axes themselves have no precise meaning, other than defining the distance "
-                            "between the data points. ",
-                            span=True,
-                        ),
-                        dmc.Anchor(
-                            '[details]',
-                            href='https://pair-code.github.io/understanding-umap/',
-                            target="_blank", # target="_blank" opens link in a new tab
-                        ),
-                    ]
-                ),
-            ]
-        ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/umap")
+    ),
+    dmc.Box(
+        id="soundade-features-description",
+        children=[]
     ),
 ])
 

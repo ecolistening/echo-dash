@@ -6,13 +6,12 @@ from loguru import logger
 from utils.webhost.localhost import Localhost
 from utils.webhost.gdrive import Google_Drive
 
-# static class
-class AudioAPI(object):
+class AudioAPI:
     API = {}
 
-    @staticmethod
-    def get_hosts(dataset, config):
-        if not dataset in AudioAPI.API:
+    @classmethod
+    def get_hosts(cls, dataset, config):
+        if not dataset in cls.API:
             hosts = {}
 
             audio_path = config.get("Dataset", {}).get("audio_path", None)
@@ -27,14 +26,14 @@ class AudioAPI(object):
                 if host.is_active():
                     hosts['gdrive'] = host
 
-            AudioAPI.API[dataset] = hosts
+            cls.API[dataset] = hosts
 
-        return AudioAPI.API[dataset]
+        return cls.API[dataset]
 
-    @staticmethod
-    def get_audio_bytes(name, dataset, config):
+    @classmethod
+    def get_audio_bytes(cls, name, dataset, config):
         audio_path = name
-        hosts = AudioAPI.get_hosts(dataset, config)
+        hosts = cls.get_hosts(dataset, config)
 
         split_name = os.path.splitext(name)
         audio_path_base = split_name[0]

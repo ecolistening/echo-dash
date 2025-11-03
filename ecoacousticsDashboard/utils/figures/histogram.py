@@ -8,10 +8,6 @@ PLOT_HEIGHT = 800
 
 def plot(
     df: pd.DataFrame,
-    facet_row: str | None = None,
-    facet_col: str | None = None,
-    histnorm: str | None = None,
-    labels: Dict[str, str] | None = None,
     **kwargs: Any,
 ) -> go.Figure:
     fig = px.histogram(

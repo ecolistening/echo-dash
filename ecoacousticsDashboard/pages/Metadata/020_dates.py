@@ -18,12 +18,8 @@ from api import dispatch, FETCH_FILES
 from components.figure_download_widget import FigureDownloadWidget
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
-from components.filter_panel import FilterPanel
-from components.date_range_filter import DateRangeFilter
-from components.site_level_filter import SiteLevelFilter
-from components.environmental_filter import EnvironmentalFilter
-from components.footer import Footer
 from utils import list2tuple
+from utils.content import get_content
 
 PAGE_NAME = 'dates'
 PAGE_TITLE = 'Recording Dates'
@@ -31,19 +27,6 @@ PLOT_HEIGHT = 800
 dash.register_page(__name__, title=PAGE_TITLE, name='Dates')
 
 layout = dmc.Box([
-    dcc.Store(id="dates-graph-data"),
-    FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                SiteLevelFilter(),
-                DateRangeFilter(),
-                EnvironmentalFilter(),
-            ]
-        ),
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
@@ -74,11 +57,10 @@ layout = dmc.Box([
     dcc.Loading(
         dcc.Graph(id="dates-graph"),
     ),
-    dbc.Offcanvas(
-        id="dates-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("dates"),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/dates")
     ),
 ])
 

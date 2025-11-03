@@ -12,33 +12,20 @@ from io import StringIO
 from typing import Any, Dict, List, Tuple
 
 from api import dispatch, FETCH_ACOUSTIC_FEATURES
+from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
+from api import filter_dict_to_tuples
 from utils import list2tuple, capitalise_each, send_download
 from utils.figures.histogram import plot
 
 PLOT_HEIGHT = 800
 
 def fetch_data(dataset_name, filters):
-    return dispatch(
-        FETCH_ACOUSTIC_FEATURES,
-        dataset_name=dataset_name,
-        dates=list2tuple(filters["date_range"]),
-        feature=filters["current_feature"],
-        feature_range=list2tuple(filters["current_feature_range"]),
-        **{variable: list2tuple(params["variable_range"]) for variable, params in filters["weather_variables"].items()},
-        locations=list2tuple(filters["current_sites"]),
-        file_ids=frozenset(itertools.chain(*list(filters["files"].values()))),
-    )
+    action = FETCH_ACOUSTIC_FEATURES
+    payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters))
+    logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+    return dispatch(action, **payload)
 
 def register_callbacks():
-    @callback(
-        Output("distributions-page-info", "is_open"),
-        Input("info-icon", "n_clicks"),
-        State("distributions-page-info", "is_open"),
-        prevent_initial_call=True,
-    )
-    def toggle_page_info(n_clicks: int, is_open: bool) -> bool:
-        return not is_open
-
     @callback(
         Output("distributions-graph", "figure"),
         State("dataset-select", "value"),
@@ -47,7 +34,6 @@ def register_callbacks():
         Input("distributions-facet-row-select", "value"),
         Input("distributions-facet-column-select", "value"),
         Input("distributions-normalised-tickbox", "checked"),
-        State("dataset-category-orders", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -56,18 +42,27 @@ def register_callbacks():
         facet_row: str,
         facet_col: str,
         normalised: bool,
-        category_orders: Dict[str, List[str]],
     ) -> Dict[str, Any]:
         if not len(filters):
             return no_update
+        options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
+        category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         fig = plot(
             fetch_data(dataset_name, filters),
             facet_row=facet_row,
             facet_col=facet_col,
+            color=color,
             histnorm="percent" if normalised else None,
-            labels=dict(value=capitalise_each(filters["current_feature"])),
             category_orders=category_orders,
+            labels={
+                "count": "Count",
+                "value": capitalise_each(filters["current_feature"]),
+                color: options.get(color, {}).get("label", color),
+                facet_row: options.get(facet_row, {}).get("label", facet_row),
+                facet_col: options.get(facet_col, {}).get("label", facet_col),
+            },
         )
+        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
         fig.update_layout(title_text=(
             f"{capitalise_each(filters['current_feature'])} | "
             f"{filters['date_range'][0]} - {filters['date_range'][1]}"

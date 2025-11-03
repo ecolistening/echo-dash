@@ -13,9 +13,8 @@ from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from components.acoustic_feature_filter import AcousticFeatureFilter
 from components.figure_download_widget import FigureDownloadWidget
-from components.footer import Footer
+from utils.content import get_content
 
 PAGE_NAME = 'distributions'
 PAGE_TITLE = 'Soundscape Descriptor Distributions'
@@ -28,35 +27,23 @@ dash.register_page(
 )
 
 layout = dmc.Box([
-    dcc.Store(id="distributions-graph-data"),
-    FilterPanel([
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                SiteLevelFilter(),
-                DateRangeFilter(),
-                EnvironmentalFilter(),
-            ]
-        ),
-        dmc.Space(h=10),
-        dmc.Group(
-            align="start",
-            grow=True,
-            children=[
-                AcousticFeatureFilter(),
-            ]
-        ),
-    ]),
-    dmc.Space(h="sm"),
     ControlsPanel([
         dmc.Group(
             grow=True,
             children=[
+                dmc.Select(
+                    id="feature-select",
+                    label="Acoustic Feature",
+                    value="bioacoustic index",
+                    searchable=True,
+                    clearable=False,
+                    allowDeselect=False,
+                ),
                 DatasetOptionsSelect(
                     id="distributions-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Colour by",
+                    value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
                     id="distributions-facet-row-select",
@@ -67,6 +54,7 @@ layout = dmc.Box([
                     id="distributions-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet columns by",
+                    value="dddn",
                 ),
                 dmc.Box([
                     dmc.Chip(
@@ -98,6 +86,27 @@ layout = dmc.Box([
                 ),
             ],
         ),
+        dmc.Group(
+            grow=True,
+            children=[
+                dmc.Stack([
+                    dmc.Text(
+                        "Acoustic Feature Range",
+                        id="feature-range-title",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.RangeSlider(
+                        id="feature-range-slider",
+                        min=0,
+                        max=999,
+                        step=1,
+                        persistence=True,
+                        showLabelOnHover=False,
+                    ),
+                ]),
+            ],
+        ),
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(
@@ -105,11 +114,19 @@ layout = dmc.Box([
             id="distributions-graph"
         ),
     ),
-    dbc.Offcanvas(
-        id="distributions-page-info",
-        is_open=False,
-        placement="bottom",
-        children=Footer("distributions"),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="page-content",
+        children=get_content("page/acoustic-feature-distributions")
+    ),
+    dmc.Box(
+        id="soundade-features-description",
+        children=[]
+    ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="feature-descriptor-content",
+        children=[],
     ),
 ])
 
