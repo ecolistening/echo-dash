@@ -127,8 +127,8 @@ class Dataset:
         if "timestamp" in data.columns:
             data["minute"] = data["timestamp"].dt.minute
             data["hour_categorical"] = data["timestamp"].dt.hour.astype(str)
-            data["hour_continuous"] = data["timestamp"].dt.hour.astype(int)
-            data["week_of_year_continuous"] = data["timestamp"].dt.isocalendar()["week"].astype(int)
+            data["hour_continuous"] = data["timestamp"].dt.hour.astype(float) / 24
+            data["week_of_year_continuous"] = data["timestamp"].dt.isocalendar()["week"] / 53
             data["week_of_year_categorical"] = data["timestamp"].dt.isocalendar()["week"].astype(str)
             data["weekday"] = data["timestamp"].dt.day_name().str[:3]
             data["date"] = pd.to_datetime(data["timestamp"].dt.strftime('%Y-%m-%d'))
@@ -137,15 +137,15 @@ class Dataset:
             data["time"] = data["timestamp"].dt.hour + data.timestamp.dt.minute / 60.0
             data["nearest_hour"] = data["timestamp"].dt.round("h")
         if "hours after sunrise" in data.columns:
-            data["hour_after_sunrise"] = data["hours after sunrise"].round(0).astype(int)
+            data["hour_after_sunrise"] = data["hours after sunrise"].round(0).astype("Int64")
         if "hours after dawn" in data.columns:
-            data["hour_after_dawn"] = data["hours after dawn"].round(0).astype(int)
+            data["hour_after_dawn"] = data["hours after dawn"].round(0).astype("Int64")
         if "hours after noon" in data.columns:
-            data["hour_after_noon"] = data["hours after noon"].round(0).astype(int)
+            data["hour_after_noon"] = data["hours after noon"].round(0).astype("Int64")
         if "hours after dusk" in data.columns:
-            data["hour_after_dusk"] = data["hours after dusk"].round(0).astype(int)
+            data["hour_after_dusk"] = data["hours after dusk"].round(0).astype("Int64")
         if "hours after sunset" in data.columns:
-            data["hour_after_sunset"] = data["hours after sunset"].round(0).astype(int)
+            data["hour_after_sunset"] = data["hours after sunset"].round(0).astype("Int64")
         return data
 
     @staticmethod
