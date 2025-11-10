@@ -1,15 +1,12 @@
 import dash
 import dash_mantine_components as dmc
 import dash_bootstrap_components as dbc
-import itertools
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
 from dash import html, dcc, callback, ctx, no_update
 from dash import Output, Input, State, ALL, MATCH
-from io import StringIO
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
@@ -17,7 +14,6 @@ from api import dispatch, FETCH_ACOUSTIC_FEATURES
 from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from api import filter_dict_to_tuples
 from utils import list2tuple, capitalise_each, send_download, safe_category_orders
-from utils.figures.index_averages_scatter import plot
 from utils.sketch import default_layout
 
 PLOT_HEIGHT = 400
@@ -35,6 +31,7 @@ def register_callbacks():
         Input("filter-store", "data"),
         Input("index-averages-time-aggregation", "value"),
         Input("index-averages-colour-select", "value"),
+        Input("index-averages-year-wrap-checkbox", "checked"),
         # Input(outliers_tickbox, "checked"),
         # Input(colours_tickbox, "checked"),
         # Input(separate_plots_tickbox, "checked"),
@@ -44,6 +41,7 @@ def register_callbacks():
         filters: Dict[str, Any],
         time_agg: str,
         color: str,
+        annual_wrap: bool,
         # outliers,
         # colour_locations,
         # separate_plots,
@@ -51,18 +49,39 @@ def register_callbacks():
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         data = fetch_data(dataset_name, filters)
-        fig = plot(
-            data,
-            time_agg,
+
+        if annual_wrap:
+            data["_time"] = data["timestamp"].apply(lambda dt: dt.replace(year=1972))
+            x_tick_format = "%b"
+        else:
+            data["_time"] = data["timestamp"]
+            x_tick_format = "%b %Y"
+
+        data = (
+            data.sort_values("_time")
+            .groupby(list(filter(None, [color, "feature", "dddn", pd.Grouper(key="_time", freq=time_agg)])))
+            .agg(value_mean=("value", "mean"), value_std=("value", "std"))
+            .reset_index()
+        )
+
+        fig = px.line(
+            data_frame=data,
+            x="_time",
+            y="value_mean",
+            error_y="value_std",
             color=color,
+            facet_row="dddn",
+            markers=True,
             labels={
-                "timestamp": "Time",
+                "_time": "Time",
                 "value_mean": "Value",
                 color: options.get(color, {}).get("label", color),
             },
             category_orders=safe_category_orders(data, category_orders),
         )
+
         fig.update_traces(marker=dict(size=4))
+        fig.update_xaxes(tickformat=x_tick_format)
         fig.update_layout(default_layout(fig))
         fig.update_layout(title_text=f"{capitalise_each(filters['current_feature'])} Seasonal Averages")
         return fig

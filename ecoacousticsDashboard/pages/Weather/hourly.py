@@ -30,17 +30,6 @@ dash.register_page(
     name="Averages"
 )
 
-windows_options = [
-    { "description": "1 hour", "frequency": "1h" },
-    { "description": "6 hours", "frequency": "6h" },
-    { "description": "1 day", "frequency": "1D" },
-    { "description": "1 week", "frequency": "1W" },
-    { "description": "2 weeks", "frequency": "2W" },
-    { "description": "1 month", "frequency": "1ME" },
-    { "description": "3 months", "frequency": "3ME" },
-    { "description": "6 months", "frequency": "6ME" },
-]
-
 layout = dmc.Box([
     ControlsPanel([
         dmc.Group(
@@ -68,6 +57,11 @@ layout = dmc.Box([
                     options=("Site Level",),
                     label="Facet rows by",
                     value="sitelevel_1",
+                ),
+                dmc.Chip(
+                    id="weather-hourly-year-wrap-checkbox",
+                    children="Annual Wrap",
+                    checked=False,
                 ),
                 dmc.Flex(
                     p="1rem",
@@ -102,10 +96,16 @@ layout = dmc.Box([
                     dmc.SegmentedControl(
                         id="weather-hourly-time-aggregation",
                         data=[
-                            {"value": opt["frequency"], "label": opt["description"]}
-                            for opt in windows_options
+                            {"label": "1 hour", "value": "1h"},
+                            {"label": "6 hours", "value": "6h"},
+                            {"label": "1 day", "value": "1D"},
+                            {"label": "1 week", "value": "1W"},
+                            {"label": "2 weeks", "value": "2W"},
+                            {"label": "1 month", "value": "1ME"},
+                            {"label": "3 months", "value": "3ME"},
+                            {"label": "6 months", "value": "6ME"},
                         ],
-                        value=windows_options[3]["frequency"],
+                        value="1W",
                         persistence=True,
                     ),
                 ]),

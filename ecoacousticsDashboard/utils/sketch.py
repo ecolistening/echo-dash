@@ -320,6 +320,7 @@ def default_layout(fig, max_height: int = 1600, row_height: int = 400):
         num_rows = 1
     return dict(
         height=min(max_height, row_height * num_rows),
+        coloraxis_colorbar_title_side="right",
         title=dict(
             automargin=True,
             x=0.5,
