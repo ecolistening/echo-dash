@@ -304,7 +304,7 @@ def fetch_acoustic_features_umap(
     dataset = DATASETS.get_dataset(dataset_name)
 
     files = (
-        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "duration", "site_id", "file_name", "dddn", "timestamp"])
+        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "duration", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
         .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
         .drop("duration", axis=1)
@@ -316,7 +316,6 @@ def fetch_acoustic_features_umap(
     file_site_weather = (
         files.merge(weather, on=["site_id", "nearest_hour"], how="left")
         .query(filter_weather_query(current_weather))
-        # .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
     file_ids = ", ".join([f"'{file_id}'" for file_id in file_site_weather.file_id])
