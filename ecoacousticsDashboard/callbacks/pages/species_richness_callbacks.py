@@ -29,18 +29,27 @@ def fetch_data(dataset_name, threshold, filters):
     logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
     return dispatch(action, **payload)
 
-plot_types = {
-    "Scatter": functools.partial(
-        px.scatter,
-        x="hour_continuous",
-        y="richness",
-        # mode="markers",
-        # markers=True,
-    ),
-    "Scatter Polar": functools.partial(
-        scatter_polar,
-        r="richness",
-        theta="hour_continuous",
+def get_plot_type(plot_type: str):
+    plot_type_mapping = {
+        "Scatter": px.scatter,
+        "Scatter Polar": sketch.scatter_polar,
+    }
+    assert plot_type in plot_type_mapping.keys(), f"'{plot_type}' is not a valid plot"
+    return plot_type_mapping[plot_type]
+
+def get_plot_params(plot_type: str, primary_axis: str, secondary_axis: str):
+    plot_type_mapping = {
+        "Scatter": dict(x=primary_axis, y=secondary_axis, **default_scatter_params()),
+        "Scatter Polar": dict(theta=primary_axis, r=secondary_axis, **default_polar_params()),
+    }
+    assert plot_type in plot_type_mapping.keys(), f"'{plot_type}' is not a valid plot"
+    return plot_type_mapping[plot_type]
+
+def default_scatter_params():
+    return dict()
+
+def default_polar_params():
+    return dict(
         mode="markers+lines",
         radialaxis=dict(
             showticklabels=True,
@@ -49,38 +58,12 @@ plot_types = {
         angularaxis=dict(
             tickmode="array",
             tickvals=(angles := list(range(0, 360, 45))),
-            ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
+            ticktext=[f"{int(angle / 360 * 24)}" for angle in angles],
             direction="clockwise",
             rotation=90,
             ticks=""
         ),
-    ),
-    # "Bar Polar": functools.partial(
-    #     sketch.bar_polar,
-    #     r="richness",
-    #     theta="hour",
-    #     marker_line_width=2,
-    #     opacity=0.8,
-    #     showlegend=False,
-    #     marker=dict(
-    #         color="rgba(133, 143, 249, 0.6)",
-    #         line=dict(color="rgba(133, 143, 249, 1.0)", width=2)
-    #     ),
-    #     radialaxis=dict(
-    #         showticklabels=True,
-    #         ticks="",
-    #     ),
-    #     angularaxis=dict(
-    #         tickmode="array",
-    #         tickvals=(angles := list(range(0, 360, 15))),
-    #         ticktext=[f"{int(angle / 360 * 24):02d}:00" for angle in angles],
-    #         direction="clockwise",
-    #         rotation=90,
-    #         ticks=""
-    #     ),
-    #     trace_height=400,
-    # ),
-}
+    )
 
 def register_callbacks():
     @callback(
@@ -88,6 +71,7 @@ def register_callbacks():
         State("dataset-select", "value"),
         Input("filter-store", "data"),
         Input("species-richness-plot-type-select", "value"),
+        Input("species-richness-primary-axis-select", "value"),
         Input("species-threshold-slider", "value"),
         Input("species-richness-color-select", "value"),
         Input("species-richness-facet-row-select", "value"),
@@ -98,6 +82,7 @@ def register_callbacks():
         dataset_name: str,
         filters: Dict[str, Any],
         plot_type: str,
+        primary_axis: str,
         threshold: str,
         color: str,
         facet_row: str,
@@ -111,24 +96,29 @@ def register_callbacks():
         data = fetch_data(dataset_name, threshold, filters)
         data = (
             data
-            .groupby(list(filter(None, set(["hour_continuous", "date", color, facet_row, facet_col]))))["species"]
+            .groupby(list(filter(None, set([primary_axis, "date", "hour_categorical", color, facet_row, facet_col]))))["species"]
             .nunique()
             .reset_index(name="richness")
         )
-        plot = plot_types[plot_type]
+        data[primary_axis] = data[primary_axis] / 24
+        plot = get_plot_type(plot_type)
+        plot_params = get_plot_params(plot_type, primary_axis=primary_axis, secondary_axis="richness")
         fig = plot(
             data_frame=data,
             color=color,
             facet_row=facet_row,
             facet_col=facet_col,
+            hover_data=["richness", primary_axis, "hour_categorical", color, facet_row, facet_col],
             labels={
-                "r": "Species Richness",
-                "theta": "Hour",
+                primary_axis: options.get(primary_axis, {}).get("label", primary_axis),
+                "hour_categorical": options.get("hour_categorical", {}).get("label", "hour_categorical"),
+                "richness": "Species Richness",
                 color: options.get(color, {}).get("label", color),
                 facet_row: options.get(facet_row, {}).get("label", facet_row),
                 facet_col: options.get(facet_col, {}).get("label", facet_col),
             },
             category_orders=safe_category_orders(data, category_orders),
+            **plot_params,
         )
         fig.update_yaxes(rangemode="tozero")
         title_text = f"Species Richness by Time of Day | p > {threshold}"
@@ -155,3 +145,4 @@ def register_callbacks():
             f"{dataset_name}_birdnet_detections",
             ctx.triggered_id["index"],
         )
+

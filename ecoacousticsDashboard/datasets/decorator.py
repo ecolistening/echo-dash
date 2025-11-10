@@ -41,6 +41,7 @@ class DatasetDecorator:
             "Site Level": self.site_level_columns,
             "Time of Day": self.solar_columns,
             "Time": self.time_columns,
+            "Hour": self.hour_columns,
             "Temporal": self.temporal_columns,
             "Spatial": self.spatial_columns,
             "Temperature": self.temperature_columns,
@@ -57,6 +58,7 @@ class DatasetDecorator:
             self.site_level_columns |
             self.solar_columns |
             self.time_columns |
+            self.hour_columns |
             self.temporal_columns |
             self.spatial_columns |
             self.temperature_columns |
@@ -126,6 +128,17 @@ class DatasetDecorator:
                     "min": self.dataset.files[f"hours after {c}"].min(),
                     "max": self.dataset.files[f"hours after {c}"].max(),
                 }
+                for c in ["dawn", "sunrise", "noon", "sunset", "dusk"]
+            }
+        }
+
+    @functools.cached_property
+    def hour_columns(self) -> Dict[str, List[Any]]:
+        return {
+            "hour_continuous": {"label": "Hour After Midnight", "min": 0, "max": 23},
+            **{
+                # FIXME: change these in soundade to snake case for application-wide consistency
+                f"hour_after_{c}": {"label": f"Hour After {c.capitalize()}", "min": 0, "max": 23}
                 for c in ["dawn", "sunrise", "noon", "sunset", "dusk"]
             }
         }

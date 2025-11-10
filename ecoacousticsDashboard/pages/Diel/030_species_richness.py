@@ -49,6 +49,15 @@ layout = dmc.Box([
                     persistence=True,
                 ),
                 DatasetOptionsSelect(
+                    id="species-richness-primary-axis-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("Hour",),
+                    label="Primary Axis",
+                    value="hour_continuous",
+                    clearable=False,
+                    allowDeselect=False,
+                ),
+                DatasetOptionsSelect(
                     id="species-richness-color-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Colour by",

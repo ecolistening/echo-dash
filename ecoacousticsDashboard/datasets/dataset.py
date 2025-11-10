@@ -136,6 +136,16 @@ class Dataset:
             data["year"] = data["timestamp"].dt.year.astype(str)
             data["time"] = data["timestamp"].dt.hour + data.timestamp.dt.minute / 60.0
             data["nearest_hour"] = data["timestamp"].dt.round("h")
+        if "hours after sunrise" in data.columns:
+            data["hour_after_sunrise"] = data["hours after sunrise"].round(0).astype(int)
+        if "hours after dawn" in data.columns:
+            data["hour_after_dawn"] = data["hours after dawn"].round(0).astype(int)
+        if "hours after noon" in data.columns:
+            data["hour_after_noon"] = data["hours after noon"].round(0).astype(int)
+        if "hours after dusk" in data.columns:
+            data["hour_after_dusk"] = data["hours after dusk"].round(0).astype(int)
+        if "hours after sunset" in data.columns:
+            data["hour_after_sunset"] = data["hours after sunset"].round(0).astype(int)
         return data
 
     @staticmethod
