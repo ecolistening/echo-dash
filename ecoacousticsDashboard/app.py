@@ -47,16 +47,35 @@ def create_dash_app() -> dash.Dash:
     from components.dataset_settings_drawer import DatasetSettingsDrawer
     from store import global_store
 
-    app.layout = dmc.MantineProvider(
-        theme=THEME,
-        withGlobalClasses=True,
-        children=dmc.AppShell(
-            id="appshell",
-            navbar=NAVBAR_CONFIG,
-            header=HEADER_CONFIG,
-            padding="md",
+    def SplashPage():
+        return dmc.Center(
+            id="landing-wrapper",
+            style={
+                "height": "100vh",
+                "display": "flex",
+                "opacity": 1,
+                "transition": "opacity 1s ease",
+                "position": "absolute",
+                "top": 0, "left": 0, "right": 0, "bottom": 0,
+                "zIndex": 9999,
+
+            },
+            children=dmc.Stack(
+                align="center",
+                children=[
+                    dmc.Image(src="/assets/logo.png", w=350),
+                    dmc.Text("Please wait while we load your data...", ta="center"),
+                    dmc.Progress(id="progress-bar", value=0, striped=True, animated=True, w="50%"),
+                    dcc.Interval(id="progress-interval", interval=500, n_intervals=0),
+                ],
+            ),
+        )
+
+    def MainPage():
+        return dmc.Box(
+            id="page-wrapper",
+            style={"display": "block", "opacity": 0, "transition": "opacity 1s ease"},
             children=[
-                *global_store,
                 Header(),
                 NavBar(),
                 DatasetSettingsDrawer(),
@@ -110,6 +129,22 @@ def create_dash_app() -> dash.Dash:
                     interval=100,
                     max_intervals=1,
                 ),
+            ]
+        )
+
+    app.layout = dmc.MantineProvider(
+        theme=THEME,
+        withGlobalClasses=True,
+        children=dmc.AppShell(
+            id="appshell",
+            navbar=NAVBAR_CONFIG,
+            header=HEADER_CONFIG,
+            padding="md",
+            children=[
+                *global_store,
+                dcc.Store(id="init-complete", storage_type="session"),
+                SplashPage(),
+                MainPage(),
             ],
         )
     )
@@ -130,6 +165,57 @@ def create_dash_app() -> dash.Dash:
         mod = __import__(page["module"], fromlist=["register_callbacks"])
         if hasattr(mod, "register_callbacks"):
             mod.register_callbacks()
+
+    @callback(
+        Output("progress-bar", "value"),
+        Output("init-complete", "data"),
+        Input("progress-interval", "n_intervals"),
+        State("init-complete", "data"),
+    )
+    def update_progress(n, init_complete):
+        if init_complete:
+            return 100, no_update
+        progress = min(100, n * 10)
+        if progress >= 100:
+            return 100, True
+        return progress, no_update
+
+    @callback(
+        Output("progress-interval", "disabled"),
+        Input("init-complete", "data")
+    )
+    def stop_interval(init_complete):
+        return bool(init_complete)
+
+    @callback(
+        Output("landing-wrapper", "style"),
+        Output("page-wrapper", "style"),
+        Input("init-complete", "data"),
+    )
+    def toggle_views(init_complete):
+        if init_complete:
+            splash_style = {
+                "display": "flex",
+                "opacity": 0,
+                "transition": "opacity 1s ease",
+                "position": "absolute",
+                "top": 0, "left": 0, "right": 0, "bottom": 0,
+                "zIndex": 9999,
+                "pointerEvents": "none",
+            }
+            app_style = {"display": "block", "opacity": 1, "transition": "opacity 1s ease"}
+            return splash_style, app_style
+
+        splash_style = {
+            "display": "flex",
+            "opacity": 1,
+            "transition": "opacity 1s ease",
+            "position": "absolute",
+            "top": 0, "left": 0, "right": 0, "bottom": 0,
+            "zIndex": 9999,
+        }
+        app_style = {"display": "block", "opacity": 0, "transition": "opacity 1s ease"}
+        return splash_style, app_style
 
     return app
 
