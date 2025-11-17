@@ -14,11 +14,89 @@ from dash_iconify import DashIconify
 from loguru import logger
 from typing import Any, Dict, List, Tuple
 
-from api import dispatch, FETCH_SPECIES, SET_SPECIES_LIST
+from api import (
+    dispatch,
+    FETCH_DATASET_CONFIG,
+    SET_DATASET_CONFIG,
+    FETCH_DATASET_SITES_TREE,
+    FETCH_DATASET_CATEGORY_ORDERS,
+    FETCH_DATASET_OPTIONS,
+    FETCH_SPECIES,
+    SET_SPECIES_LIST,
+)
 
 PAGE_SIZE = 120
 
 def register_callbacks():
+    clientside_callback(
+        """
+        function updateLoadingState(n_clicks) {
+            return true
+        }
+        """,
+        Output("settings-sites-save-button", "loading", allow_duplicate=True),
+        Input("settings-sites-save-button", "n_clicks"),
+        prevent_initial_call=True,
+    )
+
+    @callback(
+        Output("settings-sites-save-button", "loading"),
+        State("dataset-select", "value"),
+        State({"type": "sitelevel_label", "index": ALL}, "value"),
+        Input("settings-sites-save-button", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def set_dataset_config(
+        dataset_name: str,
+        site_labels: List[str],
+        n_clicks: int,
+    ) -> List[str]:
+        if not dataset_name or n_clicks is None or n_clicks == 0:
+            return no_update, False
+        trigger_id = ctx.triggered_id
+        action = SET_DATASET_CONFIG
+        payload = dict(dataset_name=dataset_name, site_labels=site_labels)
+        logger.debug(f"{trigger_id=} {action=} {payload=}")
+        time.sleep(1.0) # so the user gets a sense something happened
+        return False
+
+    @callback(
+        Output("settings-sites-form", "children"),
+        Input("dataset-select", "value"),
+    )
+    def set_sites_form(
+        dataset_name: str
+    ) -> List[dmc.TextInput]:
+        if not dataset_name:
+            return no_update
+        payload = dict(dataset_name=dataset_name)
+
+        action = FETCH_DATASET_CONFIG
+        logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+        config = dispatch(action, **payload)
+
+        action = FETCH_DATASET_SITES_TREE
+        logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
+        tree = dispatch(action, **payload)
+
+        return [
+            dmc.TextInput(
+                label=f"Level {i}",
+                id={"type": "sitelevel_label", "index": i - 1},
+                value=config.get("Site Hierarchy").get(f"sitelevel_{i}", ""),
+            )
+            for i in range(1, tree.max_depth)
+        ]
+
+    @callback(
+        Output("settings-title", "children"),
+        Input("dataset-select", "value"),
+    )
+    def set_dataset_settings_text(dataset_name: str):
+        if not dataset_name:
+            return no_update
+        return f"{dataset_name} settings"
+
     @callback(
         Output("species-table", "style"),
         Output("species-list-table", "style"),

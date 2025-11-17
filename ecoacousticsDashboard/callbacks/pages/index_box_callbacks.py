@@ -1,6 +1,7 @@
 import dash
 import dash_mantine_components as dmc
 import dash_bootstrap_components as dbc
+import functools
 import itertools
 import numpy as np
 import pandas as pd
@@ -32,6 +33,7 @@ def register_callbacks():
         Output("index-box-graph", "figure"),
         State("dataset-select", "value"),
         Input("filter-store", "data"),
+        Input("index-box-plot-type-select", "value"),
         Input("index-box-time-aggregation", "value"),
         Input("index-box-outliers-tickbox", "checked"),
         Input("index-box-colour-select", "value"),
@@ -41,6 +43,7 @@ def register_callbacks():
     def draw_figure(
         dataset_name: str,
         filters: Dict[str, Any],
+        plot_type: str,
         time_agg: str,
         outliers: bool,
         color: str,
@@ -50,13 +53,15 @@ def register_callbacks():
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
         data = fetch_data(dataset_name, filters)
-        fig = px.box(
+        plot_types = {"box": px.box, "violin": functools.partial(px.violin, box=True)}
+        fig = plot_types[plot_type](
             data_frame=data,
             x=time_agg,
             y="value",
             color=color,
             facet_row=facet_row,
             facet_col=facet_col,
+            # box=True,
             points="outliers" if outliers else False,
             hover_name="file_id",
             hover_data=[

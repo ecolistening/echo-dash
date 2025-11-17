@@ -1,10 +1,6 @@
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-import datetime as dt
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objs as go
 
 from dash import dcc
 from dash_iconify import DashIconify
@@ -13,21 +9,20 @@ from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
-from components.figure_download_widget import FigureDownloadWidget
 from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from utils import list2tuple, send_download
+from components.figure_download_widget import FigureDownloadWidget
 from utils.content import get_content
-
-PAGE_NAME = "idx-averages"
-PAGE_TITLE = "Seasonal Descriptor Averages"
+from utils.sketch import empty_figure
 
 dash.register_page(
     __name__,
-    title=PAGE_TITLE,
-    name="Averages"
+    title="Soundscape Descriptor Distributions",
+    name="Distributions",
+    path="/soundscape/descriptor-distributions",
+    order=2,
 )
 
 layout = dmc.Box([
@@ -44,38 +39,31 @@ layout = dmc.Box([
                     allowDeselect=False,
                 ),
                 DatasetOptionsSelect(
-                    id="index-averages-colour-select",
+                    id="distributions-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Site Level",),
                     label="Colour by",
                     value="sitelevel_1",
                 ),
-                dmc.Chip(
-                    id="index-averages-year-wrap-checkbox",
-                    children="Annual Wrap",
-                    checked=False,
+                DatasetOptionsSelect(
+                    id="distributions-facet-row-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    label="Facet rows by",
                 ),
-                # dmc.Chip(
-                #     'Colour by Recorder',
-                #     value='colour',
-                #     checked=True,
-                #     persistence=True,
-                #     id='colour-locations'
-                # ),
-                # dmc.Chip(
-                #     'Outliers',
-                #     value='outlier',
-                #     checked=True,
-                #     persistence=True,
-                #     id='outliers-tickbox'
-                # ),
-                # dmc.Chip(
-                #     'Plot per Recorder',
-                #     value='subplots',
-                #     checked=False,
-                #     persistence=True,
-                #     id='separate-plots'
-                # ),
+                DatasetOptionsSelect(
+                    id="distributions-facet-column-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    label="Facet columns by",
+                    value="dddn",
+                ),
+                dmc.Box([
+                    dmc.Chip(
+                        'Normalised',
+                        id="distributions-normalised-tickbox",
+                        value='normalised',
+                        checked=False,
+                        persistence=True,
+                    )
+                ]),
                 dmc.Flex(
                     p="1rem",
                     align="center",
@@ -86,10 +74,10 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    context="index-averages",
+                                    context="distributions",
                                 ),
                                 FigureDownloadWidget(
-                                    plot_name="index-averages-graph",
+                                    plot_name="distributions-graph",
                                 ),
                             ],
                         ),
@@ -116,37 +104,21 @@ layout = dmc.Box([
                         showLabelOnHover=False,
                     ),
                 ]),
-                dmc.Stack([
-                    dmc.Text(
-                        "Time Aggregation",
-                        size="sm",
-                        ta="left",
-                    ),
-                    dmc.SegmentedControl(
-                        id="index-averages-time-aggregation",
-                        data=[
-                            {"label": "1 day", "value": "1D"},
-                            {"label": "1 week", "value": "1W"},
-                            {"label": "2 weeks", "value": "2W"},
-                            {"label": "1 month", "value": "1ME"},
-                            {"label": "3 months", "value": "3ME"},
-                            {"label": "6 months", "value": "6ME"},
-                        ],
-                        value="1W",
-                        persistence=True,
-                    ),
-                ]),
             ],
         ),
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(
-        dcc.Graph(id="index-averages-graph"),
+        dcc.Graph(
+            id="distributions-graph",
+            figure=empty_figure("Loading data...")
+            # responsive=True,
+        ),
     ),
     dmc.Space(h="sm"),
     dmc.Box(
         id="page-content",
-        children=get_content("page/acoustic-feature-seasonal-averages")
+        children=get_content("page/acoustic-feature-distributions")
     ),
     dmc.Box(
         id="soundade-features-description",
@@ -160,5 +132,5 @@ layout = dmc.Box([
 ])
 
 def register_callbacks():
-    from callbacks.pages import index_averages_callbacks
-    index_averages_callbacks.register_callbacks()
+    from callbacks.pages import distributions_callbacks
+    distributions_callbacks.register_callbacks()

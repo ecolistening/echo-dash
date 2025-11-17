@@ -17,23 +17,31 @@ from components.environmental_filter import EnvironmentalFilter
 from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from components.figure_download_widget import FigureDownloadWidget
 from utils.content import get_content
-
-PAGE_NAME = "index-box-plot"
-PAGE_TITLE = "Box Plot of Acoustic Descriptor by Time of Day"
+from utils.sketch import empty_figure
 
 dash.register_page(
     __name__,
-    title=PAGE_TITLE,
-    name="Box Plot"
+    title="Soundscape Descriptor Diel Distributions",
+    name="Diel Distributions",
 )
-
-PLOT_HEIGHT = 800
 
 layout = dmc.Box([
     ControlsPanel([
         dmc.Group(
             grow=True,
             children=[
+                dmc.Select(
+                    id="index-box-plot-type-select",
+                    label="Plot Type",
+                    value="box",
+                    data=[
+                        {"label": "Box Plot", "value": "box"},
+                        {"label": "Violin Plot", "value": "violin"},
+                    ],
+                    searchable=True,
+                    clearable=False,
+                    allowDeselect=False,
+                ),
                 dmc.Select(
                     id="feature-select",
                     label="Acoustic Feature",
@@ -110,7 +118,7 @@ layout = dmc.Box([
                         id="index-box-time-aggregation",
                         data=[
                             {"value": "time", "label": "15 minutes"},
-                            {"value": "hour", "label": "1 hour"},
+                            {"value": "hour_categorical", "label": "1 hour"},
                             {"value": "dddn", "label": "Dawn-Day-Dusk-Night"}
                         ],
                         value="dddn",
@@ -136,7 +144,10 @@ layout = dmc.Box([
             span=12,
             children=[
                 dcc.Loading([
-                    dcc.Graph(id="index-box-graph"),
+                    dcc.Graph(
+                        id="index-box-graph",
+                        figure=empty_figure("Loading data..."),
+                    ),
                 ]),
             ],
         ),

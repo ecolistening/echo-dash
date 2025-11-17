@@ -16,14 +16,14 @@ from components.environmental_filter import EnvironmentalFilter
 from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from components.figure_download_widget import FigureDownloadWidget
 from utils.content import get_content
-
-PAGE_NAME = "UMAP"
-PAGE_TITLE = "UMAP of Soundscape Descriptors"
+from utils.sketch import empty_figure
 
 dash.register_page(
     __name__,
-    title=PAGE_TITLE,
-    name=PAGE_NAME,
+    title="UMAP of Soundscape Descriptors",
+    name="Uniform Manifold Projection (UMAP)",
+    path="/soundscape/umap",
+    order=2,
 )
 
 layout = dmc.Box([
@@ -146,7 +146,10 @@ layout = dmc.Box([
             span=12,
             children=[
                 dcc.Loading([
-                    dcc.Graph(id="umap-graph"),
+                    dcc.Graph(
+                        id="umap-graph",
+                        figure=empty_figure("Loading data..."),
+                    ),
                 ]),
             ],
         ),

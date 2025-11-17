@@ -330,3 +330,20 @@ def default_layout(fig, max_height: int = 1600, row_height: int = 400):
             font=dict(size=24, color="black"),
         ),
     )
+
+def empty_figure(text="No data available"):
+    fig = go.Figure()
+    fig.add_annotation(
+        text=text,
+        xref="paper", yref="paper",
+        x=0.5, y=0.5, showarrow=False,
+        font=dict(size=20, color="gray")
+    )
+    fig.update_layout(
+        xaxis={'visible': False},
+        yaxis={'visible': False},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=0, b=0, l=0, r=0),
+    )
+    return fig

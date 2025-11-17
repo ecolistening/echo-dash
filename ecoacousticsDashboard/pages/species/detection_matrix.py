@@ -17,13 +17,12 @@ from components.environmental_filter import EnvironmentalFilter
 from components.figure_download_widget import FigureDownloadWidget
 from utils.content import get_content
 
-PAGE_NAME = "species-by-site"
-PAGE_TITLE = "Species by Site"
-
 dash.register_page(
     __name__,
-    title=PAGE_TITLE,
-    name='Species Matrix',
+    title="Species Detection Matrix",
+    name="Detection Matrix",
+    path="/species/detection-matrix",
+    order=1,
 )
 
 layout = dmc.Box([

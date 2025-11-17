@@ -1,3 +1,4 @@
+import collections
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
@@ -22,42 +23,33 @@ NAVBAR_CONFIG = {
 }
 
 def Menu():
-    pages = {m: m.split('.')[1:] for m in dash.page_registry}
-    children = {}
-    for p in pages:
-        page = dash.page_registry[p]
-        if len(pages[p]) == 0:
-            logger.warning(f"Can't find page {p}")
-            continue
-        elif len(pages[p]) == 1:
-            link = dmc.NavLink(
-                label=page['name'],
-                href=page["relative_path"],
-            )
-            children[pages[p][0]] = link
-        else:
-            if pages[p][0] not in children:
-                link = dmc.NavLink(
-                    label=capitalise_each(pages[p][0]),
-                    children=[],
-                )
-                children[pages[p][0]] = link
-            link = dmc.NavLink(
-                label=page['name'],
-                href=page["relative_path"],
-            )
-            children[pages[p][0]].children.append(link)
-    # Put groups in desired order. Adjust file name to sort individual pages within groups alphabetically
     menu = []
-    order = [
-        "recorders",
-        "soundscape",
-        "species",
-        "weather",
-        "settings",
-    ]
-    for group in order:
-        menu.append(children[group])
+    import code; code.interact(local=locals())
+    groups = ["recorders", "soundscape", "species", "weather"]
+    for group in groups:
+        group_pages = {
+            k: v for k, v in dash.page_registry.items()
+            if k.startswith(f"pages.{group}")
+        }
+        if not len(group_pages):
+            logger.warning(f"Can't find pages for '{group}'")
+        elif len(group_pages) == 1:
+            namespace, page_info = list(group_pages.items())[0]
+            menu.append(dmc.NavLink(
+                label=page_info["name"],
+                href=page_info["path"],
+            ))
+        else:
+            children = []
+            for namespace, page_info in group_pages.items():
+                children.append(dmc.NavLink(
+                    label=page_info["name"],
+                    href=page_info["path"],
+                ))
+            menu.append(dmc.NavLink(
+                label=capitalise_each(group),
+                children=children,
+            ))
     return dmc.Stack(menu)
 
 def NavBar():

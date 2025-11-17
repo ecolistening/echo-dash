@@ -1,6 +1,7 @@
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
+import numpy as np
 
 from dash import dcc
 from dash_iconify import DashIconify
@@ -16,15 +17,20 @@ from components.environmental_filter import EnvironmentalFilter
 from components.figure_download_widget import FigureDownloadWidget
 from utils.content import get_content
 
-PAGE_NAME = 'distributions'
-PAGE_TITLE = 'Soundscape Descriptor Distributions'
-PLOTHEIGHT = 800
+PAGE_NAME = "species-richness"
+PAGE_TITLE = "Species Richness by Time of Day"
 
 dash.register_page(
     __name__,
-    title=PAGE_TITLE,
-    name='Distributions',
+    title="Species Richness Diel Patterns",
+    name="Diel Richness Patterns",
+    path="/species/diel-richness",
+    order=2,
 )
+
+PLOT_HEIGHT = 800
+
+plot_types = ["Scatter", "Scatter Polar"]
 
 layout = dmc.Box([
     ControlsPanel([
@@ -32,39 +38,49 @@ layout = dmc.Box([
             grow=True,
             children=[
                 dmc.Select(
-                    id="feature-select",
-                    label="Acoustic Feature",
-                    value="bioacoustic index",
+                    id="species-richness-plot-type-select",
+                    label="Select plot type",
+                    value="Scatter Polar",
+                    data=[
+                        dict(value=plot_type, label=plot_type)
+                        for plot_type in plot_types
+                    ],
                     searchable=True,
+                    clearable=False,
+                    style=dict(width=200),
+                    persistence=True,
+                ),
+                DatasetOptionsSelect(
+                    id="species-richness-primary-axis-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("Hour",),
+                    label="Primary Axis",
+                    value="hour_continuous",
                     clearable=False,
                     allowDeselect=False,
                 ),
                 DatasetOptionsSelect(
-                    id="distributions-colour-select",
+                    id="species-richness-color-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Colour by",
                     value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
-                    id="distributions-facet-row-select",
+                    id="species-richness-facet-row-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet rows by",
                 ),
                 DatasetOptionsSelect(
-                    id="distributions-facet-column-select",
+                    id="species-richness-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     label="Facet columns by",
-                    value="dddn",
+                    value="year",
                 ),
-                dmc.Box([
-                    dmc.Chip(
-                        'Normalised',
-                        id="distributions-normalised-tickbox",
-                        value='normalised',
-                        checked=False,
-                        persistence=True,
-                    )
-                ]),
+                dmc.Chip(
+                    "Only Species List",
+                    id="species-list-tickbox",
+                    checked=False,
+                ),
                 dmc.Flex(
                     p="1rem",
                     align="center",
@@ -75,10 +91,10 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    context="distributions",
+                                    context="species-richness",
                                 ),
                                 FigureDownloadWidget(
-                                    plot_name="distributions-graph",
+                                    plot_name="species-richness-graph",
                                 ),
                             ],
                         ),
@@ -91,18 +107,20 @@ layout = dmc.Box([
             children=[
                 dmc.Stack([
                     dmc.Text(
-                        "Acoustic Feature Range",
-                        id="feature-range-title",
+                        children="Detection Threshold",
                         size="sm",
-                        ta="left",
+                        ta="right",
                     ),
-                    dmc.RangeSlider(
-                        id="feature-range-slider",
-                        min=0,
-                        max=999,
-                        step=1,
+                    dmc.Slider(
+                        id="species-threshold-slider",
+                        min=0.0, max=1.0,
+                        step=0.1,
+                        value=0.5,
                         persistence=True,
-                        showLabelOnHover=False,
+                        marks=[
+                            dict(value=i, label=np.format_float_positional(i, precision=1))
+                            for i in np.arange(0.0, 1.0, 0.1)
+                        ],
                     ),
                 ]),
             ],
@@ -110,27 +128,15 @@ layout = dmc.Box([
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(
-        dcc.Graph(
-            id="distributions-graph",
-            # responsive=True,
-        ),
+        dcc.Graph(id="species-richness-graph"),
     ),
     dmc.Space(h="sm"),
     dmc.Box(
         id="page-content",
-        children=get_content("page/acoustic-feature-distributions")
-    ),
-    dmc.Box(
-        id="soundade-features-description",
-        children=[]
-    ),
-    dmc.Space(h="sm"),
-    dmc.Box(
-        id="feature-descriptor-content",
-        children=[],
+        children=get_content("page/species-richness")
     ),
 ])
 
 def register_callbacks():
-    from callbacks.pages import distributions_callbacks
-    distributions_callbacks.register_callbacks()
+    from callbacks.pages import species_richness_callbacks
+    species_richness_callbacks.register_callbacks()

@@ -1,11 +1,20 @@
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
+import datetime as dt
+import itertools
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objs as go
 
-from dash import dcc
+from dash import html, ctx, dcc, callback, no_update
+from dash import Output, Input, State, ALL
 from dash_iconify import DashIconify
+from io import StringIO
+from loguru import logger
+from typing import Any, Dict, List, Tuple
 
-from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
+from api import dispatch, FETCH_FILES, FETCH_DATASET_DROPDOWN_OPTION_GROUPS
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
@@ -15,60 +24,47 @@ from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.figure_download_widget import FigureDownloadWidget
 from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
+from utils import list2tuple
 from utils.content import get_content
-
-PAGE_NAME = 'index-scatter'
-PAGE_TITLE = 'Acoustic Descriptor by Time of Day'
 
 dash.register_page(
     __name__,
-    title=PAGE_TITLE,
-    name='Scatter Plot'
+    title="Recording Schedule",
+    name="Schedule",
+    path="/recorders/schedule",
+    order=2,
 )
-
-PLOT_HEIGHT = 800
 
 layout = dmc.Box([
     ControlsPanel([
         dmc.Group(
             grow=True,
             children=[
-                dmc.Select(
-                    id="feature-select",
-                    label="Acoustic Feature",
-                    value="bioacoustic index",
-                    searchable=True,
-                    clearable=False,
-                    allowDeselect=False,
-                ),
                 DatasetOptionsSelect(
-                    id="index-scatter-x-axis-select",
+                    id="times-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Time",),
-                    label="X-axis",
-                    value="time",
-                ),
-                DatasetOptionsSelect(
-                    id="index-scatter-colour-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
                     label="Colour by",
+                    value="valid",
+                ),
+                DatasetOptionsSelect(
+                    id="times-symbol-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
+                    label="Symbol by",
+                ),
+                DatasetOptionsSelect(
+                    id="times-facet-row-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
+                    label="Facet rows by",
                     value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
-                    id="index-scatter-symbol-select",
+                    id="times-facet-column-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Symbol by"
-                ),
-                DatasetOptionsSelect(
-                    id="index-scatter-facet-row-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    label="Facet rows by",
-                ),
-                DatasetOptionsSelect(
-                    id="index-scatter-facet-column-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    options=("File Level", "Site Level", "Time of Day", "Temporal"), #, "Spatial"),
                     label="Facet columns by",
-                    value="month",
                 ),
                 dmc.Flex(
                     p="1rem",
@@ -79,12 +75,12 @@ layout = dmc.Box([
                         dmc.Group(
                             grow=True,
                             children=[
-                                FileSelectionSidebarIcon(context="index-scatter"),
+                                FileSelectionSidebarIcon(context="times"),
                                 DataDownloadWidget(
-                                    context="index-scatter",
+                                    context="times",
                                 ),
                                 FigureDownloadWidget(
-                                    plot_name="index-scatter-graph",
+                                    plot_name="times-graph",
                                 ),
                             ],
                         ),
@@ -97,32 +93,16 @@ layout = dmc.Box([
             children=[
                 dmc.Stack([
                     dmc.Text(
-                        "Acoustic Feature Range",
-                        id="feature-range-title",
-                        size="sm",
-                        ta="left",
-                    ),
-                    dmc.RangeSlider(
-                        id="feature-range-slider",
-                        min=0,
-                        max=999,
-                        step=1,
-                        persistence=True,
-                        showLabelOnHover=False,
-                    ),
-                ]),
-                dmc.Stack([
-                    dmc.Text(
                         "Dot Size",
                         size="sm",
                         ta="left",
                     ),
                     dmc.Slider(
-                        id="index-scatter-size-slider",
+                        id="times-size-slider",
                         min=1,
                         max=20,
                         step=1,
-                        value=6,
+                        value=4,
                         marks=[
                             {"value": i, "label": f"{i}"}
                             for i in (1, 10, 20)
@@ -137,12 +117,12 @@ layout = dmc.Box([
                         ta="left",
                     ),
                     dmc.Slider(
-                        id="index-scatter-opacity-slider",
+                        id="times-opacity-slider",
                         persistence=True,
                         min=0,
                         max=100,
                         step=5,
-                        value=33,
+                        value=50,
                         marks=[
                             dict(value=i, label=f"{i}%")
                             for i in range(0, 101, 20)
@@ -155,37 +135,31 @@ layout = dmc.Box([
     dmc.Space(h="sm"),
     dmc.Grid([
         dmc.GridCol(
-            id="index-scatter-graph-container",
+            id="times-graph-container",
             span=12,
             children=[
                 dcc.Loading([
-                    dcc.Graph(id="index-scatter-graph"),
+                    dcc.Graph(
+                        id="times-graph"
+                        # responsive=True,
+                    ),
                 ]),
             ],
         ),
         FileSelectionSidebar(
-            context="index-scatter",
-            graph="index-scatter-graph",
-            sibling="index-scatter-graph-container",
+            context="times",
+            graph="times-graph",
+            sibling="times-graph-container",
             span=5,
         ),
     ]),
     dmc.Space(h="sm"),
     dmc.Box(
         id="page-content",
-        children=get_content("page/acoustic-feature-scatter")
-    ),
-    dmc.Box(
-        id="soundade-features-description",
-        children=[]
-    ),
-    dmc.Space(h="sm"),
-    dmc.Box(
-        id="feature-descriptor-content",
-        children=[],
+        children=get_content("page/times")
     ),
 ])
 
 def register_callbacks():
-    from callbacks.pages import index_scatter_callbacks
-    index_scatter_callbacks.register_callbacks()
+    from callbacks.pages import times_callbacks
+    times_callbacks.register_callbacks()

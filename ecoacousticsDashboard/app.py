@@ -39,12 +39,10 @@ def create_dash_app() -> dash.Dash:
 
     from components.header import Header, HEADER_CONFIG
     from components.nav_bar import NavBar, NAVBAR_CONFIG
-    from components.hover_icons import HoverIcons
     from components.filter_panel import FilterPanel
     from components.date_range_filter import DateRangeFilter
     from components.site_level_filter import SiteLevelFilter
     from components.environmental_filter import EnvironmentalFilter
-    from components.dataset_settings_drawer import DatasetSettingsDrawer
     from store import global_store
 
     def SplashPage():
@@ -78,7 +76,6 @@ def create_dash_app() -> dash.Dash:
             children=[
                 Header(),
                 NavBar(),
-                DatasetSettingsDrawer(),
                 dmc.AppShellMain([
                     FilterPanel([
                         dmc.Accordion(
@@ -151,9 +148,6 @@ def create_dash_app() -> dash.Dash:
 
     from callbacks import nav_bar_callbacks
     nav_bar_callbacks.register_callbacks()
-
-    from callbacks import dataset_config_callbacks
-    dataset_config_callbacks.register_callbacks()
 
     from callbacks import filter_callbacks
     filter_callbacks.register_callbacks()

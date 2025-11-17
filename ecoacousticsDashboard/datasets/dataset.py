@@ -127,7 +127,7 @@ class Dataset:
         if "timestamp" in data.columns:
             data["minute"] = data["timestamp"].dt.minute
             data["hour_categorical"] = data["timestamp"].dt.hour.astype(str)
-            data["hour_continuous"] = data["timestamp"].dt.hour.astype(float) / 24
+            data["hour_continuous"] = data["timestamp"].dt.hour.astype(float)
             data["week_of_year_continuous"] = data["timestamp"].dt.isocalendar()["week"] / 53
             data["week_of_year_categorical"] = data["timestamp"].dt.isocalendar()["week"].astype(str)
             data["weekday"] = data["timestamp"].dt.day_name().str[:3]

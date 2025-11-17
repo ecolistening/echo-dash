@@ -21,13 +21,12 @@ from components.controls_panel import ControlsPanel
 from utils import list2tuple
 from utils.content import get_content
 
-PAGE_NAME = 'dates'
-PAGE_TITLE = 'Recording Dates'
-
 dash.register_page(
     __name__,
-    title=PAGE_TITLE,
-    name='Dates',
+    title="Recording Calendar",
+    name="Calendar",
+    path="/recorders/calendar",
+    order=1,
 )
 
 layout = dmc.Box([
