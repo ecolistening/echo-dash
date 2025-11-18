@@ -6,7 +6,6 @@ from dash import dcc
 from dash_iconify import DashIconify
 
 from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
-from callbacks.pages import index_box_callbacks
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
@@ -175,5 +174,5 @@ layout = dmc.Box([
 ])
 
 def register_callbacks():
-    from callbacks.pages import index_box_callbacks
-    index_box_callbacks.register_callbacks()
+    from callbacks.pages.soundscape import diel_distributions_callbacks
+    diel_distributions_callbacks.register_callbacks()

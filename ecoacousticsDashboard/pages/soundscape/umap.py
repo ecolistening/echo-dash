@@ -172,5 +172,5 @@ layout = dmc.Box([
 ])
 
 def register_callbacks():
-    from callbacks.pages import umap_callbacks
+    from callbacks.pages.soundscape import umap_callbacks
     umap_callbacks.register_callbacks()

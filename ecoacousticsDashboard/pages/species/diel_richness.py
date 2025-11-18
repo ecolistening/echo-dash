@@ -16,6 +16,7 @@ from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.figure_download_widget import FigureDownloadWidget
 from utils.content import get_content
+from utils.sketch import empty_figure
 
 PAGE_NAME = "species-richness"
 PAGE_TITLE = "Species Richness by Time of Day"
@@ -128,7 +129,10 @@ layout = dmc.Box([
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(
-        dcc.Graph(id="species-richness-graph"),
+        dcc.Graph(
+            id="species-richness-graph",
+            figure=empty_figure("Loading data..."),
+        ),
     ),
     dmc.Space(h="sm"),
     dmc.Box(
@@ -138,5 +142,5 @@ layout = dmc.Box([
 ])
 
 def register_callbacks():
-    from callbacks.pages import species_richness_callbacks
-    species_richness_callbacks.register_callbacks()
+    from callbacks.pages.species import diel_richness_callbacks
+    diel_richness_callbacks.register_callbacks()

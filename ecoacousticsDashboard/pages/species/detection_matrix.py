@@ -16,6 +16,7 @@ from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from components.figure_download_widget import FigureDownloadWidget
 from utils.content import get_content
+from utils.sketch import empty_figure
 
 dash.register_page(
     __name__,
@@ -112,6 +113,7 @@ layout = dmc.Box([
     dcc.Loading(
         dcc.Graph(
             id="species-community-graph",
+            figure=empty_figure("Loading data..."),
             # responsive=True,
         ),
     ),
@@ -122,5 +124,5 @@ layout = dmc.Box([
 ])
 
 def register_callbacks():
-    from callbacks.pages import species_community_callbacks
-    species_community_callbacks.register_callbacks()
+    from callbacks.pages.species import detection_matrix_callbacks
+    detection_matrix_callbacks.register_callbacks()

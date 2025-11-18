@@ -20,6 +20,7 @@ from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
 from utils import list2tuple
 from utils.content import get_content
+from utils.sketch import empty_figure
 
 PAGE_NAME = "weather-hourly"
 PAGE_TITLE = "Hourly Weather"
@@ -116,7 +117,10 @@ layout = dmc.Box([
     ]),
     dmc.Space(h="sm"),
     dcc.Loading(
-        dcc.Graph(id="weather-hourly-graph"),
+        dcc.Graph(
+            id="weather-hourly-graph",
+            figure=empty_figure("Loading data..."),
+        ),
     ),
     dmc.Space(h="sm"),
     dmc.Box(
@@ -126,5 +130,5 @@ layout = dmc.Box([
 ])
 
 def register_callbacks():
-    from callbacks.pages import weather_hourly_callbacks
-    weather_hourly_callbacks.register_callbacks()
+    from callbacks.pages.weather import seasonal_averages_callbacks
+    seasonal_averages_callbacks.register_callbacks()

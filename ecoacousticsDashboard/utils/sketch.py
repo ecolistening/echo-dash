@@ -314,9 +314,9 @@ def scatter_polar(
 
 def default_layout(fig, max_height: int = 1600, row_height: int = 400):
     fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-    try:
+    if hasattr(fig, "_grid_ref") and fig._grid_ref is not None:
         num_rows = len(fig._grid_ref)
-    except AttributeError:
+    else:
         num_rows = 1
     return dict(
         height=min(max_height, row_height * num_rows),

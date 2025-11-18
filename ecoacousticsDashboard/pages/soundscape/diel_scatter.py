@@ -188,5 +188,5 @@ layout = dmc.Box([
 ])
 
 def register_callbacks():
-    from callbacks.pages import index_scatter_callbacks
-    index_scatter_callbacks.register_callbacks()
+    from callbacks.pages.soundscape import diel_scatter_callbacks
+    diel_scatter_callbacks.register_callbacks()

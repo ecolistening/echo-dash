@@ -20,6 +20,7 @@ from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
 from utils import list2tuple
 from utils.content import get_content
+from utils.sketch import empty_figure
 
 dash.register_page(
     __name__,
@@ -60,6 +61,7 @@ layout = dmc.Box([
     dcc.Loading(
         dcc.Graph(
             id="dates-graph",
+            figure=empty_figure("Loading data..."),
             # responsive=True,
         ),
     ),
@@ -71,5 +73,5 @@ layout = dmc.Box([
 ])
 
 def register_callbacks():
-    from callbacks.pages import dates_callbacks
-    dates_callbacks.register_callbacks()
+    from callbacks.pages.recorders import calendar_callbacks
+    calendar_callbacks.register_callbacks()

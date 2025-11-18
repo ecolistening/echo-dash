@@ -19,6 +19,7 @@ from components.data_download_widget import DataDownloadWidget
 from components.figure_download_widget import FigureDownloadWidget
 from utils import capitalise_each
 from utils.content import get_content
+from utils.sketch import empty_figure
 
 dash.register_page(
     __name__,
@@ -72,6 +73,7 @@ def layout():
         dcc.Loading(
             dcc.Graph(
                 id="map-graph",
+                figure=empty_figure("Loading data..."),
                 # responsive=True,
             ),
         ),
@@ -109,5 +111,5 @@ def layout():
     ])
 
 def register_callbacks():
-    from callbacks.pages import map_callbacks
+    from callbacks.pages.recorders import map_callbacks
     map_callbacks.register_callbacks()

@@ -26,6 +26,7 @@ from components.figure_download_widget import FigureDownloadWidget
 from components.file_selection_sidebar import FileSelectionSidebar, FileSelectionSidebarIcon
 from utils import list2tuple
 from utils.content import get_content
+from utils.sketch import empty_figure
 
 dash.register_page(
     __name__,
@@ -140,7 +141,8 @@ layout = dmc.Box([
             children=[
                 dcc.Loading([
                     dcc.Graph(
-                        id="times-graph"
+                        id="times-graph",
+                        figure=empty_figure("Loading data..."),
                         # responsive=True,
                     ),
                 ]),
@@ -161,5 +163,5 @@ layout = dmc.Box([
 ])
 
 def register_callbacks():
-    from callbacks.pages import times_callbacks
-    times_callbacks.register_callbacks()
+    from callbacks.pages.recorders import schedule_callbacks
+    schedule_callbacks.register_callbacks()

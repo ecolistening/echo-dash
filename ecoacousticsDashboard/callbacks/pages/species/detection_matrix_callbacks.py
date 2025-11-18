@@ -20,6 +20,7 @@ from api import FETCH_DATASET_OPTIONS, FETCH_DATASET_CATEGORY_ORDERS
 from api import filter_dict_to_tuples
 from utils.figures.species_matrix import species_matrix as plot
 from utils import list2tuple, send_download, safe_category_orders
+from utils.sketch import empty_figure, default_layout
 
 def register_callbacks():
     @callback(
@@ -80,8 +81,12 @@ def register_callbacks():
         payload = dict(dataset_name=dataset_name, threshold=threshold, **filter_dict_to_tuples(filters))
         logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
         data = dispatch(action, **payload)
-        if len(opts):
+        if opt_group is not None and len(opts):
             data = data[data[opt_group] == opts[0]]
+        if data.empty:
+            fig = empty_figure("No data available for these parameter settings")
+            fig.update_layout(default_layout(fig))
+            return fig
         fig = plot(data, axis_group, facet_col, None, safe_category_orders(data, category_orders))
         fig.update_layout(title_text=f"Species Matrix |{f' {opts[0]} |' if len(opts) else ''} p > {threshold}")
         return fig

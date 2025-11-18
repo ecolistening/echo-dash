@@ -132,5 +132,5 @@ layout = dmc.Box([
 ])
 
 def register_callbacks():
-    from callbacks.pages import distributions_callbacks
+    from callbacks.pages.soundscape import distributions_callbacks
     distributions_callbacks.register_callbacks()
