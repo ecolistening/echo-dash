@@ -113,3 +113,8 @@ dependencies = [
     "xlsxwriter>=3.2.5",
     "zipp==3.18.1",
 ]
+
+[dependency-groups]
+dev = [
+    "locust>=2.18.4",
+]
