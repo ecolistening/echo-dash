@@ -1,5 +1,6 @@
 import attrs
 import bigtree as bt
+import contextlib
 import functools
 import numpy as np
 import pandas as pd
@@ -114,7 +115,9 @@ class Dataset:
         for attr_name, attr_value in config.items():
             setattr(scaler, attr_name, attr_value)
         feature_column_names = config["feature_names_in_"]
-        model = make_pipeline(scaler, load_ParametricUMAP(self.path / "umap"))
+        with contextlib.redirect_stdout(None):
+            umap_model = load_ParametricUMAP(self.path / "umap")
+        model = make_pipeline(scaler, umap_model)
 
         def encode(data: pd.DataFrame) -> pd.DataFrame:
             xy = model.transform(data.loc[:, feature_column_names])
