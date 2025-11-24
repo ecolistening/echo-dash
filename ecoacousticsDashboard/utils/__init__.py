@@ -91,9 +91,8 @@ DOWNLOAD_PARAMS = {
 }
 def send_download(df: pd.DataFrame, file_name: str, dl_type: str) -> Dict[str, Any]:
     render, extension, params = DOWNLOAD_PARAMS[dl_type].values()
-    file_name = file_name + f".{extension}"
-    response = dcc.send_data_frame(render(df), file_name, **params)
-    return response
+    file_name = f"{file_name}_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.{extension}"
+    return dcc.send_data_frame(render(df), file_name, **params)
 
 def safe_category_orders(df, category_orders):
     safe_orders = {}
