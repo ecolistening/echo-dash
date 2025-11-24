@@ -23,24 +23,9 @@ from components.environmental_filter import EnvironmentalFilterSliderAccordion
 from components.site_level_filter import SiteLevelHierarchyAccordion, TreeNodeChip
 from utils.webhost import AudioAPI
 from utils import ceil, floor, audio_bytes_to_enc, index_to_float, float_to_index, capitalise_each
+from utils.filter import setup_filter_store
 
 Filters = Dict[str, Any]
-
-def set_filters(dataset_name):
-    action = FETCH_BASE_FILTERS
-    payload = dict(dataset_name=dataset_name)
-    filters = dispatch(action, **payload)
-    filters["date_range"] = filters["date_range_bounds"]
-    features = list(filters["acoustic_features"].keys())
-    current_feature = filters.get("current_feature", "bioacoustic index")
-    filters["current_feature"] = current_feature
-    filters["current_feature_range"] = list(filters["acoustic_features"][current_feature])
-    for variable in filters["weather_variables"].keys():
-        filters["weather_variables"][variable]["variable_range"] = filters["weather_variables"][variable]["variable_range_bounds"]
-    filters["current_sites"] = filters["tree"]
-    filters["files"] = {}
-    species = filters["species"]
-    return filters
 
 def register_callbacks():
     @callback(
@@ -50,7 +35,10 @@ def register_callbacks():
     def init_dataset_filters(
         dataset_name: str,
     ) -> Filters:
-        return set_filters(dataset_name)
+        action = FETCH_BASE_FILTERS
+        payload = dict(dataset_name=dataset_name)
+        filters = dispatch(action, **payload)
+        return setup_filter_store(filters)
 
     @callback(
         Output("filter-store", "data", allow_duplicate=True),
