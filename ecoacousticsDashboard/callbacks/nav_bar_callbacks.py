@@ -28,6 +28,7 @@ def register_callbacks():
     @callback(
         Output("dataset-select", "value"),
         Output("dataset-select", "data"),
+        Output("load-datasets", "disabled"),
         State("dataset-select", "value"),
         Input("load-datasets", "n_intervals"),
     )
@@ -41,4 +42,4 @@ def register_callbacks():
         ]
         if current_dataset is None or not len(current_dataset):
             current_dataset = dataset_options[0]["value"]
-        return current_dataset, dataset_options
+        return current_dataset, dataset_options, True

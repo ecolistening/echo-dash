@@ -27,7 +27,6 @@ class Dataset:
     audio_path: str = attrs.field(init=False)
     config: ConfigParser = attrs.field(init=False)
     soundade_config: Dict[str, Any] = attrs.field(init=False)
-    filters: Dict[str, Any] = attrs.field(init=False)
 
     def __attrs_post_init__(self) -> None:
         self.config = self._read_or_build_config(self.path / "config.ini")
@@ -35,7 +34,6 @@ class Dataset:
         self.dataset_name = self.config.get("Dataset", "name")
         self.dataset_id = self.config.get("Dataset", "id")
         self.audio_path = Path(self.config.get("Dataset", "audio_path"))
-        self.filters = self._build_base_filters()
 
     @property
     def acoustic_feature_list(self):
@@ -58,7 +56,10 @@ class Dataset:
         locations = pd.read_parquet(self.path / "locations_table.parquet")
         locations["site"] = self.dataset_name + "/" + locations["site_name"]
         for level, values in locations.site.str.split('/', expand=True).iloc[:, 1:].to_dict(orient='list').items():
-            locations[f"sitelevel_{level}"] = values
+            try:
+                locations[f"sitelevel_{level}"] = list(map(int, values))
+            except ValueError:
+                locations[f"sitelevel_{level}"] = values
         return locations
 
     @functools.cached_property
@@ -88,6 +89,23 @@ class Dataset:
         with open(self.path / "config.ini", "w") as f:
             self.config.write(f)
 
+    def save_species_list(self, species_list: List[str]):
+        with open(self.path / "species_list.yaml", "w") as f:
+            f.write(yaml.safe_dump(list(sorted(species_list))))
+            logger.debug(f"saved species_list.yaml with {species_list=}")
+
+    def species_list(self):
+        try:
+            with open(self.path / "species_list.yaml", "r") as f:
+                species_list = list(sorted(yaml.safe_load(f.read())))
+                logger.debug(f"loaded species_list.yaml containing {species_list=}")
+                return species_list
+        except IOError as e:
+            return []
+        except TypeError as e:
+            logger.warning(f"Parsing {self.path / species_list.yaml} failed")
+            return []
+
     @functools.cached_property
     def umap(self) -> Callable:
         with open(self.path / "umap" / "config.yaml", "rb") as f:
@@ -109,15 +127,25 @@ class Dataset:
         if "timestamp" in data.columns:
             data["minute"] = data["timestamp"].dt.minute
             data["hour_categorical"] = data["timestamp"].dt.hour.astype(str)
-            data["hour_continuous"] = data["timestamp"].dt.hour.astype(int)
-            data["week_of_year_continuous"] = data["timestamp"].dt.isocalendar()["week"].astype(int)
+            data["hour_continuous"] = data["timestamp"].dt.hour.astype(float)
+            data["week_of_year_continuous"] = data["timestamp"].dt.isocalendar()["week"] / 53
             data["week_of_year_categorical"] = data["timestamp"].dt.isocalendar()["week"].astype(str)
-            data["weekday"] = data["timestamp"].dt.day_name()
+            data["weekday"] = data["timestamp"].dt.day_name().str[:3]
             data["date"] = pd.to_datetime(data["timestamp"].dt.strftime('%Y-%m-%d'))
-            data["month"] = data["timestamp"].dt.month_name()
+            data["month"] = data["timestamp"].dt.month_name().str[:3]
             data["year"] = data["timestamp"].dt.year.astype(str)
             data["time"] = data["timestamp"].dt.hour + data.timestamp.dt.minute / 60.0
             data["nearest_hour"] = data["timestamp"].dt.round("h")
+        if "hours after sunrise" in data.columns:
+            data["hour_after_sunrise"] = data["hours after sunrise"].round(0).astype("Int64")
+        if "hours after dawn" in data.columns:
+            data["hour_after_dawn"] = data["hours after dawn"].round(0).astype("Int64")
+        if "hours after noon" in data.columns:
+            data["hour_after_noon"] = data["hours after noon"].round(0).astype("Int64")
+        if "hours after dusk" in data.columns:
+            data["hour_after_dusk"] = data["hours after dusk"].round(0).astype("Int64")
+        if "hours after sunset" in data.columns:
+            data["hour_after_sunset"] = data["hours after sunset"].round(0).astype("Int64")
         return data
 
     @staticmethod
@@ -141,21 +169,40 @@ class Dataset:
             logger.error(e)
             return {}
 
-    def _build_base_filters(self):
+    @property
+    def filters(self):
         filters = {}
-        # date filters
-        data = pd.read_parquet(self.path / "files_table.parquet")
-        min_date = data["timestamp"].dt.date.min().strftime("%Y-%m-%d")
-        max_date = data["timestamp"].dt.date.max().strftime("%Y-%m-%d")
-        filters["date_range_bounds"] = [min_date, max_date]
-        # feature filters
+        filters = filters | self.date_filters
+        filters = filters | self.feature_filters
+        filters = filters | self.weather_filters
+        filters = filters | self.site_level_filters
+        filters["files"] = {}
+        filters["species"] = self.species_list()
+        return filters
+
+    @functools.cached_property
+    def feature_filters(self):
+        filters = {}
         data = pd.read_parquet(self.path / "recording_acoustic_features_table.parquet")
         acoustic_features = {}
         for feature in self.acoustic_feature_list:
             df = data.loc[:, feature]
             acoustic_features[feature] = [floor(df.min(), precision=2), ceil(df.max(), precision=2)]
-            filters["acoustic_features"] = acoustic_features
-        # weather filters
+        filters["acoustic_features"] = acoustic_features
+        return filters
+
+    @functools.cached_property
+    def date_filters(self):
+        filters = {}
+        data = pd.read_parquet(self.path / "files_table.parquet")
+        min_date = data["timestamp"].dt.date.min().strftime("%Y-%m-%d")
+        max_date = data["timestamp"].dt.date.max().strftime("%Y-%m-%d")
+        filters["date_range_bounds"] = [min_date, max_date]
+        return filters
+
+    @functools.cached_property
+    def weather_filters(self):
+        filters = {}
         variables = [
             'temperature_2m', 'rain', 'snowfall',
             'wind_speed_10m', 'wind_speed_100m', 'wind_direction_10m',
@@ -174,11 +221,14 @@ class Dataset:
             variable_ranges["variable_range_bounds"] = variable_range
             weather_variables[variable] = variable_ranges
         filters["weather_variables"] = weather_variables
-        # site filters
+        return filters
+
+    @functools.cached_property
+    def site_level_filters(self):
+        filters = {}
         data = pd.read_parquet(self.path / "locations_table.parquet")
         data["site"] = self.dataset_name + "/" + data["site_name"]
         tree = bt.dataframe_to_tree(data, path_col="site")
         sites = list(bt.tree_to_dict(tree).keys())[1:]
         filters["tree"] = sites
-        filters["files"] = {}
         return filters

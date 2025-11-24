@@ -18,7 +18,6 @@ def DataDownloadWidget(
 ) -> dmc.Box:
     return dmc.HoverCard(
         children=[
-            dcc.Download(id=f"{context}-data-download"),
             dmc.HoverCardTarget(
                 children=dmc.ActionIcon(
                     DashIconify(
@@ -38,11 +37,16 @@ def DataDownloadWidget(
                     dmc.Group(
                         grow=True,
                         children=[
-                            dmc.Button(
-                                id={"type": f"{context}-data-download-button", "index": dl_type},
-                                children=dl_type,
-                                variant="filled",
-                            )
+                            dmc.Box([
+                                dcc.Download(
+                                    id={"type": f"{context}-data-download", "index": dl_type}
+                                ),
+                                dmc.Button(
+                                    id={"type": f"{context}-data-download-button", "index": dl_type},
+                                    children=dl_type,
+                                    variant="filled",
+                                )
+                            ])
                             for dl_type in dl_types
                         ],
                     )

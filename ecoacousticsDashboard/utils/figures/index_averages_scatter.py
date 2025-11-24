@@ -20,7 +20,7 @@ def plot(
         .reset_index()
     )
     df.columns = ["_".join(filter(None, col_levels)) for col_levels in df.columns.to_flat_index()]
-    fig = px.line(
+    return px.line(
         data_frame=df,
         x="timestamp",
         y="value_mean",
@@ -30,13 +30,3 @@ def plot(
         markers=True,
         **kwargs,
     )
-    fig.update_traces(marker=dict(size=4))
-    fig.update_layout(
-        height=PLOT_HEIGHT,
-        title=dict(
-            x=0.5,
-            y=0.97,
-            font=dict(size=24),
-        )
-    )
-    return fig

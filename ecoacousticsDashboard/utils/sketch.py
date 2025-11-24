@@ -11,6 +11,7 @@ __ALL__ = [
     "bar_polar",
     "scatter_polar",
 ]
+
 def safe_polar_subplot_params(rows=1, cols=1, target_spacing=0.05):
     if rows < 1 or cols < 1:
         raise ValueError("rows and cols must be >= 1")
@@ -33,6 +34,27 @@ def safe_polar_subplot_params(rows=1, cols=1, target_spacing=0.05):
         "vertical_spacing": v_spacing,
     }
 
+def dedup(l: List[Any]):
+    seen = []
+    return [x for x in l if not (x in seen or seen.append(x))]
+
+def get_hover_template(hover_name, hover_data, labels):
+    template = ""
+    start_idx = 0
+    seen = []
+    hover_data = list(filter(None, dedup(hover_data)))
+    if hover_name:
+        template += f"<b>%{{customdata[0]}}</b><br>"
+        start_idx += 1
+        columns = [hover_name] + hover_data
+    else:
+        columns = hover_data
+
+    for i, column in enumerate(columns[start_idx:], start=start_idx):
+        template += f"<b>{labels.get(column, column)}</b>: %{{customdata[{i}]}}<br>"
+
+    template += "<extra></extra>"
+    return template, columns
 
 def bar_polar(
     data_frame: pd.DataFrame,
@@ -147,6 +169,8 @@ def scatter_polar(
     theta: str,
     facet_row: str,
     facet_col: str,
+    hover_name: str = None,
+    hover_data: List[str] = None,
     color: str | None = None,
     category_orders: Dict[str, List[Any]] = {},
     radialaxis: Dict[str, Any] = {},
@@ -163,6 +187,8 @@ def scatter_polar(
         return go.Figure()
 
     labels = labels or {}
+    hover_data = hover_data or []
+    hover_template, hover_columns = get_hover_template(hover_name, hover_data, labels)
 
     if facet_row is None:
         data_frame["_row_facet"] = "All"
@@ -233,7 +259,8 @@ def scatter_polar(
                 _theta = [None]
             else:
                 _r = subset_max[r].tolist()
-                _theta = (subset_max[theta] * 360 / 24).tolist()
+                _theta = (360 * subset_max[theta]).tolist()
+                # add first element to complete the line
                 _r = _r + [_r[0]]
                 _theta = _theta + [_theta[0]]
 
@@ -251,17 +278,20 @@ def scatter_polar(
             fig.add_trace(trace, row=row, col=col)
 
             if subset.empty:
-                _r = [None]
-                _theta = [None]
+                subset["r"] = [None]
+                subset["theta"] = [None]
             else:
-                _r = subset[r].tolist()
-                _theta = (subset[theta] * 360 / 24).tolist()
+                subset["r"] = subset[r].tolist()
+                # NB: this makes an assumption that we have a sample for the min and max of the angular axis
+                # the alternative would be to normalise beforehand, but this was a simple quick fix
+                subset["theta"] = (360 * subset[theta]).tolist()
 
             # plot individual points
             trace = go.Scatterpolar(
-                r=_r,
-                theta=_theta,
-                hovertemplate="".join([f"<b>{name}</b>: %{{{col}}}<br>" for col, name in labels.items()]),
+                r=subset["r"],
+                theta=subset["theta"],
+                customdata=subset[hover_columns].to_numpy(),
+                hovertemplate=hover_template,
                 name=color_category,
                 mode="markers",
                 marker=dict(color=color_map[color_category]),
@@ -271,9 +301,49 @@ def scatter_polar(
             fig.add_trace(trace, row=row, col=col)
 
     radialaxis["range"] = [0, data_frame[r].max()]
+    radialaxis["title"] = dict(text=labels.get(r, ""))
+    # FIXME: outstanding feature request on plotly as of 10/11/25: https://github.com/plotly/plotly.js/issues/6332
+    # angularaxis["title"] = dict(text=labels.get(theta, ""))
+
     for i in range(1, num_rows * num_cols + 1):
         fig.update_layout({
             f"polar{i if i > 1 else ''}": dict(radialaxis=radialaxis, angularaxis=angularaxis),
         })
 
+    return fig
+
+def default_layout(fig, max_height: int = 1600, row_height: int = 400):
+    fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+    if hasattr(fig, "_grid_ref") and fig._grid_ref is not None:
+        num_rows = len(fig._grid_ref)
+    else:
+        num_rows = 1
+    return dict(
+        height=min(max_height, row_height * num_rows),
+        coloraxis_colorbar_title_side="right",
+        title=dict(
+            automargin=True,
+            x=0.5,
+            y=1.00,
+            xanchor="center",
+            yanchor="top",
+            font=dict(size=24, color="black"),
+        ),
+    )
+
+def empty_figure(text="No data available"):
+    fig = go.Figure()
+    fig.add_annotation(
+        text=text,
+        xref="paper", yref="paper",
+        x=0.5, y=0.5, showarrow=False,
+        font=dict(size=20, color="gray")
+    )
+    fig.update_layout(
+        xaxis={'visible': False},
+        yaxis={'visible': False},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=0, b=0, l=0, r=0),
+    )
     return fig

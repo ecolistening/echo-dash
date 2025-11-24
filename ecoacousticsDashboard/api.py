@@ -34,6 +34,7 @@ def filter_dict_to_tuples(filters):
         "current_feature": (filters["current_feature"], list2tuple(filters["current_feature_range"])),
         "current_file_ids": list2tuple(list(itertools.chain(*filters["files"].values()))),
         "current_weather": list2tuple([(variable_name, list2tuple(params["variable_range"])) for variable_name, params in filters["weather_variables"].items()]),
+        "current_species": list2tuple(filters["species"]),
     }
     return filters_args
 
@@ -59,7 +60,6 @@ def set_current_dataset(
 ) -> str:
     return dataset_name
 
-@functools.lru_cache(maxsize=3)
 def fetch_dataset_config(
     dataset_name: str
 ) -> Dict[str, Any]:
@@ -111,6 +111,22 @@ def fetch_dataset_category_orders(
     dataset = DATASETS.get_dataset(dataset_name)
     return DatasetDecorator(dataset).category_orders
 
+def fetch_species_list(
+    dataset_name: str,
+) -> None:
+    dataset = DATASETS.get_dataset(dataset_name)
+    species_list = dataset.species_list()
+    logger.info(f"{species_list=}")
+    return species_list
+
+def set_species_list(
+    dataset_name: str,
+    species_list: Tuple[str, ...]
+) -> None:
+    dataset = DATASETS.get_dataset(dataset_name)
+    dataset.save_species_list(species_list)
+    return True
+
 @functools.lru_cache(maxsize=3)
 def fetch_files(
     dataset_name: str,
@@ -124,7 +140,7 @@ def fetch_files(
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     files = (
-        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
+        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "duration", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
         .query(f"{'valid == True and ' if valid_only else ''}{filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
@@ -148,6 +164,13 @@ def fetch_locations(
     return dataset.locations
 
 @functools.lru_cache(maxsize=3)
+def fetch_species(
+    dataset_name: str,
+) -> pd.DataFrame:
+    dataset = DATASETS.get_dataset(dataset_name)
+    return dataset.species
+
+@functools.lru_cache(maxsize=3)
 def fetch_weather(
     dataset_name: str,
 ) -> pd.DataFrame:
@@ -166,7 +189,7 @@ def fetch_file_weather(
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     files = (
-        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
+        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "duration", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
         .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
     )
@@ -178,7 +201,7 @@ def fetch_file_weather(
         files.merge(weather, on=["site_id", "nearest_hour"], how="left")
         .query(filter_weather_query(current_weather))
         .merge(dataset.locations, on="site_id", how="left")
-        .melt(id_vars=["file_id", "site_id", "nearest_hour", "timestamp", *dataset.locations.columns], var_name="variable", value_name="value")
+        .melt(id_vars=list(set(["file_id", "site_id", "nearest_hour", "timestamp", *dataset.locations.columns])), var_name="variable", value_name="value")
     )
 
 @functools.lru_cache(maxsize=10)
@@ -193,7 +216,7 @@ def fetch_acoustic_features(
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     files = (
-        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
+        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "duration", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
         .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
@@ -209,7 +232,7 @@ def fetch_acoustic_features(
     )
     file_ids = ", ".join([f"'{file_id}'" for file_id in file_site_weather.file_id])
     features = (
-        pd.read_parquet(dataset.path / "recording_acoustic_features_table.parquet", columns=["file_id", "segment_id", "duration", "offset", current_feature[0]])
+        pd.read_parquet(dataset.path / "recording_acoustic_features_table.parquet", columns=["file_id", "segment_id", "offset", current_feature[0]])
         .query(f"file_id in ({file_ids}) and {filter_feature_query(current_feature)}")
         .assign(feature=lambda df: current_feature[0])
         .rename(columns={current_feature[0]: "value"})
@@ -225,13 +248,14 @@ def fetch_birdnet_species(
     current_feature: Tuple[str, Tuple[float, ...]],
     current_file_ids: Tuple[str, ...],
     current_weather: Tuple[str, Tuple[float, ...]],
+    current_species: Tuple[str, ...],
     **kwargs: Any,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     decorator = DatasetDecorator(dataset)
 
     files = (
-        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
+        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "duration", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
         .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
     )
@@ -252,10 +276,13 @@ def fetch_birdnet_species(
         )
         .assign(species=lambda df: df[["scientific_name", "common_name"]].agg("\n".join, axis=1))
     )
+    if len(current_species):
+        species = species[species["scientific_name"].isin(current_species)]
     file_ids = ", ".join([f"'{file_id}'" for file_id in file_site_weather.file_id])
+    species_names = ", ".join([f"'{species_name}'" for species_name in species.scientific_name])
     species_probs = (
         pd.read_parquet(dataset.path / "birdnet_species_probs_table.parquet", columns=["file_id", "scientific_name", "confidence"])
-        .query(f"confidence >= {threshold} and file_id in ({file_ids})")
+        .query(f"confidence >= {threshold} and file_id in ({file_ids}) and scientific_name in ({species_names})")
         .assign(detected=lambda df: [1] * len(df))
     )
     return dataset.append_columns(
@@ -277,9 +304,10 @@ def fetch_acoustic_features_umap(
     dataset = DATASETS.get_dataset(dataset_name)
 
     files = (
-        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "site_id", "file_name", "dddn", "timestamp"])
+        pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "duration", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])
         .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)}")
         .assign(nearest_hour=lambda df: df["timestamp"].dt.round("h"))
+        .drop("duration", axis=1)
     )
     weather = (
         pd.read_parquet(dataset.path / "weather_table.parquet")
@@ -288,7 +316,6 @@ def fetch_acoustic_features_umap(
     file_site_weather = (
         files.merge(weather, on=["site_id", "nearest_hour"], how="left")
         .query(filter_weather_query(current_weather))
-        # .drop([col for col in weather.columns if col not in ["site_id", "nearest_hour"]], axis=1)
         .merge(dataset.locations, on="site_id", how="left")
     )
     file_ids = ", ".join([f"'{file_id}'" for file_id in file_site_weather.file_id])
@@ -318,6 +345,8 @@ FETCH_DATASET_CONFIG = "fetch_dataset_config"
 SET_DATASET_CONFIG = "set_dataset_config"
 FETCH_DATASET_SITES_TREE = "fetch_dataset_sites_tree"
 FETCH_BASE_FILTERS = "fetch_base_filters"
+FETCH_SPECIES_LIST = "fetch_species_list"
+SET_SPECIES_LIST = "set_species_list"
 
 FETCH_DATASET_OPTIONS = "fetch_dataset_options"
 FETCH_DATASET_CATEGORY_ORDERS = "fetch_dataset_category_orders"
@@ -330,6 +359,7 @@ FETCH_ACOUSTIC_FEATURES_UMAP = "fetch_acoustic_features_umap"
 FETCH_BIRDNET_SPECIES = "fetch_birdnet_species"
 FETCH_WEATHER = "fetch_weather"
 FETCH_FILE_WEATHER = "fetch_file_weather"
+FETCH_SPECIES = "fetch_species"
 
 API = {
     FETCH_DATASETS: fetch_datasets,
@@ -339,6 +369,8 @@ API = {
     SET_DATASET_CONFIG: set_dataset_config,
     FETCH_DATASET_SITES_TREE: fetch_sites_tree,
     FETCH_BASE_FILTERS: fetch_base_filters,
+    FETCH_SPECIES_LIST: fetch_species_list,
+    SET_SPECIES_LIST: set_species_list,
 
     FETCH_DATASET_OPTIONS: fetch_dataset_options,
     FETCH_DATASET_CATEGORY_ORDERS: fetch_dataset_category_orders,
@@ -351,4 +383,5 @@ API = {
     FETCH_BIRDNET_SPECIES: fetch_birdnet_species,
     FETCH_WEATHER: fetch_weather,
     FETCH_FILE_WEATHER: fetch_file_weather,
+    FETCH_SPECIES: fetch_species,
 }

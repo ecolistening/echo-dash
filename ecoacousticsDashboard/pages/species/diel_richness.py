@@ -1,10 +1,7 @@
 import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-import datetime as dt
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objs as go
+import numpy as np
 
 from dash import dcc
 from dash_iconify import DashIconify
@@ -13,57 +10,76 @@ from api import FETCH_DATASET_DROPDOWN_OPTION_GROUPS
 from components.dataset_options_select import DatasetOptionsSelect
 from components.data_download_widget import DataDownloadWidget
 from components.controls_panel import ControlsPanel
-from components.figure_download_widget import FigureDownloadWidget
 from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from utils import list2tuple
+from components.figure_download_widget import FigureDownloadWidget
 from utils.content import get_content
 from utils.sketch import empty_figure
 
-PAGE_NAME = "weather-hourly"
-PAGE_TITLE = "Hourly Weather"
+PAGE_NAME = "species-richness"
+PAGE_TITLE = "Species Richness by Time of Day"
 
 dash.register_page(
     __name__,
-    title="Seasonal Weather Averages",
-    name="Seasonal Averages",
-    path="/weather/seasonal-averages",
-    order=1,
+    title="Species Richness Diel Patterns",
+    name="Diel Richness Patterns",
+    path="/species/diel-richness",
+    order=2,
 )
+
+PLOT_HEIGHT = 800
+
+plot_types = ["Scatter", "Scatter Polar"]
 
 layout = dmc.Box([
     ControlsPanel([
         dmc.Group(
             grow=True,
             children=[
+                dmc.Select(
+                    id="species-richness-plot-type-select",
+                    label="Select plot type",
+                    value="Scatter Polar",
+                    data=[
+                        dict(value=plot_type, label=plot_type)
+                        for plot_type in plot_types
+                    ],
+                    searchable=True,
+                    clearable=False,
+                    style=dict(width=200),
+                    persistence=True,
+                ),
                 DatasetOptionsSelect(
-                    id="weather-hourly-variable-select",
+                    id="species-richness-primary-axis-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Temperature", "Precipitation", "Wind"),
-                    label="Weather Variable",
-                    value="temperature_2m",
+                    options=("Hour",),
+                    label="Primary Axis",
+                    value="hour_continuous",
                     clearable=False,
                     allowDeselect=False,
                 ),
                 DatasetOptionsSelect(
-                    id="weather-hourly-colour-select",
+                    id="species-richness-color-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Site Level",),
                     label="Colour by",
                     value="sitelevel_1",
                 ),
                 DatasetOptionsSelect(
-                    id="weather-hourly-facet-row-select",
+                    id="species-richness-facet-row-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Site Level",),
                     label="Facet rows by",
-                    value="sitelevel_1",
+                ),
+                DatasetOptionsSelect(
+                    id="species-richness-facet-column-select",
+                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
+                    label="Facet columns by",
+                    value="year",
                 ),
                 dmc.Chip(
-                    id="weather-hourly-year-wrap-checkbox",
-                    children="Annual Wrap",
+                    "Only Species List",
+                    id="species-list-tickbox",
                     checked=False,
                 ),
                 dmc.Flex(
@@ -76,10 +92,10 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    context="weather-hourly",
+                                    context="species-richness",
                                 ),
                                 FigureDownloadWidget(
-                                    plot_name="weather-hourly-graph",
+                                    plot_name="species-richness-graph",
                                 ),
                             ],
                         ),
@@ -92,24 +108,20 @@ layout = dmc.Box([
             children=[
                 dmc.Stack([
                     dmc.Text(
-                        "Time Aggregation",
+                        children="Detection Threshold",
                         size="sm",
-                        ta="left",
+                        ta="right",
                     ),
-                    dmc.SegmentedControl(
-                        id="weather-hourly-time-aggregation",
-                        data=[
-                            {"label": "1 hour", "value": "1h"},
-                            {"label": "6 hours", "value": "6h"},
-                            {"label": "1 day", "value": "1D"},
-                            {"label": "1 week", "value": "1W"},
-                            {"label": "2 weeks", "value": "2W"},
-                            {"label": "1 month", "value": "1ME"},
-                            {"label": "3 months", "value": "3ME"},
-                            {"label": "6 months", "value": "6ME"},
-                        ],
-                        value="1W",
+                    dmc.Slider(
+                        id="species-threshold-slider",
+                        min=0.0, max=1.0,
+                        step=0.1,
+                        value=0.5,
                         persistence=True,
+                        marks=[
+                            dict(value=i, label=np.format_float_positional(i, precision=1))
+                            for i in np.arange(0.0, 1.0, 0.1)
+                        ],
                     ),
                 ]),
             ],
@@ -118,17 +130,17 @@ layout = dmc.Box([
     dmc.Space(h="sm"),
     dcc.Loading(
         dcc.Graph(
-            id="weather-hourly-graph",
+            id="species-richness-graph",
             figure=empty_figure("Loading data..."),
         ),
     ),
     dmc.Space(h="sm"),
     dmc.Box(
         id="page-content",
-        children=get_content("page/weather-hourly")
+        children=get_content("page/species-richness")
     ),
 ])
 
 def register_callbacks():
-    from callbacks.pages.weather import seasonal_averages_callbacks
-    seasonal_averages_callbacks.register_callbacks()
+    from callbacks.pages.species import diel_richness_callbacks
+    diel_richness_callbacks.register_callbacks()

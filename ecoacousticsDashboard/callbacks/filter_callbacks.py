@@ -39,6 +39,7 @@ def set_filters(dataset_name):
         filters["weather_variables"][variable]["variable_range"] = filters["weather_variables"][variable]["variable_range_bounds"]
     filters["current_sites"] = filters["tree"]
     filters["files"] = {}
+    species = filters["species"]
     return filters
 
 def register_callbacks():
