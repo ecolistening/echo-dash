@@ -37,88 +37,136 @@ def create_dash_app() -> dash.Dash:
         ]
     )
 
-    from components.header import Header, HEADER_CONFIG
-    from components.nav_bar import NavBar, NAVBAR_CONFIG
-    from components.hover_icons import HoverIcons
+    from components.header import Header
+    from components.menu import Menu
     from components.filter_panel import FilterPanel
     from components.date_range_filter import DateRangeFilter
     from components.site_level_filter import SiteLevelFilter
     from components.environmental_filter import EnvironmentalFilter
-    from components.dataset_settings_drawer import DatasetSettingsDrawer
     from store import global_store
+
+    def SplashPage():
+        return dmc.Center(
+            id="splash-wrapper",
+            style={
+                "height": "100vh",
+                "display": "flex",
+                "opacity": 1,
+                "transition": "opacity 1s ease",
+                "position": "absolute",
+                "top": 0, "left": 0, "right": 0, "bottom": 0,
+                "zIndex": 9999,
+            },
+            children=dmc.Stack(
+                align="center",
+                children=[
+                    dmc.Image(src="/assets/logo.png", w=350),
+                    dmc.Text("Please wait while we load your data...", ta="center"),
+                    dmc.Progress(id="progress-bar", value=0, striped=True, animated=True, w="50%"),
+                    dcc.Interval(id="progress-interval", interval=500, n_intervals=0),
+                ],
+            ),
+        )
+
+    def MainPage():
+        return dmc.Box(
+            id="page-wrapper",
+            style={"display": "block", "opacity": 0, "transition": "opacity 1s ease"},
+            children=[
+                dmc.AppShellHeader(
+                    id="header",
+                    children=Header(),
+                ),
+                dmc.AppShellNavbar(
+                    id="navbar",
+                    p="md",
+                    w=300,
+                    children=Menu(),
+                ),
+                dmc.AppShellMain(
+                    children=[
+                        FilterPanel([
+                            dmc.Accordion(
+                                multiple=True,
+                                persistence=True,
+                                children=[
+                                    dmc.AccordionItem(
+                                        value="site",
+                                        children=[
+                                            dmc.AccordionControl("By Site"),
+                                            dmc.AccordionPanel(SiteLevelFilter())
+                                        ]
+                                    ),
+                                    dmc.AccordionItem(
+                                        value="date",
+                                        children=[
+                                            dmc.AccordionControl("By Date"),
+                                            dmc.AccordionPanel(DateRangeFilter())
+                                        ]
+                                    ),
+                                    dmc.AccordionItem(
+                                        value="weather",
+                                        children=[
+                                            dmc.AccordionControl("By Weather"),
+                                            dmc.AccordionPanel(EnvironmentalFilter())
+                                        ]
+                                    ),
+                                ]
+                            ),
+                            dmc.Space(h="sm"),
+                            dmc.Group(
+                                justify="flex-end",
+                                children=[
+                                    dmc.Button(
+                                        id="filter-reset-button",
+                                        children="Reset All",
+                                        color="blue",
+                                        w=100,
+                                    ),
+                                ]
+                            ),
+                        ]),
+                        dmc.Space(h="sm"),
+                        dash.page_container,
+                    ],
+                ),
+                dcc.Interval(
+                    id="load-datasets",
+                    interval=100,
+                    max_intervals=1,
+                ),
+            ]
+        )
 
     app.layout = dmc.MantineProvider(
         theme=THEME,
         withGlobalClasses=True,
         children=dmc.AppShell(
             id="appshell",
-            navbar=NAVBAR_CONFIG,
-            header=HEADER_CONFIG,
+            navbar={
+                "width": 300,
+                "breakpoint": "sm",
+                "collapsed": {
+                    "desktop": False,
+                    "mobile": True,
+                },
+            },
+            header={
+                "height": 60,
+                "color": "black",
+            },
             padding="md",
             children=[
                 *global_store,
-                Header(),
-                NavBar(),
-                DatasetSettingsDrawer(),
-                dmc.AppShellMain([
-                    FilterPanel([
-                        dmc.Accordion(
-                            multiple=True,
-                            persistence=True,
-                            children=[
-                                dmc.AccordionItem(
-                                    value="site",
-                                    children=[
-                                        dmc.AccordionControl("By Site"),
-                                        dmc.AccordionPanel(SiteLevelFilter())
-                                    ]
-                                ),
-                                dmc.AccordionItem(
-                                    value="date",
-                                    children=[
-                                        dmc.AccordionControl("By Date"),
-                                        dmc.AccordionPanel(DateRangeFilter())
-                                    ]
-                                ),
-                                dmc.AccordionItem(
-                                    value="weather",
-                                    children=[
-                                        dmc.AccordionControl("By Weather"),
-                                        dmc.AccordionPanel(EnvironmentalFilter())
-                                    ]
-                                ),
-                            ]
-                        ),
-                        dmc.Space(h="sm"),
-                        dmc.Group(
-                            justify="flex-end",
-                            children=[
-                                dmc.Button(
-                                    id="filter-reset-button",
-                                    children="Reset All",
-                                    color="blue",
-                                    w=100,
-                                ),
-                            ]
-                        ),
-                    ]),
-                    dmc.Space(h="sm"),
-                    dash.page_container,
-                ]),
-                dcc.Interval(
-                    id="load-datasets",
-                    interval=100,
-                    max_intervals=1,
-                ),
+                dcc.Store(id="init-complete", storage_type="session"),
+                SplashPage(),
+                MainPage(),
             ],
         )
     )
 
     from callbacks import nav_bar_callbacks
     nav_bar_callbacks.register_callbacks()
-
-    from callbacks import dataset_config_callbacks
-    dataset_config_callbacks.register_callbacks()
 
     from callbacks import filter_callbacks
     filter_callbacks.register_callbacks()
@@ -130,6 +178,57 @@ def create_dash_app() -> dash.Dash:
         mod = __import__(page["module"], fromlist=["register_callbacks"])
         if hasattr(mod, "register_callbacks"):
             mod.register_callbacks()
+
+    @callback(
+        Output("progress-bar", "value"),
+        Output("init-complete", "data"),
+        Input("progress-interval", "n_intervals"),
+        State("init-complete", "data"),
+    )
+    def update_progress(n, init_complete):
+        if init_complete:
+            return 100, no_update
+        progress = min(100, n * 10)
+        if progress >= 100:
+            return 100, True
+        return progress, no_update
+
+    @callback(
+        Output("progress-interval", "disabled"),
+        Input("init-complete", "data")
+    )
+    def stop_interval(init_complete):
+        return bool(init_complete)
+
+    @callback(
+        Output("splash-wrapper", "style"),
+        Output("page-wrapper", "style"),
+        Input("init-complete", "data"),
+    )
+    def toggle_views(init_complete):
+        if init_complete:
+            splash_style = {
+                "display": "flex",
+                "opacity": 0,
+                "transition": "opacity 1s ease",
+                "position": "absolute",
+                "top": 0, "left": 0, "right": 0, "bottom": 0,
+                "zIndex": 9999,
+                "pointerEvents": "none",
+            }
+            app_style = {"display": "block", "opacity": 1, "transition": "opacity 1s ease"}
+            return splash_style, app_style
+
+        splash_style = {
+            "display": "flex",
+            "opacity": 1,
+            "transition": "opacity 1s ease",
+            "position": "absolute",
+            "top": 0, "left": 0, "right": 0, "bottom": 0,
+            "zIndex": 9999,
+        }
+        app_style = {"display": "block", "opacity": 0, "transition": "opacity 1s ease"}
+        return splash_style, app_style
 
     return app
 

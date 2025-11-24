@@ -6,8 +6,6 @@ from dash import html, dcc, callback
 from dash import Output, Input, State
 from dash_iconify import DashIconify
 
-from components.hover_icons import HoverIcons
-
 HEADER_CONFIG = {
     "height": 60,
     "color": "black",
@@ -29,15 +27,75 @@ def Header():
                                     size="sm",
                                     opened=True,
                                 ),
-                                # dmc.Image(src=logo, h=40),
-                                dmc.Title("EchoDash", c="blue"),
+                                dmc.Anchor(
+                                    children=dmc.Text(
+                                        "echo-dash",
+                                        c="#1D4A7A",
+                                        size="xl"
+                                    ),
+                                    href="/",
+                                    underline="never",
+                                ),
                             ]
                         ),
                     ),
                     dmc.GridCol(
-                        span=6,
-                        children=HoverIcons()
-                    )
+                        span=5,
+                        children=dmc.Group(
+                            justify="flex-end",
+                            children=[
+                                dmc.Box([
+                                    dmc.Text(
+                                        "Choose a dataset:",
+                                        size="sm",
+                                        span=True,
+                                        mr="1rem",
+                                    ),
+                                    dmc.Select(
+                                        id="dataset-select",
+                                        style={"display": "inline-block"},
+                                        searchable=True,
+                                        clearable=False,
+                                        allowDeselect=False,
+                                        nothingFoundMessage="No datasets found...",
+                                        persistence=True,
+                                    ),
+                                ]),
+                            ]
+                        )
+                    ),
+                    dmc.GridCol(
+                        span=1,
+                        children=dmc.Group(
+                            justify="flex-end",
+                            children=[
+                                dmc.Anchor(
+                                    children=dmc.ActionIcon(
+                                        DashIconify(
+                                            icon="cil:home",
+                                            width=24,
+                                        ),
+                                        variant="light",
+                                        color="blue",
+                                        size="lg",
+                                    ),
+                                    href="/",
+                                ),
+                                dmc.Anchor(
+                                    children=dmc.ActionIcon(
+                                        DashIconify(
+                                            icon="fluent:settings-32-regular",
+                                            width=24,
+                                        ),
+                                        variant="light",
+                                        color="blue",
+                                        size="lg",
+                                    ),
+                                    href="/settings"
+                                ),
+                            ]
+                        ),
+                    ),
                 ]
             ),
         ]

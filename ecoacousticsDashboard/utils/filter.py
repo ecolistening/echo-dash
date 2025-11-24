@@ -5,7 +5,7 @@ def filter_sites_query(sites, selected_sites):
 
 def filter_files_query(file_ids):
     file_ids = ", ".join([f"'{file_id}'" for file_id in file_ids])
-    return f"file_id not in ({file_ids})"
+    return f"file_id not in ({file_ids}) and duration >= 60.0"
 
 def filter_dates_query(date_range):
     return f"timestamp >= '{date_range[0]}' and timestamp <= '{date_range[1]}'"

@@ -18,18 +18,15 @@ from components.filter_panel import FilterPanel
 from components.date_range_filter import DateRangeFilter
 from components.site_level_filter import SiteLevelFilter
 from components.environmental_filter import EnvironmentalFilter
-from utils import list2tuple
+from utils import list2tuple, send_download
 from utils.content import get_content
 from utils.sketch import empty_figure
 
-PAGE_NAME = "weather-hourly"
-PAGE_TITLE = "Hourly Weather"
-
 dash.register_page(
     __name__,
-    title="Seasonal Weather Averages",
+    title="Soundscape Descriptor Seasonal Averages",
     name="Seasonal Averages",
-    path="/weather/seasonal-averages",
+    path="/soundscape/seasonal-averages",
     order=1,
 )
 
@@ -38,34 +35,47 @@ layout = dmc.Box([
         dmc.Group(
             grow=True,
             children=[
-                DatasetOptionsSelect(
-                    id="weather-hourly-variable-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Temperature", "Precipitation", "Wind"),
-                    label="Weather Variable",
-                    value="temperature_2m",
+                dmc.Select(
+                    id="feature-select",
+                    label="Acoustic Feature",
+                    value="bioacoustic index",
+                    searchable=True,
                     clearable=False,
                     allowDeselect=False,
                 ),
                 DatasetOptionsSelect(
-                    id="weather-hourly-colour-select",
+                    id="index-averages-colour-select",
                     action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
                     options=("Site Level",),
                     label="Colour by",
                     value="sitelevel_1",
                 ),
-                DatasetOptionsSelect(
-                    id="weather-hourly-facet-row-select",
-                    action=FETCH_DATASET_DROPDOWN_OPTION_GROUPS,
-                    options=("Site Level",),
-                    label="Facet rows by",
-                    value="sitelevel_1",
-                ),
                 dmc.Chip(
-                    id="weather-hourly-year-wrap-checkbox",
+                    id="index-averages-year-wrap-checkbox",
                     children="Annual Wrap",
                     checked=False,
                 ),
+                # dmc.Chip(
+                #     'Colour by Recorder',
+                #     value='colour',
+                #     checked=True,
+                #     persistence=True,
+                #     id='colour-locations'
+                # ),
+                # dmc.Chip(
+                #     'Outliers',
+                #     value='outlier',
+                #     checked=True,
+                #     persistence=True,
+                #     id='outliers-tickbox'
+                # ),
+                # dmc.Chip(
+                #     'Plot per Recorder',
+                #     value='subplots',
+                #     checked=False,
+                #     persistence=True,
+                #     id='separate-plots'
+                # ),
                 dmc.Flex(
                     p="1rem",
                     align="center",
@@ -76,10 +86,10 @@ layout = dmc.Box([
                             grow=True,
                             children=[
                                 DataDownloadWidget(
-                                    context="weather-hourly",
+                                    context="index-averages",
                                 ),
                                 FigureDownloadWidget(
-                                    plot_name="weather-hourly-graph",
+                                    plot_name="index-averages-graph",
                                 ),
                             ],
                         ),
@@ -92,15 +102,29 @@ layout = dmc.Box([
             children=[
                 dmc.Stack([
                     dmc.Text(
+                        "Acoustic Feature Range",
+                        id="feature-range-title",
+                        size="sm",
+                        ta="left",
+                    ),
+                    dmc.RangeSlider(
+                        id="feature-range-slider",
+                        min=0,
+                        max=999,
+                        step=1,
+                        persistence=True,
+                        showLabelOnHover=False,
+                    ),
+                ]),
+                dmc.Stack([
+                    dmc.Text(
                         "Time Aggregation",
                         size="sm",
                         ta="left",
                     ),
                     dmc.SegmentedControl(
-                        id="weather-hourly-time-aggregation",
+                        id="index-averages-time-aggregation",
                         data=[
-                            {"label": "1 hour", "value": "1h"},
-                            {"label": "6 hours", "value": "6h"},
                             {"label": "1 day", "value": "1D"},
                             {"label": "1 week", "value": "1W"},
                             {"label": "2 weeks", "value": "2W"},
@@ -118,17 +142,26 @@ layout = dmc.Box([
     dmc.Space(h="sm"),
     dcc.Loading(
         dcc.Graph(
-            id="weather-hourly-graph",
+            id="index-averages-graph",
             figure=empty_figure("Loading data..."),
         ),
     ),
     dmc.Space(h="sm"),
     dmc.Box(
         id="page-content",
-        children=get_content("page/weather-hourly")
+        children=get_content("page/acoustic-feature-seasonal-averages")
+    ),
+    dmc.Box(
+        id="soundade-features-description",
+        children=[]
+    ),
+    dmc.Space(h="sm"),
+    dmc.Box(
+        id="feature-descriptor-content",
+        children=[],
     ),
 ])
 
 def register_callbacks():
-    from callbacks.pages.weather import seasonal_averages_callbacks
+    from callbacks.pages.soundscape import seasonal_averages_callbacks
     seasonal_averages_callbacks.register_callbacks()

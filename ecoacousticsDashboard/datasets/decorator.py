@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import attrs
 import functools
+import numpy as np
 
 from loguru import logger
 from typing import Any, Dict, Tuple, List
@@ -10,8 +11,8 @@ from datasets.dataset import Dataset
 from utils import floor, ceil, capitalise_each
 
 DEFAULT_OPTION_GROUPS = ("Site Level", "Time of Day", "Temporal")# "Spatial")
-WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+WEEKDAYS = list(map(lambda s: s[:3], ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']))
+MONTHS = list(map(lambda s: s[:3], ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']))
 DDDN = ["dawn", "day", "dusk", "night"]
 
 @attrs.define
@@ -40,6 +41,7 @@ class DatasetDecorator:
             "Site Level": self.site_level_columns,
             "Time of Day": self.solar_columns,
             "Time": self.time_columns,
+            "Hour": self.hour_columns,
             "Temporal": self.temporal_columns,
             "Spatial": self.spatial_columns,
             "Temperature": self.temperature_columns,
@@ -56,6 +58,7 @@ class DatasetDecorator:
             self.site_level_columns |
             self.solar_columns |
             self.time_columns |
+            self.hour_columns |
             self.temporal_columns |
             self.spatial_columns |
             self.temperature_columns |
@@ -97,11 +100,7 @@ class DatasetDecorator:
         for column in self.dataset.locations.columns:
             if column.startswith("sitelevel_"):
                 label = self.dataset.config.get('Site Hierarchy', column, fallback=column)
-                values = self.dataset.files[column].unique()
-                try:
-                    order = list(map(str, sorted(map(int, values))))
-                except ValueError:
-                    order = list(sorted(values))
+                order = list(sorted(self.dataset.files[column].unique()))
                 columns[column] = {"label": label, "order": order}
         return columns
 
@@ -134,6 +133,17 @@ class DatasetDecorator:
         }
 
     @functools.cached_property
+    def hour_columns(self) -> Dict[str, List[Any]]:
+        return {
+            "hour_continuous": {"label": "Hour After Midnight", "min": 0, "max": 23},
+            **{
+                # FIXME: change these in soundade to snake case for application-wide consistency
+                f"hour_after_{c}": {"label": f"Hour After {c.capitalize()}", "min": 0, "max": 23}
+                for c in ["dawn", "sunrise", "noon", "sunset", "dusk"]
+            }
+        }
+
+    @functools.cached_property
     def temporal_columns(self) -> Dict[str, List[Any]]:
         return {
             "hour_continuous": {
@@ -153,11 +163,11 @@ class DatasetDecorator:
                 "label": "Week of Year (Categorical)",
             },
             "weekday": {
-                "order": sorted(self.dataset.files["weekday"].unique(), key=lambda x: WEEKDAYS.index(x)),
+                "order": list(map(lambda s: s[:3], sorted(self.dataset.files["weekday"].unique(), key=lambda x: WEEKDAYS.index(x)))),
                 "label": "Week Day",
             },
             "month": {
-                "order": sorted(self.dataset.files["month"].unique(), key=lambda x: MONTHS.index(x)),
+                "order": list(map(lambda s: s[:3], sorted(self.dataset.files["month"].unique(), key=lambda x: MONTHS.index(x)))),
                 "label": "Month",
             },
             "year": {
@@ -252,11 +262,11 @@ class DatasetDecorator:
         return {
             "habitat_type": {
                 "label": "Habitat Type",
-                "order": list(self.dataset.species["habitat_type"].unique()),
+                "order": list(filter(None, self.dataset.species["habitat_type"].unique())),
             },
             "habitat_density": {
                 "label": "Habitat Density",
-                "order": list(self.dataset.species["habitat_density"].unique()),
+                "order": list(filter(lambda x: not np.isnan(x), self.dataset.species["habitat_density"].unique())),
             },
         }
 
@@ -265,15 +275,15 @@ class DatasetDecorator:
         return {
             "trophic_niche": {
                 "label": "Trophic Niche",
-                "order": list(self.dataset.species["trophic_niche"].unique()),
+                "order": list(filter(None, self.dataset.species["trophic_niche"].unique())),
             },
             "trophic_level": {
                 "label": "Trophic Level",
-                "order": list(self.dataset.species["trophic_level"].unique()),
+                "order": list(filter(None, self.dataset.species["trophic_level"].unique())),
             },
             "primary_lifestyle": {
                 "label": "Primary Lifestyle",
-                "order": list(self.dataset.species["primary_lifestyle"].unique()),
+                "order": list(filter(None, self.dataset.species["primary_lifestyle"].unique())),
             },
         }
 
