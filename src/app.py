@@ -44,6 +44,7 @@ def create_dash_app() -> dash.Dash:
     from components.site_level_filter import SiteLevelFilter
     from components.environmental_filter import EnvironmentalFilter
     from store import global_store
+    from api import dispatch, FETCH_DATASETS
 
     def SplashPage():
         return dmc.Center(
@@ -133,7 +134,6 @@ def create_dash_app() -> dash.Dash:
                 dcc.Interval(
                     id="load-datasets",
                     interval=100,
-                    max_intervals=1,
                 ),
             ]
         )
@@ -178,6 +178,25 @@ def create_dash_app() -> dash.Dash:
         mod = __import__(page["module"], fromlist=["register_callbacks"])
         if hasattr(mod, "register_callbacks"):
             mod.register_callbacks()
+
+    @callback(
+        Output("dataset-select", "value"),
+        Output("dataset-select", "data"),
+        Output("load-datasets", "disabled"),
+        State("dataset-select", "value"),
+        Input("load-datasets", "n_intervals"),
+    )
+    def fetch_datasets(current_dataset, _) -> List[Dict[str, str]]:
+        action = FETCH_DATASETS
+        logger.debug(f"{ctx.triggered_id=} {action=}")
+        datasets = dispatch(action, default=[])
+        dataset_options = [
+            dict(label=dataset, value=dataset)
+            for dataset in datasets
+        ]
+        if current_dataset is None or not len(current_dataset):
+            current_dataset = dataset_options[0]["value"]
+        return current_dataset, dataset_options, True
 
     @callback(
         Output("progress-bar", "value"),

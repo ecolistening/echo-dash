@@ -66,27 +66,27 @@ def register_callbacks():
             return no_update
         return set_filters(dataset_name)
 
-    # @callback(
-    #     Output("precache", "data"),
-    #     State("precache", "data"),
-    #     State("dataset-select", "value"),
-    #     Input("filter-store", "data"),
-    # )
-    # def precache_api_requests(cached_dataset: bool | None, dataset_name: str, filters: Dict[str, Any]) -> None:
-    #     if not dataset_name or cached_dataset == dataset_name:
-    #         return no_update
+    @callback(
+        Output("precache", "data"),
+        State("precache", "data"),
+        State("dataset-select", "value"),
+        Input("filter-store", "data"),
+    )
+    def precache_api_requests(cached_dataset: bool | None, dataset_name: str, filters: Dict[str, Any]) -> None:
+        if not dataset_name or cached_dataset == dataset_name:
+            return no_update
 
-    #     logger.debug(f"{ctx.triggered_id=} caching {dataset_name} on load")
-    #     payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters))
+        logger.debug(f"{ctx.triggered_id=} caching {dataset_name} on load")
+        payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters))
 
-    #     dispatch(FETCH_FILES, **payload)
-    #     dispatch(FETCH_FILE_WEATHER, **payload)
-    #     dispatch(FETCH_ACOUSTIC_FEATURES_UMAP, **payload)
-    #     dispatch(FETCH_ACOUSTIC_FEATURES, **payload)
-    #     dispatch(FETCH_BIRDNET_SPECIES, threshold=0.5, **payload)
-    #     logger.debug(f"Filter caching {dataset_name} complete")
+        dispatch(FETCH_FILES, **payload)
+        dispatch(FETCH_FILE_WEATHER, **payload)
+        dispatch(FETCH_ACOUSTIC_FEATURES_UMAP, **payload)
+        dispatch(FETCH_ACOUSTIC_FEATURES, **payload)
+        dispatch(FETCH_BIRDNET_SPECIES, threshold=0.5, **payload)
+        logger.debug(f"Filter caching {dataset_name} complete")
 
-    #     return dataset_name
+        return dataset_name
 
     # ------ DATES FILTER ----- #
 
