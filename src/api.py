@@ -23,20 +23,10 @@ from utils.filter import (
     filter_dates_query,
     filter_weather_query,
     filter_feature_query,
+    filter_dict_to_tuples,
 )
 
 DATASETS = DatasetLoader(root_dir)
-
-def filter_dict_to_tuples(filters):
-    filters_args = {
-        "current_sites": list2tuple(filters["current_sites"]),
-        "current_date_range": list2tuple(filters["date_range"]),
-        "current_feature": (filters["current_feature"], list2tuple(filters["current_feature_range"])),
-        "current_file_ids": list2tuple(list(itertools.chain(*filters["files"].values()))),
-        "current_weather": list2tuple([(variable_name, list2tuple(params["variable_range"])) for variable_name, params in filters["weather_variables"].items()]),
-        "current_species": list2tuple(filters["species"]),
-    }
-    return filters_args
 
 @functools.lru_cache(maxsize=1)
 def fetch_datasets():
