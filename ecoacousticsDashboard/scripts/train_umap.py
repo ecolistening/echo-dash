@@ -53,7 +53,6 @@ def train_umap(
     pipe.fit(data)
     # persist scaling parameters and feature list
     save_dir.mkdir(exist_ok=True, parents=True)
-    import code; code.interact(local=locals())
     with open(save_dir / "config.yaml", "wb") as f:
         config = dict(
             center_=scaler.center_,
