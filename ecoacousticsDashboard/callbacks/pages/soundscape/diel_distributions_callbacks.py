@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, dcc, callback, ctx, no_update
+from dash import html, dcc, callback, ctx, no_update, clientside_callback
 from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
 from loguru import logger
@@ -98,11 +98,23 @@ def register_callbacks():
         fig.update_layout(title_text=title_text)
         return fig
 
+    clientside_callback(
+        """
+        function updateLoadingState(n_clicks) {
+            return true
+        }
+        """,
+        Output({"type": "index-box-data-download-button", "index": MATCH}, "loading", allow_duplicate=True),
+        Input({"type": "index-box-data-download-button", "index": MATCH}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
     @callback(
-        Output("index-box-data-download", "data"),
+        Output({"type": "index-box-data-download", "index": MATCH}, "data"),
+        Output({"type": "index-box-data-download-button", "index": MATCH}, "loading"),
         State("dataset-select", "value"),
         State("filter-store", "data"),
-        Input({"type": "index-box-data-download-button", "index": ALL}, "n_clicks"),
+        Input({"type": "index-box-data-download-button", "index": MATCH}, "n_clicks"),
         prevent_initial_call=True,
     )
     def download_data(
@@ -114,4 +126,4 @@ def register_callbacks():
             fetch_data(dataset_name, filters),
             f"{dataset_name}_acoustic_indices",
             ctx.triggered_id["index"],
-        )
+        ), False

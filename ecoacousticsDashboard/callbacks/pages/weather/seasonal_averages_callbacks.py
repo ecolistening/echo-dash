@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, dcc, callback, ctx, no_update
+from dash import html, dcc, callback, ctx, no_update, clientside_callback
 from dash import Output, Input, State, ALL, MATCH
 from loguru import logger
 from typing import Any, Dict, List, Tuple
@@ -87,11 +87,23 @@ def register_callbacks():
         fig.update_layout(title_text=options.get(variable, {}).get("label", variable))
         return fig
 
+    clientside_callback(
+        """
+        function updateLoadingState(n_clicks) {
+            return true
+        }
+        """,
+        Output({"type": "weather-hourly-data-download-button", "index": MATCH}, "loading", allow_duplicate=True),
+        Input({"type": "weather-hourly-data-download-button", "index": MATCH}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
     @callback(
-        Output("weather-hourly-data-download", "data"),
+        Output({"type": "weather-hourly-data-download", "index": MATCH}, "data"),
+        Output({"type": "weather-hourly-data-download-button", "index": MATCH}, "loading"),
         State("dataset-select", "value"),
         State("filter-store", "data"),
-        Input({"type": "weather-hourly-data-download-button", "index": ALL}, "n_clicks"),
+        Input({"type": "weather-hourly-data-download-button", "index": MATCH}, "n_clicks"),
         prevent_initial_call=True,
     )
     def download_data(
@@ -103,4 +115,14 @@ def register_callbacks():
             fetch_data(dataset_name, filters),
             f"{dataset_name}_weather",
             ctx.triggered_id["index"]
-        )
+        ), False
+
+    @callback(
+        Output({"type": "weather-hourly-data-download", "index": MATCH}, "data", allow_duplicate=True),
+        Input({"type": "weather-hourly-data-download", "index": MATCH}, "data"),
+        prevent_initial_call=True,
+    )
+    def clear_download(data):
+        if data is not None:
+            return None
+        return no_update

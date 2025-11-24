@@ -37,8 +37,8 @@ def create_dash_app() -> dash.Dash:
         ]
     )
 
-    from components.header import Header, HEADER_CONFIG
-    from components.nav_bar import NavBar, NAVBAR_CONFIG
+    from components.header import Header
+    from components.menu import Menu
     from components.filter_panel import FilterPanel
     from components.date_range_filter import DateRangeFilter
     from components.site_level_filter import SiteLevelFilter
@@ -47,7 +47,7 @@ def create_dash_app() -> dash.Dash:
 
     def SplashPage():
         return dmc.Center(
-            id="landing-wrapper",
+            id="splash-wrapper",
             style={
                 "height": "100vh",
                 "display": "flex",
@@ -56,7 +56,6 @@ def create_dash_app() -> dash.Dash:
                 "position": "absolute",
                 "top": 0, "left": 0, "right": 0, "bottom": 0,
                 "zIndex": 9999,
-
             },
             children=dmc.Stack(
                 align="center",
@@ -74,53 +73,63 @@ def create_dash_app() -> dash.Dash:
             id="page-wrapper",
             style={"display": "block", "opacity": 0, "transition": "opacity 1s ease"},
             children=[
-                Header(),
-                NavBar(),
-                dmc.AppShellMain([
-                    FilterPanel([
-                        dmc.Accordion(
-                            multiple=True,
-                            persistence=True,
-                            children=[
-                                dmc.AccordionItem(
-                                    value="site",
-                                    children=[
-                                        dmc.AccordionControl("By Site"),
-                                        dmc.AccordionPanel(SiteLevelFilter())
-                                    ]
-                                ),
-                                dmc.AccordionItem(
-                                    value="date",
-                                    children=[
-                                        dmc.AccordionControl("By Date"),
-                                        dmc.AccordionPanel(DateRangeFilter())
-                                    ]
-                                ),
-                                dmc.AccordionItem(
-                                    value="weather",
-                                    children=[
-                                        dmc.AccordionControl("By Weather"),
-                                        dmc.AccordionPanel(EnvironmentalFilter())
-                                    ]
-                                ),
-                            ]
-                        ),
+                dmc.AppShellHeader(
+                    id="header",
+                    children=Header(),
+                ),
+                dmc.AppShellNavbar(
+                    id="navbar",
+                    p="md",
+                    w=300,
+                    children=Menu(),
+                ),
+                dmc.AppShellMain(
+                    children=[
+                        FilterPanel([
+                            dmc.Accordion(
+                                multiple=True,
+                                persistence=True,
+                                children=[
+                                    dmc.AccordionItem(
+                                        value="site",
+                                        children=[
+                                            dmc.AccordionControl("By Site"),
+                                            dmc.AccordionPanel(SiteLevelFilter())
+                                        ]
+                                    ),
+                                    dmc.AccordionItem(
+                                        value="date",
+                                        children=[
+                                            dmc.AccordionControl("By Date"),
+                                            dmc.AccordionPanel(DateRangeFilter())
+                                        ]
+                                    ),
+                                    dmc.AccordionItem(
+                                        value="weather",
+                                        children=[
+                                            dmc.AccordionControl("By Weather"),
+                                            dmc.AccordionPanel(EnvironmentalFilter())
+                                        ]
+                                    ),
+                                ]
+                            ),
+                            dmc.Space(h="sm"),
+                            dmc.Group(
+                                justify="flex-end",
+                                children=[
+                                    dmc.Button(
+                                        id="filter-reset-button",
+                                        children="Reset All",
+                                        color="blue",
+                                        w=100,
+                                    ),
+                                ]
+                            ),
+                        ]),
                         dmc.Space(h="sm"),
-                        dmc.Group(
-                            justify="flex-end",
-                            children=[
-                                dmc.Button(
-                                    id="filter-reset-button",
-                                    children="Reset All",
-                                    color="blue",
-                                    w=100,
-                                ),
-                            ]
-                        ),
-                    ]),
-                    dmc.Space(h="sm"),
-                    dash.page_container,
-                ]),
+                        dash.page_container,
+                    ],
+                ),
                 dcc.Interval(
                     id="load-datasets",
                     interval=100,
@@ -134,8 +143,18 @@ def create_dash_app() -> dash.Dash:
         withGlobalClasses=True,
         children=dmc.AppShell(
             id="appshell",
-            navbar=NAVBAR_CONFIG,
-            header=HEADER_CONFIG,
+            navbar={
+                "width": 300,
+                "breakpoint": "sm",
+                "collapsed": {
+                    "desktop": False,
+                    "mobile": True,
+                },
+            },
+            header={
+                "height": 60,
+                "color": "black",
+            },
             padding="md",
             children=[
                 *global_store,
@@ -182,7 +201,7 @@ def create_dash_app() -> dash.Dash:
         return bool(init_complete)
 
     @callback(
-        Output("landing-wrapper", "style"),
+        Output("splash-wrapper", "style"),
         Output("page-wrapper", "style"),
         Input("init-complete", "data"),
     )

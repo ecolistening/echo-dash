@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, dcc, callback, ctx, no_update
+from dash import html, dcc, callback, ctx, no_update, clientside_callback
 from dash import Output, Input, State, ALL, MATCH
 from io import StringIO
 from loguru import logger
@@ -128,20 +128,32 @@ def register_callbacks():
         fig.update_layout(title_text="UMAP of Soundscape Descriptors")
         return fig
 
+    clientside_callback(
+        """
+        function updateLoadingState(n_clicks) {
+            return true
+        }
+        """,
+        Output({"type": "umap-data-download-button", "index": MATCH}, "loading", allow_duplicate=True),
+        Input({"type": "umap-data-download-button", "index": MATCH}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
     @callback(
-        Output("umap-data-download", "data"),
+        Output({"type": "umap-data-download", "index": MATCH}, "data"),
+        Output({"type": "umap-data-download-button", "index": MATCH}, "loading"),
         State("dataset-select", "value"),
         State("filter-store", "data"),
-        Input({"type": "umap-data-download-button", "index": ALL}, "n_clicks"),
+        Input({"type": "umap-data-download-button", "index": MATCH}, "n_clicks"),
         prevent_initial_call=True,
     )
     def download_data(
         dataset_name: str,
         filters,
-        clicks,
+        n_clicks,
     ) -> Dict[str, Any]:
         return send_download(
             fetch_data(dataset_name, filters),
             f"{dataset_name}_acoustic_features_umap",
             ctx.triggered_id["index"]
-        )
+        ), False

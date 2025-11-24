@@ -9,7 +9,7 @@ import plotly.express as px
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 
-from dash import html, dcc, callback, ctx, no_update
+from dash import html, dcc, callback, ctx, no_update, clientside_callback
 from dash import Output, Input, State, ALL, MATCH
 from loguru import logger
 from io import StringIO
@@ -91,12 +91,24 @@ def register_callbacks():
         fig.update_layout(title_text=f"Species Matrix |{f' {opts[0]} |' if len(opts) else ''} p > {threshold}")
         return fig
 
+    clientside_callback(
+        """
+        function updateLoadingState(n_clicks) {
+            return true
+        }
+        """,
+        Output({"type": "species-community-data-download-button", "index": MATCH}, "loading", allow_duplicate=True),
+        Input({"type": "species-community-data-download-button", "index": MATCH}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
     @callback(
-        Output("species-community-data-download", "data"),
+        Output({"type": "species-community-data-download", "index": MATCH}, "data"),
+        Output({"type": "species-community-data-download-button", "index": MATCH}, "loading"),
         State("dataset-select", "value"),
         State("filter-store", "data"),
         State("species-threshold-slider", "value"),
-        Input({"type": "species-community-data-download-button", "index": ALL}, "n_clicks"),
+        Input({"type": "species-community-data-download-button", "index": MATCH}, "n_clicks"),
         prevent_initial_call=True,
     )
     def download_data(
@@ -113,4 +125,4 @@ def register_callbacks():
             data,
             f"{dataset_name}_birdnet_detections",
             ctx.triggered_id["index"],
-        )
+        ), False

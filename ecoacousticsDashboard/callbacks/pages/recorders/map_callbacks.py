@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, dcc, callback, ctx, no_update
+from dash import html, dcc, callback, ctx, no_update, clientside_callback
 from dash import Output, Input, State, ALL, MATCH
 from loguru import logger
 from io import StringIO
@@ -109,11 +109,23 @@ def register_callbacks():
         fig['layout']['uirevision'] = 'some-constant'
         return fig
 
+    clientside_callback(
+        """
+        function updateLoadingState(n_clicks) {
+            return true
+        }
+        """,
+        Output({"type": "map-data-download-button", "index": MATCH}, "loading", allow_duplicate=True),
+        Input({"type": "map-data-download-button", "index": MATCH}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
     @callback(
-        Output("map-data-download", "data"),
+        Output({"type": "map-data-download", "index": MATCH}, "data"),
+        Output({"type": "map-data-download-button", "index": MATCH}, "loading"),
         State("dataset-select", "value"),
         State("filter-store", "data"),
-        Input({"type": "map-data-download-button", "index": ALL}, "n_clicks"),
+        Input({"type": "map-data-download-button", "index": MATCH}, "n_clicks"),
         prevent_initial_call=True,
     )
     def download_data(
@@ -125,4 +137,4 @@ def register_callbacks():
             fetch_data(dataset_name).sort_values(by="location"),
             f"{dataset_name}_map_locations",
             ctx.triggered_id["index"],
-        )
+        ), False

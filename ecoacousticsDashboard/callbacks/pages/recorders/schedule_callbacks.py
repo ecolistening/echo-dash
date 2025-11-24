@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 
-from dash import html, dcc, callback, ctx, no_update
+from dash import html, dcc, callback, ctx, no_update, clientside_callback
 from dash import Output, Input, State, ALL, MATCH
 from loguru import logger
 from io import StringIO
@@ -118,11 +118,23 @@ def register_callbacks():
         fig.update_layout(title_text=title_text)
         return fig
 
+    clientside_callback(
+        """
+        function updateLoadingState(n_clicks) {
+            return true
+        }
+        """,
+        Output({"type": "times-data-download-button", "index": MATCH}, "loading", allow_duplicate=True),
+        Input({"type": "times-data-download-button", "index": MATCH}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
     @callback(
-        Output("times-data-download", "data"),
+        Output({"type": "times-data-download", "index": MATCH}, "data"),
+        Output({"type": "times-data-download-button", "index": MATCH}, "loading"),
         State("dataset-select", "value"),
         State("filter-store", "data"),
-        Input({"type": "times-data-download-button", "index": ALL}, "n_clicks"),
+        Input({"type": "times-data-download-button", "index": MATCH}, "n_clicks"),
         prevent_initial_call=True,
     )
     def download_data(
@@ -134,4 +146,4 @@ def register_callbacks():
             fetch_data(dataset_name, filters),
             f"{dataset_name}_birdnet_detections",
             ctx.triggered_id["index"],
-        )
+        ), False

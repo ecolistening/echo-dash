@@ -27,7 +27,15 @@ def Header():
                                     size="sm",
                                     opened=True,
                                 ),
-                                dmc.Text("echo-dash", c="#1D4A7A", size="xl")
+                                dmc.Anchor(
+                                    children=dmc.Text(
+                                        "echo-dash",
+                                        c="#1D4A7A",
+                                        size="xl"
+                                    ),
+                                    href="/",
+                                    underline="never",
+                                ),
                             ]
                         ),
                     ),
@@ -64,14 +72,24 @@ def Header():
                                 dmc.Anchor(
                                     children=dmc.ActionIcon(
                                         DashIconify(
-                                            icon="fluent:settings-32-regular",
+                                            icon="cil:home",
                                             width=24,
                                         ),
-                                        id="dataset-settings-button",
                                         variant="light",
                                         color="blue",
                                         size="lg",
-                                        n_clicks=0,
+                                    ),
+                                    href="/",
+                                ),
+                                dmc.Anchor(
+                                    children=dmc.ActionIcon(
+                                        DashIconify(
+                                            icon="fluent:settings-32-regular",
+                                            width=24,
+                                        ),
+                                        variant="light",
+                                        color="blue",
+                                        size="lg",
                                     ),
                                     href="/settings"
                                 ),

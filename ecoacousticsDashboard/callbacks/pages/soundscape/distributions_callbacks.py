@@ -68,11 +68,23 @@ def register_callbacks():
         fig.update_layout(title_text=f"{capitalise_each(filters['current_feature'])} | {filters['date_range'][0]} - {filters['date_range'][1]}")
         return fig
 
+    clientside_callback(
+        """
+        function updateLoadingState(n_clicks) {
+            return true
+        }
+        """,
+        Output({"type": "distributions-data-download-button", "index": MATCH}, "loading", allow_duplicate=True),
+        Input({"type": "distributions-data-download-button", "index": MATCH}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
     @callback(
-        Output("distributions-data-download", "data"),
+        Output({"type": "distributions-data-download", "index": MATCH}, "data"),
+        Output({"type": "distributions-data-download-button", "index": MATCH}, "loading"),
         State("dataset-select", "value"),
         State("filter-store", "data"),
-        Input({"type": "distributions-data-download-button", "index": ALL}, "n_clicks"),
+        Input({"type": "distributions-data-download-button", "index": MATCH}, "n_clicks"),
         prevent_initial_call=True,
     )
     def download_data(
@@ -84,4 +96,4 @@ def register_callbacks():
             fetch_data(dataset_name, filters),
             f"{dataset_name}_acoustic_features",
             ctx.triggered_id["index"]
-        )
+        ), False
