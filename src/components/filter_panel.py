@@ -19,9 +19,14 @@ def FilterPanel(
                 children=[
                     dmc.AccordionControl(
                         "Filters",
-                        icon=DashIconify(
-                            icon="cil:filter",
-                            width=24,
+                        icon=dmc.ActionIcon(
+                            DashIconify(
+                                icon="cil:filter",
+                                width=24,
+                            ),
+                            variant="light",
+                            color="blue",
+                            size="lg",
                         ),
                     ),
                     dmc.AccordionPanel(

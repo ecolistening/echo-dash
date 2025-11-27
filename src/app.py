@@ -83,9 +83,14 @@ def create_dash_app() -> dash.Dash:
                     children=[
                         dmc.AccordionControl(
                             "Datasets",
-                            icon=DashIconify(
-                                icon="solar:database-linear",
-                                width=24,
+                            icon=dmc.ActionIcon(
+                                DashIconify(
+                                    icon="solar:database-linear",
+                                    width=24,
+                                ),
+                                variant="light",
+                                color="blue",
+                                size="lg",
                             ),
                         ),
                         dmc.AccordionPanel(

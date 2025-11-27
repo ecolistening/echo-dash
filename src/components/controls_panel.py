@@ -21,10 +21,14 @@ def ControlsPanel(
                 children=[
                     dmc.AccordionControl(
                         "Controls",
-                        icon=DashIconify(
-                            icon="oui:controls-horizontal",
-                            width=24,
+                        icon=dmc.ActionIcon(
+                            DashIconify(
+                                icon="oui:controls-horizontal",
+                                width=24,
+                            ),
+                            variant="light",
                             color="blue",
+                            size="lg",
                         ),
                     ),
                     dmc.AccordionPanel(
