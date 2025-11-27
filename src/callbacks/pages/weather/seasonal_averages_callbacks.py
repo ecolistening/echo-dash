@@ -34,6 +34,7 @@ def register_callbacks():
         Input("weather-hourly-colour-select", "value"),
         Input("weather-hourly-facet-row-select", "value"),
         Input("weather-hourly-year-wrap-checkbox", "checked"),
+        Input("plotly-theme", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -43,6 +44,7 @@ def register_callbacks():
         color: str,
         facet_row: str,
         annual_wrap: bool,
+        template: str,
     ) -> go.Figure:
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
@@ -85,6 +87,7 @@ def register_callbacks():
         fig.update_xaxes(tickformat=x_tick_format)
         fig.update_layout(default_layout(fig))
         fig.update_layout(title_text=options.get(variable, {}).get("label", variable))
+        fig.update_layout(template=template)
         return fig
 
     clientside_callback(

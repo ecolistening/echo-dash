@@ -77,6 +77,7 @@ def register_callbacks():
         Input("species-richness-facet-row-select", "value"),
         Input("species-richness-facet-column-select", "value"),
         Input("species-list-tickbox", "checked"),
+        Input("plotly-theme", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -88,6 +89,7 @@ def register_callbacks():
         facet_row: str,
         facet_col: str,
         species_checkbox: bool,
+        template: str,
     ) -> go.Figure:
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
@@ -124,6 +126,7 @@ def register_callbacks():
         title_text = f"Species Richness by Time of Day | p > {threshold}"
         fig.update_layout(default_layout(fig, row_height=600))
         fig.update_layout(title_text=title_text, margin=dict(t=100))
+        fig.update_layout(template=template)
         return fig
 
     clientside_callback(

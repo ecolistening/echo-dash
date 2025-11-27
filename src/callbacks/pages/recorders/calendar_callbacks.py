@@ -30,16 +30,18 @@ def register_callbacks():
         Output("dates-graph", "figure"),
         State("dataset-select", "value"),
         Input("filter-store", "data"),
+        Input("plotly-theme", "data"),
     )
     def draw_figure(
         dataset_name: str,
         filters: Dict[str, Any],
+        template: str,
     ) -> Dict[str, Any]:
         data = fetch_data(dataset_name, filters)
         fig = plot(data)
         title_text = "Recording Dates"
         fig.update_layout(default_layout(fig))
-        fig.update_layout(title_text=title_text)
+        fig.update_layout(title_text=title_text, template=template)
         return fig
 
     clientside_callback(

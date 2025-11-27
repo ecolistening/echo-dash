@@ -9,5 +9,6 @@ global_store = [
     dcc.Store(id="filter-store", storage_type="local"),
     dcc.Store(id="species-store", storage_type="local", data=[]),
     dcc.Store(id="precache"),
-    dcc.Store(id="color-scheme", data="light", storage_type="local")
+    dcc.Store(id="color-scheme", data="light", storage_type="local"),
+    dcc.Store(id="plotly-theme", data="plotly", storage_type="local")
 ]

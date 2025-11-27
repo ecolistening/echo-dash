@@ -71,6 +71,7 @@ def register_callbacks():
         Input("umap-symbol-select", "value"),
         Input("umap-facet-row-select", "value"),
         Input("umap-facet-column-select", "value"),
+        Input("plotly-theme", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -81,6 +82,7 @@ def register_callbacks():
         symbol: str,
         facet_row: str,
         facet_col: str,
+        template: str,
     ) -> go.Figure:
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
@@ -126,6 +128,7 @@ def register_callbacks():
         fig.update_traces(marker=dict(size=dot_size))
         fig.update_layout(default_layout(fig, row_height=800))
         fig.update_layout(title_text="UMAP of Soundscape Descriptors")
+        fig.update_layout(template=template)
         return fig
 
     # TODO: FINISH

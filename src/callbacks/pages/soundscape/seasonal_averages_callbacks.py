@@ -35,6 +35,7 @@ def register_callbacks():
         # Input(outliers_tickbox, "checked"),
         # Input(colours_tickbox, "checked"),
         # Input(separate_plots_tickbox, "checked"),
+        Input("plotly-theme", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -45,6 +46,7 @@ def register_callbacks():
         # outliers,
         # colour_locations,
         # separate_plots,
+        template: str,
     ) -> go.Figure:
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
@@ -84,6 +86,7 @@ def register_callbacks():
         fig.update_xaxes(tickformat=x_tick_format)
         fig.update_layout(default_layout(fig))
         fig.update_layout(title_text=f"{capitalise_each(filters['current_feature'])} Seasonal Averages")
+        fig.update_layout(template=template)
         return fig
 
     clientside_callback(

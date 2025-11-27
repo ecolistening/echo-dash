@@ -64,6 +64,7 @@ def register_callbacks():
         Input("times-symbol-select", "value"),
         Input("times-facet-row-select", "value"),
         Input("times-facet-column-select", "value"),
+        Input("plotly-theme", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -74,6 +75,7 @@ def register_callbacks():
         symbol: str,
         facet_row: str,
         facet_col: str,
+        template: str,
     ) -> go.Figure:
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
@@ -116,6 +118,7 @@ def register_callbacks():
         fig.update_traces(marker=dict(size=dot_size))
         fig.update_layout(default_layout(fig))
         fig.update_layout(title_text=title_text)
+        fig.update_layout(template=template)
         return fig
 
     clientside_callback(

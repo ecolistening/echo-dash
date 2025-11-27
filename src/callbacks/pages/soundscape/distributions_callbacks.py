@@ -35,6 +35,7 @@ def register_callbacks():
         Input("distributions-facet-row-select", "value"),
         Input("distributions-facet-column-select", "value"),
         Input("distributions-normalised-tickbox", "checked"),
+        Input("plotly-theme", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -43,6 +44,7 @@ def register_callbacks():
         facet_row: str,
         facet_col: str,
         normalised: bool,
+        template: str,
     ) -> Dict[str, Any]:
         if not len(filters):
             return no_update
@@ -66,6 +68,7 @@ def register_callbacks():
         )
         fig.update_layout(default_layout(fig))
         fig.update_layout(title_text=f"{capitalise_each(filters['current_feature'])} | {filters['date_range'][0]} - {filters['date_range'][1]}")
+        fig.update_layout(template=template)
         return fig
 
     clientside_callback(

@@ -62,6 +62,7 @@ def register_callbacks():
         Input("species-matrix-filter", "value"),
         Input({"type": "species-matrix-group-control", "index": ALL}, "value"),
         Input("species-list-tickbox", "checked"),
+        Input("plotly-theme", "data"),
     )
     def draw_figure(
         dataset_name: str,
@@ -72,6 +73,7 @@ def register_callbacks():
         opt_group: str,
         opts: str,
         species_checkbox: bool,
+        template: str,
     ) -> go.Figure:
         options = dispatch(FETCH_DATASET_OPTIONS, dataset_name=dataset_name)
         category_orders = dispatch(FETCH_DATASET_CATEGORY_ORDERS, dataset_name=dataset_name)
@@ -89,6 +91,7 @@ def register_callbacks():
             return fig
         fig = plot(data, axis_group, facet_col, None, safe_category_orders(data, category_orders))
         fig.update_layout(title_text=f"Species Matrix |{f' {opts[0]} |' if len(opts) else ''} p > {threshold}")
+        fig.update_layout(template=template)
         return fig
 
     clientside_callback(
