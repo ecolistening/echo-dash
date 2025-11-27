@@ -128,6 +128,20 @@ def register_callbacks():
         fig.update_layout(title_text="UMAP of Soundscape Descriptors")
         return fig
 
+    # TODO: FINISH
+    # clientside_callback(
+    #     """
+    #     function (n_clicks, fig) {
+    #         fig.layout.template = (n_clicks % 2) ? 'plotly_dark' : 'plotly'
+    #         return fig
+    #     }
+    #     """,
+    #     Output("umap-graph", "figure", allow_duplicate=True),
+    #     Input("color-scheme-toggle", "n_clicks"),
+    #     State("umap-graph", "figure"),
+    #     prevent_initial_call=True,
+    # )
+
     clientside_callback(
         """
         function updateLoadingState(n_clicks) {

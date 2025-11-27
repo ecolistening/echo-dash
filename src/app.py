@@ -10,8 +10,8 @@ if is_production:
 logger.debug(f"Python Version: {sys.version}")
 
 import dash
-import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
+import dash_bootstrap_components as dbc
 
 from dash import Dash, dcc, ctx
 from dash import Output, Input, State, callback, no_update
@@ -20,7 +20,7 @@ from typing import Any, Dict, List
 
 THEME = {
     "fontFamily": "'Inter', sans-serif",
-    "primaryColor": "indigo",
+    # "primaryColor": "indigo",
     "components": {
         "Button": {"styles": {"root": {"fontWeight": 400}}},
         "Alert": {"styles": {"title": {"fontWeight": 500}}},
@@ -33,8 +33,7 @@ def create_dash_app() -> dash.Dash:
         __name__,
         use_pages=True,
         external_stylesheets=[
-            dbc.themes.LITERA,
-            dbc.icons.BOOTSTRAP,
+            # dbc.icons.BOOTSTRAP,
             "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;900&display=swap",
         ]
     )
@@ -72,6 +71,52 @@ def create_dash_app() -> dash.Dash:
         )
 
     def MainPage():
+        dataset_panel = dmc.Accordion(
+            chevronPosition="right",
+            variant="separated",
+            radius="sm",
+            value="datasets",
+            persistence=True,
+            children=[
+                dmc.AccordionItem(
+                    value="datasets",
+                    children=[
+                        dmc.AccordionControl(
+                            "Datasets",
+                            icon=DashIconify(
+                                icon="solar:database-linear",
+                                width=24,
+                            ),
+                        ),
+                        dmc.AccordionPanel(
+                            style={"padding": "0 0 1rem 0"},
+                            children=dmc.Group(
+                                grow=True,
+                                children=[
+                                    dmc.Box([
+                                        dmc.Text(
+                                            "Choose a dataset:",
+                                            size="sm",
+                                            span=True,
+                                            mr="1rem",
+                                        ),
+                                        dmc.Select(
+                                            id="dataset-select",
+                                            style={"display": "inline-block"},
+                                            searchable=True,
+                                            clearable=False,
+                                            allowDeselect=False,
+                                            nothingFoundMessage="No datasets found...",
+                                            persistence=True,
+                                        ),
+                                    ]),
+                                ]
+                            ),
+                        )
+                    ]
+                )
+            ],
+        )
         return dmc.Box(
             id="page-wrapper",
             style={"display": "block", "opacity": 0, "transition": "opacity 1s ease"},
@@ -88,6 +133,8 @@ def create_dash_app() -> dash.Dash:
                 ),
                 dmc.AppShellMain(
                     children=[
+                        dataset_panel,
+                        dmc.Space(h="sm"),
                         FilterPanel([
                             dmc.Accordion(
                                 multiple=True,
