@@ -119,6 +119,7 @@ class Dataset:
             umap_model = load_ParametricUMAP(self.path / "umap")
         model = make_pipeline(scaler, umap_model)
 
+        # FIXME: encode and save everything, load on startup like the others
         def encode(data: pd.DataFrame) -> pd.DataFrame:
             xy = model.transform(data.loc[:, feature_column_names])
             data["x"], data["y"] = np.split(xy, indices_or_sections=2, axis=1)
