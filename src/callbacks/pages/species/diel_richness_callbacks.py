@@ -78,7 +78,6 @@ def register_callbacks():
         Input("species-richness-facet-column-select", "value"),
         Input("species-list-tickbox", "checked"),
         Input("plotly-theme", "data"),
-        prevent_initial_call=True,
     )
     def draw_figure(
         dataset_name: str,
