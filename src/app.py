@@ -32,7 +32,7 @@ def create_dash_app() -> dash.Dash:
     app = dash.Dash(
         __name__,
         use_pages=True,
-        # suppress_callback_exceptions=is_production,
+        suppress_callback_exceptions=is_production,
         external_stylesheets=[
             # dbc.icons.BOOTSTRAP,
             "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;900&display=swap",
@@ -312,7 +312,7 @@ server = app.server
 
 if __name__ == '__main__':
     logger.info("Start server..")
-    app.run(host='0.0.0.0', debug=False)
-    # if not is_production:
-    app.enable_dev_tools(dev_tools_ui=True, dev_tools_serve_dev_bundles=True, dev_tools_props_check=True)
+    app.run(host='0.0.0.0', debug=not is_production)
+    if not is_production:
+        app.enable_dev_tools(dev_tools_ui=True, dev_tools_serve_dev_bundles=True, dev_tools_props_check=True)
     logger.info("Server shutdown.")
