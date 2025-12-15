@@ -119,7 +119,7 @@ def set_species_list(
     dataset.save_species_list(species_list)
     return True
 
-# @functools.lru_cache(maxsize=3)
+@functools.lru_cache(maxsize=3)
 def fetch_files(
     dataset_name: str,
     current_sites: Tuple[str, ...] = tuple(),
@@ -152,28 +152,28 @@ def fetch_files(
     # )
     # return dataset.append_columns(file_site_weather)
 
-# @functools.lru_cache(maxsize=3)
+@functools.lru_cache(maxsize=3)
 def fetch_locations(
     dataset_name: str,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     return dataset.locations
 
-# @functools.lru_cache(maxsize=3)
+@functools.lru_cache(maxsize=3)
 def fetch_species(
     dataset_name: str,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     return dataset.species
 
-# @functools.lru_cache(maxsize=3)
+@functools.lru_cache(maxsize=3)
 def fetch_weather(
     dataset_name: str,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     return pd.read_parquet(dataset.path / "weather_table.parquet")
 
-# @functools.lru_cache(maxsize=10)
+@functools.lru_cache(maxsize=10)
 def fetch_file_weather(
     dataset_name: str,
     current_sites: Tuple[str, ...],
@@ -205,7 +205,7 @@ def fetch_file_weather(
     #     .melt(id_vars=list(set(["file_id", "site_id", "nearest_hour", "timestamp", *dataset.locations.columns])), var_name="variable", value_name="value")
     # )
 
-# @functools.lru_cache(maxsize=10)
+@functools.lru_cache(maxsize=10)
 def fetch_acoustic_features(
     dataset_name: str,
     current_sites: Tuple[str, ...],
@@ -319,7 +319,7 @@ def fetch_acoustic_features_umap(
     dataset = DATASETS.get_dataset(dataset_name)
     return (
         dataset.features
-        .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)} and {filter_weather_query(current_weather)}")
+        .query(f"valid == True and {filter_files_query(current_file_ids)} and {filter_sites_query(dataset.locations, current_sites)} and {filter_dates_query(current_date_range)} and {filter_weather_query(current_weather)} and {filter_feature_query(current_feature)}")
     )
     # files = (
     #     pd.read_parquet(dataset.path / "files_table.parquet", columns=["file_id", "valid", "duration", "site_id", "file_name", "file_path", "dddn", "timestamp", "hours after sunrise", "hours after dawn", "hours after noon", "hours after dusk", "hours after sunset"])

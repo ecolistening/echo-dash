@@ -37,9 +37,7 @@ class Dataset:
         self.audio_path = Path(self.config.get("Dataset", "audio_path"))
 
     def setup(self):
-        self.files
-        self.features
-        self.species_probs
+        pass
 
     @property
     def acoustic_feature_list(self):
@@ -81,15 +79,15 @@ class Dataset:
     def weather(self):
         return pd.read_parquet(self.path / "weather_table.parquet")
 
-    @functools.cached_property
+    @property
     def files(self):
         return pd.read_parquet(self.path / "files.parquet")
 
-    @functools.cached_property
+    @property
     def features(self):
         return pd.read_parquet(self.path / "features.parquet")
 
-    @functools.cached_property
+    @property
     def species_probs(self):
         return pd.read_parquet(self.path / "species.parquet")
 
