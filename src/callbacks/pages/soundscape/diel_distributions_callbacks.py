@@ -117,14 +117,18 @@ def register_callbacks():
         Output({"type": "index-box-data-download-button", "index": MATCH}, "loading"),
         State("dataset-select", "value"),
         State("filter-store", "data"),
+        State({"type": "index-box-data-download-button", "index": MATCH}, "id"),
         Input({"type": "index-box-data-download-button", "index": MATCH}, "n_clicks"),
         prevent_initial_call=True,
     )
     def download_data(
         dataset_name: str,
         filters,
+        ids,
         clicks,
     ) -> Dict[str, Any]:
+        if ids is None or not len(list(filter(None, ids))):
+            return no_update
         return send_download(
             fetch_data(dataset_name, filters),
             f"{dataset_name}_acoustic_indices",

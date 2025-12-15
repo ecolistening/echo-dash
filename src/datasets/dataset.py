@@ -36,6 +36,11 @@ class Dataset:
         self.dataset_id = self.config.get("Dataset", "id")
         self.audio_path = Path(self.config.get("Dataset", "audio_path"))
 
+    def setup(self):
+        self.files
+        self.features
+        self.species_probs
+
     @property
     def acoustic_feature_list(self):
         ignore_columns = ['sr', 'segment_id', 'segment_idx', 'file_id', 'duration', 'offset', 'frame_length', 'hop_length', 'n_fft', 'feature_length']
@@ -189,10 +194,9 @@ class Dataset:
     @functools.cached_property
     def feature_filters(self):
         filters = {}
-        data = pd.read_parquet(self.path / "recording_acoustic_features_table.parquet")
         acoustic_features = {}
         for feature in self.acoustic_feature_list:
-            df = data.loc[:, feature]
+            df = self.features.loc[:, feature]
             acoustic_features[feature] = [floor(df.min(), precision=2), ceil(df.max(), precision=2)]
         filters["acoustic_features"] = acoustic_features
         return filters
@@ -200,9 +204,8 @@ class Dataset:
     @functools.cached_property
     def date_filters(self):
         filters = {}
-        data = pd.read_parquet(self.path / "files_table.parquet")
-        min_date = data["timestamp"].dt.date.min().strftime("%Y-%m-%d")
-        max_date = data["timestamp"].dt.date.max().strftime("%Y-%m-%d")
+        min_date = self.files["timestamp"].dt.date.min().strftime("%Y-%m-%d")
+        max_date = self.files["timestamp"].dt.date.max().strftime("%Y-%m-%d")
         filters["date_range_bounds"] = [min_date, max_date]
         return filters
 

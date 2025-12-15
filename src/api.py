@@ -27,10 +27,12 @@ from utils.filter import (
 )
 
 DATASETS = DatasetLoader(root_dir)
+for dataset in DATASETS:
+    dataset.setup()
 
 @functools.lru_cache(maxsize=1)
 def fetch_datasets():
-    return [dataset.dataset_name for dataset in DATASETS]
+    return [dataset.dataset_name for dataset in DATASETS if dataset is not None]
 
 @functools.lru_cache(maxsize=3)
 def fetch_dataset(
@@ -59,7 +61,7 @@ def fetch_dataset_config(
         for section in dataset.config.sections()
     }
 
-@functools.lru_cache(maxsize=3)
+# @functools.lru_cache(maxsize=3)
 def fetch_sites_tree(
     dataset_name: str,
 ):
@@ -117,7 +119,7 @@ def set_species_list(
     dataset.save_species_list(species_list)
     return True
 
-@functools.lru_cache(maxsize=3)
+# @functools.lru_cache(maxsize=3)
 def fetch_files(
     dataset_name: str,
     current_sites: Tuple[str, ...] = tuple(),
@@ -150,28 +152,28 @@ def fetch_files(
     # )
     # return dataset.append_columns(file_site_weather)
 
-@functools.lru_cache(maxsize=3)
+# @functools.lru_cache(maxsize=3)
 def fetch_locations(
     dataset_name: str,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     return dataset.locations
 
-@functools.lru_cache(maxsize=3)
+# @functools.lru_cache(maxsize=3)
 def fetch_species(
     dataset_name: str,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     return dataset.species
 
-@functools.lru_cache(maxsize=3)
+# @functools.lru_cache(maxsize=3)
 def fetch_weather(
     dataset_name: str,
 ) -> pd.DataFrame:
     dataset = DATASETS.get_dataset(dataset_name)
     return pd.read_parquet(dataset.path / "weather_table.parquet")
 
-@functools.lru_cache(maxsize=10)
+# @functools.lru_cache(maxsize=10)
 def fetch_file_weather(
     dataset_name: str,
     current_sites: Tuple[str, ...],
@@ -203,7 +205,7 @@ def fetch_file_weather(
     #     .melt(id_vars=list(set(["file_id", "site_id", "nearest_hour", "timestamp", *dataset.locations.columns])), var_name="variable", value_name="value")
     # )
 
-@functools.lru_cache(maxsize=10)
+# @functools.lru_cache(maxsize=10)
 def fetch_acoustic_features(
     dataset_name: str,
     current_sites: Tuple[str, ...],
@@ -244,7 +246,7 @@ def fetch_acoustic_features(
     # )
     # return dataset.append_columns(features.merge(file_site_weather, on="file_id", how="left"))
 
-@functools.lru_cache(maxsize=10)
+# @functools.lru_cache(maxsize=10)
 def fetch_birdnet_species(
     dataset_name: str,
     threshold: float,
@@ -304,7 +306,7 @@ def fetch_birdnet_species(
 #         .merge(file_site_weather, on="file_id", how="left")
 #     )
 
-@functools.lru_cache(maxsize=4)
+# @functools.lru_cache(maxsize=4)
 def fetch_acoustic_features_umap(
     dataset_name: str,
     current_sites: Tuple[str, ...],

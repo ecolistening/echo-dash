@@ -52,7 +52,9 @@ def register_callbacks():
         n_clicks: int,
     ) -> List[str]:
         if not dataset_name or n_clicks is None or n_clicks == 0:
-            return no_update, False
+            return no_update
+        if site_labels is None or not len(list(filter(None, site_labels))):
+            return no_update
         trigger_id = ctx.triggered_id
         action = SET_DATASET_CONFIG
         payload = dict(dataset_name=dataset_name, site_labels=site_labels)
@@ -258,6 +260,8 @@ def register_callbacks():
         selected_species: List[str],
         check_boxes: List[bool],
     ) -> List[str]:
+        if selected_species is None or not len(list(filter(None, selected_species))):
+            return no_update
         current_species = set(filters["species"])
         for checked, scientific_name in zip(check_boxes, selected_species):
             if checked:

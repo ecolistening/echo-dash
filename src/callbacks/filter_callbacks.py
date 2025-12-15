@@ -54,28 +54,6 @@ def register_callbacks():
             return no_update
         return set_filters(dataset_name)
 
-    # @callback(
-    #     Output("precache", "data"),
-    #     Input("precache", "data"),
-    #     State("dataset-select", "value"),
-    #     State("filter-store", "data"),
-    # )
-    # def precache_api_requests(cached_dataset: bool | None, dataset_name: str, filters: Dict[str, Any]) -> None:
-    #     if not dataset_name or cached_dataset == dataset_name:
-    #         return no_update
-
-    #     logger.debug(f"{ctx.triggered_id=} caching {dataset_name} on load")
-    #     payload = dict(dataset_name=dataset_name, **filter_dict_to_tuples(filters))
-
-    #     dispatch(FETCH_FILES, **payload)
-    #     dispatch(FETCH_FILE_WEATHER, **payload)
-    #     dispatch(FETCH_ACOUSTIC_FEATURES_UMAP, **payload)
-    #     dispatch(FETCH_ACOUSTIC_FEATURES, **payload)
-    #     dispatch(FETCH_BIRDNET_SPECIES, threshold=0.5, **payload)
-    #     logger.debug(f"Filter caching {dataset_name} complete")
-
-    #     return dataset_name
-
     # ------ DATES FILTER ----- #
 
     @callback(
@@ -250,6 +228,8 @@ def register_callbacks():
     ) -> Filters:
         if not ctx.triggered_id:
             return no_update
+        if not len(list(filter(None, slider_ids))):
+            return no_update
         variable_name = ctx.triggered_id["index"]
         variable_params = filters["weather_variables"][variable_name]
         ids, values = slider_ids, slider_values
@@ -301,12 +281,16 @@ def register_callbacks():
 
     @callback(
         Output({"type": "weather-variable-range-slider", "index": ALL}, "value"),
+        State({"type": "weather-variable-range-slider", "index": ALL}, "id"),
         Input("filter-store", "data"),
         prevent_initial_call=True,
     )
     def update_weather_variable_slider(
+        slider_ids: List[str],
         filters: Filters
     ) -> Tuple[str, List[str]]:
+        if not len(list(filter(None, slider_ids))):
+            return no_update
         current_filter_values = list(map(
             lambda params: params["variable_range"],
             filters["weather_variables"].values()
@@ -323,12 +307,16 @@ def register_callbacks():
 
     @callback(
         Output({"type": "weather-variable-range-text", "index": ALL}, "children"),
+        State({"type": "weather-variable-range-text", "index": ALL}, "id"),
         Input("filter-store", "data"),
         prevent_initial_call=True,
     )
     def update_weather_variable_slider(
+        text_ids: List[str],
         filters: Filters
     ) -> Tuple[str, List[str]]:
+        if not len(list(filter(None, text_ids))):
+            return no_update
         current_filter_values = list(map(
             lambda params: params["variable_range"],
             filters["weather_variables"].values()
@@ -370,15 +358,12 @@ def register_callbacks():
         filters: Filters,
         dataset_name: str,
     ) -> Filters:
-        flat_values = list(itertools.chain(*values))
-        # this shouldn't happen, but a guard will prevent bugs
-        if not len(flat_values):
+        if not len(list(filter(None, values))):
             return no_update
-        # when nodes haven't changed, prevent update to stop graph reload triggering
+        flat_values = list(itertools.chain(*values))
         current_nodes = [node.path_name for node in bt.list_to_tree(filters["current_sites"]).descendants]
         if sorted(current_nodes) == sorted(flat_values):
             return no_update
-
         action = FETCH_DATASET_SITES_TREE
         payload = dict(dataset_name=dataset_name)
         logger.debug(f"{ctx.triggered_id=} {action=} {payload=}")
@@ -408,6 +393,8 @@ def register_callbacks():
         current_sites,
         dataset_name: str,
     ) -> Tuple[List[TreeNodeChip], List[str]]:
+        if not len(list(filter(None, current_sites))):
+            return no_update
         # FIXME: to prevent exception when changing dataaset, we should return the node chip rather than its values
         # as the number of site chips may have changed
         sites = filters["current_sites"]
@@ -456,6 +443,8 @@ def register_callbacks():
         values: bool,
         filters: Dict[str, List[str]],
     ) -> Dict[str, List[str]]:
+        if not len(list(filter(None, values))):
+            return no_update
         file_filters = filters["files"]
         # remove by index
         filters["files"] = {value: file_filters[value] for value in values}
