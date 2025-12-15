@@ -60,7 +60,8 @@ def register_callbacks():
             x_tick_format = "%b %Y"
 
         data = (
-            data.sort_values("_time")
+            data
+            .sort_values(by="_time")
             .groupby(list(filter(None, [color, "feature", "dddn", pd.Grouper(key="_time", freq=time_agg)])))
             .agg(value_mean=("value", "mean"), value_std=("value", "std"))
             .reset_index()

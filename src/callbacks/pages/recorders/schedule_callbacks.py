@@ -96,7 +96,7 @@ def register_callbacks():
                 "dddn",
                 "hour_categorical",
                 "week_of_year_categorical",
-                "duration",
+                "file_duration",
             ],
             labels={
                 "file_name": "File Name",
@@ -106,7 +106,7 @@ def register_callbacks():
                 "dddn": "Dawn/Day/Dusk/Night",
                 "hour_categorical": options.get("hour_categorical", {}).get("label", "hour_categorical"),
                 "week_of_year_categorical": options.get("week_of_year_categorical", {}).get("label", "week_of_year_categorical"),
-                "duration": "Duration (seconds)",
+                "file_duration": "Duration (seconds)",
                 color: options.get(color, {}).get("label", color),
                 facet_row: options.get(facet_row, {}).get("label", facet_row),
                 facet_col: options.get(facet_col, {}).get("label", facet_col),

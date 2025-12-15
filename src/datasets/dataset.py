@@ -78,13 +78,15 @@ class Dataset:
 
     @functools.cached_property
     def files(self):
-        files = pd.read_parquet(self.path / "files_table.parquet")
-        return (
-            self.append_columns(files)
-            .merge(self.weather, left_on=["site_id", "nearest_hour"], right_on=["site_id", "timestamp"], suffixes=("", "_weather"))
-            .merge(self.solar, on=["site_id", "date"], how="left")
-            .merge(self.locations, on="site_id", how="left")
-        )
+        return pd.read_parquet(self.path / "files.parquet")
+
+    @functools.cached_property
+    def features(self):
+        return pd.read_parquet(self.path / "features.parquet")
+
+    @functools.cached_property
+    def species_probs(self):
+        return pd.read_parquet(self.path / "species.parquet")
 
     def save_config(self):
         with open(self.path / "config.ini", "w") as f:
