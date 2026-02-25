@@ -30,24 +30,13 @@ For development, running the Dashboard in a virtual environment allows the devel
 
 For ease-of-deployment, the dashboard can be run in Docker. Docker uses gunicorn as the server backend as it is more reliable than the development server that ships with flask.
 
-### Docker
-Install the latest version of docker, at minimum version 3+
-
-Navigate to `ecoacoustics-dashboard/ecoacousticsDashboard/` where `compose.yaml` is located and run using:
-
-```
-docker compose up --build -d
-```
-
-After an initial build (if you don't have an image already built) the app should be available at `http://localhost:8050/`.
-
 ### Using UV
 Install [Astral's UV](https://docs.astral.sh/uv/)
 
 Change to the application directory
 
 ```
-cd ecoacousticsDashboard
+cd src
 ```
 
 Create a virtual environment and install dependencies
@@ -61,6 +50,17 @@ uv sync
 Run the dashboard with the command `python app.py`. Flask should now start on `http://localhost:8050/` and you should be able to load the app.
 
 Alternatively you can manually run the app using gunicorn using `gunicron app:server`.
+
+### Docker
+Install the latest version of docker, at minimum version 3+
+
+Navigate to `/src/` where `docker-compose.yaml` is located and run using:
+
+```
+docker compose up --build -d
+```
+
+After an initial build (if you don't have an image already built) the app should be available at `http://localhost:8050/`.
 
 # State of Development (August 2023)
 There are a number of different plots (pages) in various states of development. The most advanced and recent is `overview > UMAP` and the structure of that page (the options menu at the top and the 'About' and 'Download' sections at the bottom) should be used as a basis for redeveloping the other pages.
