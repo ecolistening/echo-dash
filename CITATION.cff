@@ -81,6 +81,10 @@ authors:
       Department of Music, School for Progressive Futures,
       University of Sussex, Brighton, UK 
     orcid: 'https://orcid.org/0000-0001-7093-2143'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.18770083
+    description: DOI for this version of the software
 repository-code: 'https://github.com/ecolistening/echo-dash'
 url: 'https://echodash.co.uk/'
 abstract: >-
@@ -88,5 +92,6 @@ abstract: >-
   source, online ecoacoustic dashboard for interactive
   exploration of spatiotemporal soundscape data.
 license: GPL-3.0
+commit: e5cb9756e1a980f899b1d176517e647e2976d6a5
 version: 1.0.0
 date-released: '2024-02-25'
