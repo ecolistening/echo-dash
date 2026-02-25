@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/627429542.svg)](https://doi.org/10.5281/zenodo.18770082)
+
 # Ecoacoustics Dashboard
 
 ## Documentation
